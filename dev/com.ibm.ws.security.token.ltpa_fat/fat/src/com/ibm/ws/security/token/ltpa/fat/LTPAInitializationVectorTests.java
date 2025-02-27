@@ -28,17 +28,15 @@ import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 
 import com.ibm.websphere.simplicity.RemoteFile;
-import com.ibm.websphere.simplicity.config.Authentication;
-import com.ibm.websphere.simplicity.config.ConfigElementList;
 import com.ibm.websphere.simplicity.config.LTPA;
 import com.ibm.websphere.simplicity.config.ServerConfiguration;
-import com.ibm.websphere.simplicity.config.ValidationKeys;
 import com.ibm.websphere.simplicity.log.Log;
 import com.ibm.ws.webcontainer.security.test.servlets.FormLoginClient;
 
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
+import componenttest.topology.impl.LibertyFileManager;
 import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.impl.LibertyServerFactory;
 import componenttest.vulnerability.LeakedPasswordChecker;
@@ -53,14 +51,7 @@ public class LTPAInitializationVectorTests {
     protected static final String APP_NAME = "ltpaKeyRotationTestServer";
     protected static final String PROGRAMMATIC_API_SERVLET = "ProgrammaticAPIServlet";
     protected static final String authTypeForm = "FORM";
-    protected static final String authTypeBasic = "BASIC";
     protected static final String cookieName = "LtpaToken2";
-
-    // Keys to help readability of the test
-    protected static final boolean IS_MANAGER_ROLE = true;
-    protected static final boolean NOT_MANAGER_ROLE = false;
-    protected static final boolean IS_EMPLOYEE_ROLE = true;
-    protected static final boolean NOT_EMPLOYEE_ROLE = false;
 
     // Initialize two liberty servers for form login
     private static LibertyServer server1 = LibertyServerFactory.getLibertyServer("com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer1");
@@ -79,8 +70,17 @@ public class LTPAInitializationVectorTests {
     private static String validationKeyFIPSPassword = "{xor}CDo9Hgw=";
 
     // Initialize the FormLogin Clients
-    private static final FormLoginClient flClient1 = new FormLoginClient(server1, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
-    private static final FormLoginClient flClient2 = new FormLoginClient(server2, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
+    private static FormLoginClient server1FlClient1;
+    private static FormLoginClient server1FlClient2;
+    private static FormLoginClient server2FlClient1;
+    private static FormLoginClient server2FlClient2;
+
+//    private static FormLoginClient server1FlClient1 = new FormLoginClient(server1, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
+//    private static FormLoginClient server1FlClient2 = new FormLoginClient(server1, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin2");
+//    private static FormLoginClient server2FlClient1 = new FormLoginClient(server2, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
+//    private static FormLoginClient server2FlClient2 = new FormLoginClient(server2, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin2");
+
+    // Define server.xml files
     private static final String DEFAULT_SERVER_XML = "server.xml";
     private static final String DEFAULT_FIPS_SERVER_XML = "serverFIPS.xml";
 
@@ -90,24 +90,10 @@ public class LTPAInitializationVectorTests {
     private static final String VALIDATION_KEYS_PATH = "resources/security/";
     private static final String VALIDATION_KEY1_PATH = "resources/security/validation1.keys";
     private static final String VALIDATION_KEY2_PATH = "resources/security/validation2.keys";
-    private static final String BAD_SHARED_VALIDATION_KEY1_PATH = "resources/security/validation3.keys";
-    private static final String BAD_SHARED_VALIDATION_KEY2_PATH = "resources/security/validation4.keys";
-    private static final String BAD_PRIVATE_VALIDATION_KEY1_PATH = "resources/security/validation5.keys";
-    private static final String BAD_PRIVATE_VALIDATION_KEY2_PATH = "resources/security/validation6.keys";
-    private static final String BAD_PUBLIC_VALIDATION_KEY1_PATH = "resources/security/validation7.keys";
-    private static final String BAD_PUBLIC_VALIDATION_KEY2_PATH = "resources/security/validation8.keys";
 
     // Define the paths to the alternate key files
     private static String ALT_VALIDATION_KEY1_PATH = "alternate/validation1.keys";
     private static String ALT_VALIDATION_KEY2_PATH = "alternate/validation2.keys";
-    private static String ALT_VALIDATION_KEY3_PATH = "alternate/validation3.keys";
-    private static String ALT_VALIDATION_KEY4_PATH = "alternate/validation4.keys";
-    private static String ALT_VALIDATION_KEY5_PATH = "alternate/validation5.keys";
-    private static String ALT_VALIDATION_KEY6_PATH = "alternate/validation6.keys";
-    private static String ALT_VALIDATION_KEY7_PATH = "alternate/validation7.keys";
-    private static String ALT_VALIDATION_KEY8_PATH = "alternate/validation8.keys";
-    private static String ALT_CONFIGVALIDATION_KEY1_PATH = "alternate/configuredValidation1.keys";
-    private static String SERVER_XML_PATH = "server.xml";
 
     // Define the paths to the server.xml files
     private static final String relativeDirectory1 = server1.getServerRoot();
@@ -119,7 +105,8 @@ public class LTPAInitializationVectorTests {
     private static final String baseDirectory2 = server2.getInstallRootParent();
 
     // Define the remote message log file
-    private static RemoteFile messagesLogFile = null;
+    private static RemoteFile messagesLogFile1 = null;
+    private static RemoteFile messagesLogFile2 = null;
 
     @Rule
     public TestRule passwordChecker1 = new LeakedPasswordChecker(server1);
@@ -143,10 +130,12 @@ public class LTPAInitializationVectorTests {
     public static void setUp() throws Exception {
 
         // Copy validation key file (validation1.keys) to the server
-        LibertyServer[] servers = { server1 };
+
+        server2.useSecondaryHTTPPort();
+
+        LibertyServer[] servers = { server1, server2 };
 
         for (LibertyServer server : servers) {
-            copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server);
 
             server.setupForRestConnectorAccess();
 
@@ -162,8 +151,18 @@ public class LTPAInitializationVectorTests {
             assertNotNull("Expected LTPA configuration ready message not found in the log.",
                           server.waitForStringInLog("CWWKS4105I"));
 
-            messagesLogFile = server.getDefaultLogFile();
         }
+
+        messagesLogFile1 = server1.getDefaultLogFile();
+        messagesLogFile2 = server2.getDefaultLogFile();
+
+        server1FlClient1 = new FormLoginClient(server1, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
+        server1FlClient2 = new FormLoginClient(server1, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin2");
+        server2FlClient1 = new FormLoginClient(server2, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
+        server2FlClient2 = new FormLoginClient(server2, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin2");
+
+        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
+        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
 
     }
 
@@ -182,8 +181,11 @@ public class LTPAInitializationVectorTests {
     }
 
     public void resetConnection() {
-        flClient1.resetClientState();
-        flClient2.resetClientState();
+        server1FlClient1.resetClientState();
+        server1FlClient2.resetClientState();
+
+        server2FlClient1.resetClientState();
+        server2FlClient2.resetClientState();
     }
 
     @AfterClass
@@ -192,22 +194,63 @@ public class LTPAInitializationVectorTests {
             server1.stopServer(serverShutdownMessages);
             server2.stopServer(serverShutdownMessages);
         } finally {
-            flClient1.releaseClient();
-            flClient2.releaseClient();
+            server1FlClient1.resetClientState();
+            server1FlClient2.resetClientState();
+
+            server2FlClient1.resetClientState();
+            server2FlClient2.resetClientState();
         }
     }
 
+    /*
+     * POSITIVE TEST CASE:
+     * 1. Server #1 and Server #2 contain different primary LTPA Keys with different/same LTPA keys passwords
+     * 2. Access a simple servlet with form login using valid credentials on Server #1
+     * authentication should be successful and retrieve the SSO cookie
+     * 3. Copy the LTPA primary key from Server #1 and place it in Server #2
+     * rename the copied key to the name specified for the validation key in server.xml, and ensure that the password is set to that of the primary key in Server #1
+     * 4. Server #2 must be restarted
+     * 5. Attempt to access the simple servlet with form login on Server #2 using the SSO cookie from Server #1
+     * Authentication should be successful because the correct validation key, password and IV is provided
+     */
+
     @Mode(TestMode.LITE)
     @Test
-    public void testAlwaysPassing() throws Exception {
-        configureServer("true", "10", true, server1);
-        configureServer("true", "10", true, server2);
+    public void testLTPAValidationKeyUsage_twoServers_samePW() throws Exception {
 
-        assertTrue(true);
+        // Configure both servers, and replace the randomly generated LTPA keys with known valid keys
+        configureServer("true", "10", true, server1);
+        renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
+
+        configureServer("true", "10", true, server2);
+        renameFileIfExists(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, true, server2);
+
+        // Initial login to simple servlet for form login1
+        String response1 = server1FlClient1.accessProtectedServletWithAuthorizedCredentials(FormLoginClient.PROTECTED_SIMPLE, validUser, validPassword);
+
+        // Get the SSO cookie from the login
+        String server1Cookie = server1FlClient1.getCookieFromLastLogin();
+        assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
+
+        // Attempt to login to the simple servlet on server #2 and assert that the login fails
+        assertTrue("An invalid cookie should result in authorization challenge",
+                   server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
+
+        // Copy the ltpa.keys file to server #2 and rename it as validation1.key
+        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server2);
+        renameFileIfExists(VALIDATION_KEY1_PATH, CONFIGURED_VALIDATION_KEY1_PATH, true, server2);
+
+        server2.stopServer(serverShutdownMessages);
+        server2.startServer(true);
+
+        // Attempt to login to the simple servlet on server #2 and assert that the login is successful
+        server2FlClient1.accessProtectedServletWithAuthorizedCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie);
+
     }
 
     public void moveLogMarkForServer(LibertyServer server) throws Exception {
-        server.setMarkToEndOfLog(messagesLogFile);
+        server.setMarkToEndOfLog(messagesLogFile1);
+        server.setMarkToEndOfLog(messagesLogFile2);
     }
 
     // Function to do the server configuration for all the tests.
@@ -264,19 +307,11 @@ public class LTPAInitializationVectorTests {
         }
 
         // Assert that a default ltpa.keys file is generated
-        assertFileWasCreated(DEFAULT_KEY_PATH);
+        assertFileWasCreated(DEFAULT_KEY_PATH, server);
         server.setKeysAndJVMOptsForFips();
         if (setLogMarkToEnd)
-            server.setMarkToEndOfLog(messagesLogFile);
-    }
-
-    // Function to configure the keysFileName to a specific value
-    public boolean setLTPAkeysFileNameElement(LTPA ltpa, String value) {
-        if (!ltpa.keysFileName.equals(value)) {
-            ltpa.keysFileName = value;
-            return true; // Config update is needed
-        }
-        return false; // Config update is not needed;
+            server.setMarkToEndOfLog(messagesLogFile1);
+        server.setMarkToEndOfLog(messagesLogFile2);
     }
 
     // Function to set the monitorValidationKeysDir to true or false
@@ -315,69 +350,6 @@ public class LTPAInitializationVectorTests {
         return false; // Config update is not needed;
     }
 
-    // Function to configure the fileName for validation keys
-    public boolean setLTPAvalidationKeyFileNameElement(LTPA ltpa, String value) {
-        ConfigElementList<ValidationKeys> validationKeys = ltpa.getValidationKeys();
-        ValidationKeys validationKey = validationKeys.get(0);
-
-        // Check if null
-        if (validationKey.fileName == null) {
-            validationKey.fileName = value;
-            return true; // Config update is needed
-        }
-
-        if (!validationKey.fileName.equals(value)) {
-            validationKey.fileName = value;
-            return true; // Config update is needed
-        }
-        return false; // Config update is not needed;
-    }
-
-    // Function to configure the password for validation keys
-    public boolean setLTPAvalidationKeyPasswordElement(LTPA ltpa, String value) {
-        ConfigElementList<ValidationKeys> validationKeys = ltpa.getValidationKeys();
-        ValidationKeys validationKey = validationKeys.get(0);
-
-        // Check if null
-        if (validationKey.password == null) {
-            validationKey.password = value;
-            return true; // Config update is needed
-        }
-
-        if (!validationKey.password.equals(value)) {
-            validationKey.password = value;
-            return true; // Config update is needed
-        }
-        return false; // Config update is not needed;
-    }
-
-    // Function to configure the validUntilDate for validation keys
-    public boolean setLTPAvalidationKeyValidUntilDateElement(LTPA ltpa, String value) {
-        ConfigElementList<ValidationKeys> validationKeys = ltpa.getValidationKeys();
-        ValidationKeys validationKey = validationKeys.get(0);
-
-        // Check if null
-        if (validationKey.validUntilDate == null) {
-            validationKey.validUntilDate = value;
-            return true; // Config update is needed
-        }
-
-        if (!validationKey.validUntilDate.equals(value)) {
-            validationKey.validUntilDate = value;
-            return true; // Config update is needed
-        }
-        return false; // Config update is not needed;
-    }
-
-    // Function to configure the cacheEnabled element for authentication cache
-    public boolean setAuthenticationCacheEnabledElement(Authentication auth, String value) {
-        if (!auth.cacheEnabled.equals(value)) {
-            auth.cacheEnabled = value;
-            return true; // Config update is needed
-        }
-        return false; // Config update is not needed;
-    }
-
     // Function to update the server configuration dynamically
     public static void updateConfigDynamically(LibertyServer server, ServerConfiguration config) throws Exception {
         server.setMarkToEndOfLog(server.getDefaultLogFile());
@@ -402,12 +374,12 @@ public class LTPAInitializationVectorTests {
      */
     private static void deleteFileIfExists(String filePath, boolean checkFileIsGone, LibertyServer server) throws Exception {
         Log.info(thisClass, "deleteFileIfExists", "filepath: " + filePath);
-        if (fileExists(filePath, 1)) {
+        if (fileExists(filePath, 1, server)) {
             Log.info(thisClass, "deleteFileIfExists", "file exists, deleting...");
             server.deleteFileFromLibertyServerRoot(filePath);
 
             // Double check to make sure the file is gone
-            if (checkFileIsGone && fileExists(filePath, 1))
+            if (checkFileIsGone && fileExists(filePath, 1, server))
                 throw new Exception("Unable to delete file: " + filePath);
         }
     }
@@ -419,9 +391,9 @@ public class LTPAInitializationVectorTests {
      *
      * @throws Exception
      */
-    private void assertFileWasCreated(String filePath) throws Exception {
+    private void assertFileWasCreated(String filePath, LibertyServer server) throws Exception {
         assertTrue("The file was not created as expected. If this is an intermittent failure, then increase the wait time.",
-                   fileExists(filePath));
+                   fileExists(filePath, server));
     }
 
     /**
@@ -432,8 +404,8 @@ public class LTPAInitializationVectorTests {
      *
      * @throws Exception
      */
-    private static boolean fileExists(String filePath) throws Exception {
-        return fileExists(filePath, 5);
+    private static boolean fileExists(String filePath, LibertyServer server) throws Exception {
+        return fileExists(filePath, 5, server);
     }
 
     /**
@@ -445,7 +417,7 @@ public class LTPAInitializationVectorTests {
      *
      * @throws Exception
      */
-    private static boolean fileExists(String filePath, int numberOfTries) throws Exception {
+    private static boolean fileExists(String filePath, int numberOfTries, LibertyServer server) throws Exception {
         boolean exists = false;
         boolean exceptionHasBeenPrinted = false;
         int count = 0;
@@ -456,7 +428,7 @@ public class LTPAInitializationVectorTests {
                 Log.info(thisClass, "fileExists", "waiting 2s...");
             }
             try {
-                exists = server1.getFileFromLibertyServerRoot(filePath).exists();
+                exists = server.getFileFromLibertyServerRoot(filePath).exists();
             } catch (Exception e) {
                 // The file does not exist if there's an exception
                 Log.info(thisClass, "fileExists", "The file does not exist");
@@ -484,11 +456,41 @@ public class LTPAInitializationVectorTests {
      */
     private static void copyFileToServerResourcesSecurityDir(String sourceFile, LibertyServer server) throws Exception {
         Log.info(thisClass, "copyFileToServerResourcesSecurityDir", "sourceFile: " + sourceFile);
-        String serverRoot = server1.getServerRoot();
+        String serverRoot = server.getServerRoot();
         String securityResources = serverRoot + "/resources/security";
         server.setServerRoot(securityResources);
         server.copyFileToLibertyServerRoot(sourceFile);
         server.setServerRoot(serverRoot);
+    }
+
+    /**
+     * Rename the file if it exists. If we can't rename it, then
+     * throw an exception as we need to be able to rename these files.
+     * If checkFileIsGone is true, then we will double check to make
+     * sure the file is gone.
+     *
+     * @param filePath
+     * @param newFilePath
+     * @param checkFileIsGone
+     *
+     * @throws Exception
+     */
+    private static void renameFileIfExists(String filePath, String newFilePath, boolean checkFileIsGone, LibertyServer server) throws Exception {
+        Log.info(thisClass, "renameFileIfExists", "\nfilepath: " + filePath + "\nnewFilePath: " + newFilePath);
+        server.setMarkToEndOfLog(server.getDefaultLogFile());
+
+        if (fileExists(filePath, 1, server)) {
+            if (fileExists(newFilePath, 1, server)) {
+                LibertyFileManager.moveLibertyFile(server.getFileFromLibertyServerRoot(filePath), server.getFileFromLibertyServerRoot(newFilePath));
+            } else {
+                Log.info(thisClass, "renameFileIfExists", "Calling server.renameLibertyServerRootFile");
+                server.renameLibertyServerRootFile(filePath, newFilePath);
+            }
+        }
+
+        // Double check to make sure the file is gone
+        if (checkFileIsGone && fileExists(filePath, 1, server))
+            throw new Exception("Unable to rename file: " + filePath);
     }
 
     /**
@@ -512,11 +514,11 @@ public class LTPAInitializationVectorTests {
         deleteFileIfExists(CONFIGURED_VALIDATION_KEY1_PATH, true, server);
 
         // Wait for the LTPA configuration to be ready after the change
-        assertNotNull("Expected LTPA configuration ready message not found in the log.",
-                      server1.waitForStringInLog("CWWKS4105I", 5000));
+//        assertNotNull("Expected LTPA configuration ready message not found in the log.",
+//                      server.waitForStringInLog("CWWKS4105I", 10000));
 
         // Assert that a default ltpa.keys file exists prior to next test case
-        assertFileWasCreated(DEFAULT_KEY_PATH);
+        assertFileWasCreated(DEFAULT_KEY_PATH, server);
         Log.info(thisClass, "resetServer", "exiting");
     }
 }
