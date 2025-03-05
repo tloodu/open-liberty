@@ -736,7 +736,7 @@ public class LTPAInitializationVectorTests {
      @Mode(TestMode.LITE)
      @Test
      @AllowedFFDC({ "javax.crypto.BadPaddingException","java.lang.IllegalArgumentException" })
-     public void testLTPA_fipskey_in_nonfips() throws Exception {
+     public void testLTPA_fipskey_in_nonfips_and_vice_versa() throws Exception {
         
 
 
