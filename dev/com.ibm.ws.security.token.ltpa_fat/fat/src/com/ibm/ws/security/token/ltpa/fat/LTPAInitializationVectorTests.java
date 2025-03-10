@@ -194,7 +194,6 @@ public class LTPAInitializationVectorTests {
     @BeforeClass
     public static void setUp() throws Exception {
 
-        // Copy validation key file (validation1.keys) to the server
         server2.useSecondaryHTTPPort();
 
         LibertyServer[] servers = { server1, server2 };
