@@ -905,7 +905,7 @@ public class LTPAInitializationVectorTests {
      * 3. Access a simple servlet with form login using valid credentials on server #1
      * 4. Authentication should be successful and retrieve the SSO cookie
      * 5. Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * 6. Authentication fails because although IV and keys file is valid
+     * 6. Authentication fails because IV and keys file is valid
      */
 
     
@@ -1042,7 +1042,7 @@ public class LTPAInitializationVectorTests {
      * 4. Copy the LTPA Primary key as in Server #1 and place it in Server #2, renamed as validation1.key
      * 5. Replace the `password` property to the same as that of server 1.
      * 6. Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * 7. Authentication fails because although IV and keys are invalid as MonitorValidationKeysDir was false so any changes to the validation key
+     * 7. Authentication fails because IV and keys are invalid as MonitorValidationKeysDir was false so any changes to the validation key
      * will not be registered. Even though validation1.keys should result in a success on server 2, it does not as the IV was still set to ltpa2.keys.
      */
 
@@ -1096,7 +1096,7 @@ public class LTPAInitializationVectorTests {
      * 4. Access a simple servlet with form login using valid credentials on server #1
      * 5. Authentication should be successful and retrieve the SSO cookie
      * 6. Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * 7. Authentication fails because although IV and keys file is valid, the validation key is invalid
+     * 7. Authentication fails because IV and keys file is valid, the validation key is invalid
      */
 
     @Mode(TestMode.LITE)
