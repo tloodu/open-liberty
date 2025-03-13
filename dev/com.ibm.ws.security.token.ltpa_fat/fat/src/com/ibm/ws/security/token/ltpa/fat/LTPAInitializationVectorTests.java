@@ -109,16 +109,10 @@ public class LTPAInitializationVectorTests {
     private static String ALT_VALIDATION_KEY2_PATH = "alternate/validation2.keys";
     private static String ALT_VALIDATION_KEY3_PATH = "alternate/validation3.keys";
     private static String ALT_VALIDATION_KEY4_PATH = "alternate/validation4.keys";
-    private static String ALT_VALIDATION_KEY5_PATH = "alternate/validation5.keys";
-    private static String ALT_VALIDATION_KEY6_PATH = "alternate/validation6.keys";
-    private static String ALT_VALIDATION_KEY7_PATH = "alternate/validation7.keys";
-    private static String ALT_VALIDATION_KEY8_PATH = "alternate/validation8.keys";
     private static String ALT_VALIDATION_KEY9_PATH = "alternate/validation9.keys";
     private static String VALIDATION_KEYS_4 = "validation4.keys";
     private static String VALIDATION_KEYS_1 = "validation1.keys";
 
-
-    private static String SERVER_XML_PATH = "server.xml";
 
     // Define the paths to the alternate key files
     private static String ALT_FIPS_VALIDATION_KEY1_PATH = "alternateFIPS/validation1.keys";
@@ -164,10 +158,6 @@ public class LTPAInitializationVectorTests {
             ALT_VALIDATION_KEY2_PATH = ALT_FIPS_VALIDATION_KEY2_PATH;
             ALT_VALIDATION_KEY3_PATH = ALT_FIPS_VALIDATION_KEY3_PATH;
             ALT_VALIDATION_KEY4_PATH = ALT_FIPS_VALIDATION_KEY4_PATH;
-            ALT_VALIDATION_KEY5_PATH = ALT_FIPS_VALIDATION_KEY5_PATH;
-            ALT_VALIDATION_KEY6_PATH = ALT_FIPS_VALIDATION_KEY6_PATH;
-            ALT_VALIDATION_KEY7_PATH = ALT_FIPS_VALIDATION_KEY7_PATH;
-            ALT_VALIDATION_KEY8_PATH = ALT_FIPS_VALIDATION_KEY8_PATH;
             ALT_VALIDATION_KEY9_PATH = ALT_FIPS_VALIDATION_KEY9_PATH;
         }
     }
@@ -904,7 +894,7 @@ public class LTPAInitializationVectorTests {
      * 3. Access a simple servlet with form login using valid credentials on server #1
      * 4. Authentication should be successful and retrieve the SSO cookie
      * 5. Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * 6. Authentication fails because IV and keys file is valid
+     * 6. Authentication fails because IV and keys file are invalid
      */
 
     
