@@ -87,6 +87,8 @@ public class LTPAInitializationVectorTests {
     private static final String DEFAULT_FIPS_SERVER2_XML = "server2FIPS.xml";
     private static final String BACKUP_SERVERXML_IV_SERVER_1 = "iv_server1_server.xml";
     private static final String BACKUP_SERVERXML_IV_SERVER_2 = "iv_server2_server.xml";
+    private static final String BACKUP_SERVERXML_IV_SERVER_1_FIPS = "iv_fips_server1.xml";
+    private static final String BACKUP_SERVERXML_IV_SERVER_2_FIPS = "iv_fips_server2.xml";
 
     // Define the paths to the key files
     private static final String DEFAULT_KEY_PATH = "resources/security/ltpa.keys";
@@ -212,15 +214,31 @@ public class LTPAInitializationVectorTests {
                 server.startServer(true);
             }
         }
-        // Fix up server.xml for both server1 and server 2. Modifications to server xml will carry into subsequent tests
-        server1.copyFileToLibertyServerRoot(BACKUP_SERVERXML_IV_SERVER_1);
-        //TODO FIPS needs to be considered here.
-        renameFileIfExists(BACKUP_SERVERXML_IV_SERVER_1, DEFAULT_SERVER_XML, true, server1);
-        server1.waitForStringInLogUsingMark("CWWKG001[7-8]I");
 
-        server2.copyFileToLibertyServerRoot(BACKUP_SERVERXML_IV_SERVER_2);
-        // TODO FIPS needs to be considered here
-        renameFileIfExists(BACKUP_SERVERXML_IV_SERVER_2, DEFAULT_SERVER_XML, true, server2);
+        if (fipsEnabled){
+
+            // Fix up server.xml for both server1 and server 2. Modifications to server xml will carry into subsequent tests
+            server1.copyFileToLibertyServerRoot(BACKUP_SERVERXML_IV_SERVER_1_FIPS);
+            //TODO FIPS needs to be considered here.
+            renameFileIfExists(BACKUP_SERVERXML_IV_SERVER_1_FIPS, DEFAULT_SERVER_XML, true, server1);
+            server1.waitForStringInLogUsingMark("CWWKG001[7-8]I");
+
+            server2.copyFileToLibertyServerRoot(BACKUP_SERVERXML_IV_SERVER_2_FIPS);
+            // TODO FIPS needs to be considered here
+            renameFileIfExists(BACKUP_SERVERXML_IV_SERVER_2_FIPS, DEFAULT_SERVER_XML, true, server2);
+        }
+        else {
+        
+            // Fix up server.xml for both server1 and server 2. Modifications to server xml will carry into subsequent tests
+            server1.copyFileToLibertyServerRoot(BACKUP_SERVERXML_IV_SERVER_1);
+            //TODO FIPS needs to be considered here.
+            renameFileIfExists(BACKUP_SERVERXML_IV_SERVER_1, DEFAULT_SERVER_XML, true, server1);
+            server1.waitForStringInLogUsingMark("CWWKG001[7-8]I");
+
+            server2.copyFileToLibertyServerRoot(BACKUP_SERVERXML_IV_SERVER_2);
+            // TODO FIPS needs to be considered here
+            renameFileIfExists(BACKUP_SERVERXML_IV_SERVER_2, DEFAULT_SERVER_XML, true, server2);
+        }
 
         for (LibertyServer server : servers) {
             server.waitForStringInLogUsingMark("CWWKG001[7-8]I");
@@ -384,7 +402,12 @@ public class LTPAInitializationVectorTests {
         // Dynamically add a configured validation key element into the server2 configuration
         ServerConfiguration server2Config = server2.getServerConfiguration();
         LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, "configuredValidation1.keys", "{xor}Lz4sLCgwLTs=");
+
+        if (fipsEnabled){
+            setLTPAValidationKey(ltpa2, "configuredValidation1.keys", "{xor}CDo9Hgw=");
+        } else {
+            setLTPAValidationKey(ltpa2, "configuredValidation1.keys", "{xor}Lz4sLCgwLTs=");
+        }
         // Update the server configuration to recognize the changes
         updateConfigDynamically(server2, server2Config);
 
@@ -436,7 +459,7 @@ public class LTPAInitializationVectorTests {
 
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server1);
-
+        
         // Replace the randomly generated LTPA keys with the known valid ltpa keys and assert the change occurs
         renameFileIfExists(DIFFERENT_PW_VALIDATION_KEY_PATH, DEFAULT_KEY_PATH, true, server1);
         assertNotNull("Expected LTPA configuration ready message not found in the log.",
