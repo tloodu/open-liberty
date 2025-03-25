@@ -1362,7 +1362,11 @@ public class LTPAInitializationVectorTests {
 
         ServerConfiguration serverConfig = server.getServerConfiguration();
         LTPA ltpa = serverConfig.getLTPA();
-        setLTPAKeyPasswordElement(ltpa, "{xor}Lz4sLCgwLTs=");
+        if (fipsEnabled) {
+            setLTPAKeyPasswordElement(ltpa, "{xor}CDo9Hgw=");
+        } else {
+            setLTPAKeyPasswordElement(ltpa, "{xor}Lz4sLCgwLTs=");
+        }
         updateConfigDynamically(server, serverConfig);
 
         server.stopServer(serverShutdownMessages);
