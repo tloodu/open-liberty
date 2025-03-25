@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.StringJoiner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -237,14 +238,15 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
      */
     private void debugLTPAConfig() {
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(tc, "primaryKeyImportFile: " + primaryKeyImportFile);
-            //Tr.debug(tc, "primaryKeyPassword: " + primaryKeyPassword);
-            Tr.debug(tc, "keyTokenExpiration: " + keyTokenExpiration);
-            Tr.debug(tc, "monitorInterval: " + monitorInterval);
-            Tr.debug(tc, "authFilterRef: " + authFilterRef);
-            Tr.debug(tc, "monitorValidationKeysDir: " + monitorValidationKeysDir);
-            Tr.debug(tc, "updateTrigger: " + updateTrigger);
-            Tr.debug(tc, "validationKeys: " + (validationKeys == null ? "Null" : maskKeysPasswords(validationKeys)));
+            StringJoiner sj = new StringJoiner(", ", "debugLTPAConfig[", "]");
+            sj.add("primaryKeyImportFile: " + primaryKeyImportFile);
+            sj.add("keyTokenExpiration: " + keyTokenExpiration);
+            sj.add("monitorInterval: " + monitorInterval);
+            sj.add("authFilterRef: " + authFilterRef);
+            sj.add("monitorValidationKeysDir: " + monitorValidationKeysDir);
+            sj.add("updateTrigger: " + updateTrigger);
+            sj.add("validationKeys: " + (validationKeys == null ? "Null" : maskKeysPasswords(validationKeys)));
+            Tr.debug(tc, sj.toString());
         }
     }
 
@@ -367,13 +369,19 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
 
         if (monitorValidationKeysDir || isValidationKeysFileConfigured) {
             try {
-                // primaryKeyImportFile has already been resolved when the server loads the config, this includes variable and .. being resolved.
                 // primaryKeyImportDir is required to be set to load any validation keys.
                 primaryKeyImportDir = new File(primaryKeyImportFile).getCanonicalFile().getParent() + File.separator;
                 Tr.debug(tc, "primaryKeyImportDir: " + primaryKeyImportDir);
             } catch (IOException e) {
                 Tr.debug(tc, "An exception occurred in resolveActualPrimaryKeysFileLocation method", e);
             }
+        }
+
+        try {
+            // Get the canonical path for primaryKeyImportFile so that path separators are corrected based on OS.
+            primaryKeyImportFile = new File(primaryKeyImportFile).getCanonicalPath();
+        } catch (IOException ioe) {
+            Tr.debug(tc, "An exception occurred in resolveActualPrimaryKeysFileLocation method", ioe);
         }
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
