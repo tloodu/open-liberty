@@ -93,9 +93,9 @@ public class LTPAInitializationVectorTests {
     private static final String VALIDATION_KEY1 = "validation1.keys";
     private static final String VALIDATION_KEY4 = "validation4.keys";
     private static final String VALIDATION_KEY9 = "validation9.keys";
-    private static final String LIBERTY_PASSWORD_ENCRYPT = "{xor}EzY9Oi0rJg==";
-    private static String PASSWORD_ENCRYPT = "{xor}Lz4sLCgwLTs=";
-    private static String PASSWORD_FIPS_ENCRYPT = "{xor}CDo9Hgw=";
+    private static final String LTPA_LIBERTY_PASSWORD = "{xor}EzY9Oi0rJg==";
+    private static String LTPA_DEFAULT_PASSWORD = "{xor}Lz4sLCgwLTs=";
+    private static String LTPA_FIPS_DEFAULT_PASSWORD= "{xor}CDo9Hgw=";
     
     List<String> PREBUILT_KEYS = Arrays.asList(DEFAULT_KEY_PATH, DIFFERENT_PW_VALIDATION_KEY_PATH, BAD_SHARED_VALIDATION_KEY2_PATH,
                                                VALIDATION_KEY3_PATH,
@@ -137,7 +137,7 @@ public class LTPAInitializationVectorTests {
             ALT_VALIDATION_KEY3_PATH = ALT_FIPS_VALIDATION_KEY3_PATH;
             ALT_VALIDATION_KEY4_PATH = ALT_FIPS_VALIDATION_KEY4_PATH;
             ALT_VALIDATION_KEY9_PATH = ALT_FIPS_VALIDATION_KEY9_PATH;
-            PASSWORD_ENCRYPT = PASSWORD_FIPS_ENCRYPT;
+            LTPA_DEFAULT_PASSWORD= LTPA_FIPS_DEFAULT_PASSWORD;
         }
     }
 
@@ -373,7 +373,7 @@ public class LTPAInitializationVectorTests {
 
         // Dynamically add a configured validation key element into the server2 configuration
         LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY1, PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY1, LTPA_DEFAULT_PASSWORD);
 
         // Update the server configuration to recognize the changes
         updateConfigDynamically(server2, server2Config);
@@ -417,7 +417,7 @@ public class LTPAInitializationVectorTests {
         // Change the default keysPassword configured in server.xml to that of the added ltpa keys file (Liberty)
         ServerConfiguration serverConfig = server1.getServerConfiguration();
         LTPA ltpa = serverConfig.getLTPA();
-        setLTPAKeyPasswordElement(ltpa, LIBERTY_PASSWORD_ENCRYPT);
+        setLTPAKeyPasswordElement(ltpa, LTPA_LIBERTY_PASSWORD);
         updateConfigDynamically(server1, serverConfig);
 
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
@@ -446,7 +446,7 @@ public class LTPAInitializationVectorTests {
         // Dynamically add the validation key element into the server2 configuration
         ServerConfiguration server2Config = server2.getServerConfiguration();
         LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LIBERTY_PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LTPA_LIBERTY_PASSWORD);
         updateConfigDynamically(server2, server2Config);
 
         // Copy the ltpa.keys file to server #2 and test authentication should be successful because monitorValidationkeysDir monitors unlisted keys files
@@ -530,7 +530,7 @@ public class LTPAInitializationVectorTests {
 
         // Dynamically add the validation key element into the server2 configuration
         LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LIBERTY_PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LTPA_LIBERTY_PASSWORD);
         updateConfigDynamically(server2, server2Config);
 
         // Attempt to login to the simple servlet on server #2 and assert that the login is successful
@@ -713,7 +713,7 @@ public class LTPAInitializationVectorTests {
         // Change the default keysPassword to that of the added ltpa keys file (Liberty)
         ServerConfiguration server2Config = server2.getServerConfiguration();
         LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, LTPA_DEFAULT_PASSWORD);
        
         updateConfigDynamically(server2, server2Config);
 
@@ -905,7 +905,7 @@ public class LTPAInitializationVectorTests {
         // Change the default keysPassword to that of the added ltpa keys file
         ServerConfiguration serverConfig = server1.getServerConfiguration();
         LTPA ltpa = serverConfig.getLTPA();
-        setLTPAKeyPasswordElement(ltpa, PASSWORD_ENCRYPT);
+        setLTPAKeyPasswordElement(ltpa, LTPA_DEFAULT_PASSWORD);
         updateConfigDynamically(server1, serverConfig);
         
 
@@ -924,7 +924,7 @@ public class LTPAInitializationVectorTests {
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server2);
 
         // Change the default keysPassword to that of the added ltpa keys file 
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY1, PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY1, LTPA_DEFAULT_PASSWORD);
         
         updateConfigDynamically(server2, server2Config);
         
@@ -938,7 +938,7 @@ public class LTPAInitializationVectorTests {
 
          //Copy over validation4.keys
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY4_PATH, server2);
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, LTPA_DEFAULT_PASSWORD);
         
         updateConfigDynamically(server2, server2Config);
        
@@ -1087,7 +1087,7 @@ public class LTPAInitializationVectorTests {
         // set the key file element as the failing key
         ServerConfiguration server2Config = server2.getServerConfiguration();
         LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, PASSWORD_ENCRYPT);
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, LTPA_DEFAULT_PASSWORD);
         
         updateConfigDynamically(server2, server2Config);
 
