@@ -384,7 +384,7 @@ public class LTPAInitializationVectorTests {
         server2FlClient1.accessProtectedServletWithAuthorizedCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie);
     }
 
-    /**
+        /**
      * Verify that an SSO cookie retrieved from authentication on one server can be used on a second server using a validation key and derived IV where both servers use different
      * keysPassword.
      *
@@ -408,18 +408,17 @@ public class LTPAInitializationVectorTests {
      */
     @Mode(TestMode.LITE)
     @Test
-    @AllowedFFDC({ "javax.crypto.BadPaddingException", "java.lang.IllegalArgumentException" })
     public void testLTPAValidationKeyUsage_twoServers_differentPW_monitorValidationKeysDir_true() throws Exception {
 
         // Configure the servers
         configureServer("true", "10", true, server1);
         configureServer("true", "10", true, server2);
 
-      // Change the default keysPassword configured in server.xml to that of the added ltpa keys file (Liberty)
-      ServerConfiguration serverConfig = server1.getServerConfiguration();
-      LTPA ltpa = serverConfig.getLTPA();
-      setLTPAKeyPasswordElement(ltpa, LIBERTY_PASSWORD_ENCRYPT);
-      updateConfigDynamically(server1, serverConfig);
+        // Change the default keysPassword configured in server.xml to that of the added ltpa keys file (Liberty)
+        ServerConfiguration serverConfig = server1.getServerConfiguration();
+        LTPA ltpa = serverConfig.getLTPA();
+        setLTPAKeyPasswordElement(ltpa, LIBERTY_PASSWORD_ENCRYPT);
+        updateConfigDynamically(server1, serverConfig);
 
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server1);
@@ -444,16 +443,18 @@ public class LTPAInitializationVectorTests {
         String server1Cookie = server1FlClient1.getCookieFromLastLogin();
         assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
 
+        // Dynamically add the validation key element into the server2 configuration
+        ServerConfiguration server2Config = server2.getServerConfiguration();
+        LTPA ltpa2 = server2Config.getLTPA();
+        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LIBERTY_PASSWORD_ENCRYPT);
+        updateConfigDynamically(server2, server2Config);
 
         // Copy the ltpa.keys file to server #2 and test authentication should be successful because monitorValidationkeysDir monitors unlisted keys files
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server2);
         assertNotNull("Expected LTPA configuration ready message not found in the log.",
                       server2.waitForStringInLog("CWWKS4105I", 10000));
 
-        // Dynamically add the validation key element into the server2 configuration
-        ServerConfiguration server2Config = server2.getServerConfiguration();
-        LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LIBERTY_PASSWORD_ENCRYPT);
+        // Refresh the server configuration to allow recognition of the configured validation key
         updateConfigDynamically(server2, server2Config);
 
         // Attempt to login to the simple servlet on server #2 and assert that the login is successful (uses validation key)
