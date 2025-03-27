@@ -546,13 +546,14 @@ public class LTPAInitializationVectorTests {
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
 
-        // Configure both servers, and replace the generated LTPA keys with the known valid ltpa key in server 1
+        // Configure the server, and replace the generated LTPA keys with the known valid ltpa key in server 1
         configureServer("true", "10", true, server1);
         renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
 
         configureServer("true", "10", true, server2);
-        // Configure both servers, and replace the generated LTPA keys with the known valid ltpa key in server 2
+        // Configure the server, and replace the generated LTPA keys with the known valid ltpa key in server 2
         renameFileIfExists(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, true, server2);
+
         // Wait for the LTPA configuration to be ready after the change
         assertNotNull("Expected LTPA configuration ready message not found in the log.",
                       server2.waitForStringInLog("CWWKS4105I", 5000));
@@ -566,7 +567,8 @@ public class LTPAInitializationVectorTests {
         assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
 
 
-        // // Attempt to login to the simple servlet on server #2 and assert that the login fails
+        // Attempt to login to the simple servlet on server #2 and assert that the login fails
+        // IV for server 1 is validation1.keys but IV for server 2 is validation2.keys
         assertTrue("An invalid cookie should result in an authorization challenge",
                    server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
     }
@@ -584,6 +586,7 @@ public class LTPAInitializationVectorTests {
     @Mode(TestMode.LITE)
     @Test
     @AllowedFFDC({ "java.lang.IllegalArgumentException" })
+    //Have to allow FFDC as the 3des key length with the word 'garbage' is not divisible by 4 and can not be decrypted properly
     public void testLTPAValidationKeyUsage_no_validation_keys_and_bad_keys() throws Exception {
         // Copy valid ltpa keys to server 1 and an invalid one to server 2
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
@@ -597,6 +600,7 @@ public class LTPAInitializationVectorTests {
         renameFileIfExists(VALIDATION_KEY3_PATH, DEFAULT_KEY_PATH, true, server2);
 
         // Wait for the LTPA configuration error message (ltpa contains garbage value)
+        
         assertNotNull("Expected LTPA configuration error message not found in the log.",
                       server2.waitForStringInLog("CWWKS4106E", 5000));
 
@@ -634,6 +638,8 @@ public class LTPAInitializationVectorTests {
         // Configure both servers, and replace the randomly generated LTPA keys with the known valid ltpa keys
         configureServer("true", "10", true, server1);
         renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
+        assertNotNull("Expected LTPA configuration ready message not found in the log.",
+                      server1.waitForStringInLog("CWWKS4105I", 5000));
 
         configureServer("true", "10", true, server2);
         renameFileIfExists(VALIDATION_KEY3_PATH, DEFAULT_KEY_PATH, true, server2);
@@ -659,7 +665,8 @@ public class LTPAInitializationVectorTests {
         }
         updateConfigDynamically(server2, server2Config);
 
-        // // Attempt to login to the simple servlet on server #2 and assert that the login  fails as expected
+        // Attempt to login to the simple servlet on server #2 and assert that the login  fails as expected
+        // The IV is set to an invalid  key for server 2 
         assertTrue("An invalid cookie should result in an authorization challenge",
                    server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
     }
@@ -688,6 +695,7 @@ public class LTPAInitializationVectorTests {
             configureServer("true", "10", true, server1);
 
             renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
+
 
             updateConfigDynamically(server1, serverConfig);
 
@@ -741,6 +749,8 @@ public class LTPAInitializationVectorTests {
         renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
 
         // Wait for the LTPA configuration to be ready after the change
+        assertNotNull("Expected LTPA configuration ready message not found in the log.",
+                      server2.waitForStringInLog("CWWKS4105I", 5000));
 
         configureServer("true", "10", true, server2);
 
@@ -786,6 +796,8 @@ public class LTPAInitializationVectorTests {
         renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
 
         // Wait for the LTPA configuration to be ready after the change
+        assertNotNull("Expected LTPA configuration ready message not found in the log.",
+                      server2.waitForStringInLog("CWWKS4105I", 5000));
 
         configureServer("true", "10", true, server2);
         renameFileIfExists(BAD_SHARED_VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, true, server2);
@@ -928,10 +940,17 @@ public class LTPAInitializationVectorTests {
         // Configure both servers, and replace the randomly generated LTPA keys  with valid keys in server 1 and invalid ones in server 2
         configureServer("true", "10", true, server1);
         renameFileIfExists(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, true, server1);
+        // Wait for the LTPA configuration to be ready after the change
+        assertNotNull("Expected LTPA configuration ready message not found in the log.",
+                      server2.waitForStringInLog("CWWKS4105I", 5000));
 
         configureServer("true", "10", true, server2);
 
         renameFileIfExists(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, true, server2);
+        // Wait for the LTPA configuration to be ready after the change
+        assertNotNull("Expected LTPA configuration ready message not found in the log.",
+                      server2.waitForStringInLog("CWWKS4105I", 5000));
+
         // Initial login to simple servlet for form login1
         server1FlClient1.accessProtectedServletWithAuthorizedCredentials(FormLoginClient.PROTECTED_SIMPLE, validUser, validPassword);
 
