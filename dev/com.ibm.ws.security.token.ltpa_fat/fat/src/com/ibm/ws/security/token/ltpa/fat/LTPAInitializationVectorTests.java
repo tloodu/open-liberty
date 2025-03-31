@@ -647,7 +647,7 @@ public class LTPAInitializationVectorTests {
     @Mode(TestMode.LITE)
     @Test
     @AllowedFFDC({ "java.lang.IllegalArgumentException" })
-    //FFDC because validation4.keys is an incorrectly formatted corrupted key which will cause an Illegal Argument exceptions
+    //FFDC because validation3.keys is an incorrectly formatted corrupted key which will cause an Illegal Argument exceptions
     public void testLTPAValidationKeyUsage_bad_keys() throws Exception {
 
         // Copy valid ltpa keys to server1 and invalid primary and valid key to server 2
