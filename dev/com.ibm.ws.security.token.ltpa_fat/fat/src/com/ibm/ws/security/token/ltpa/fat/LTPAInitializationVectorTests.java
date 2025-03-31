@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2023, 2025 IBM Corporation and others.
+ * Copyright (c) 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -569,59 +569,6 @@ public class LTPAInitializationVectorTests {
     /**
      * Negative Test Case:
      * Verify that the SSO cookie from a server with a valid key fails on a server with an invalid key. Even though an FFDC will be created for server 2
-     * because an invalid key (badly formatted) can not be decrypted, we can allow it to validate the SSO failure on server 2.
-     * This will result in an invalid IV value for server 2.
-     *
-     * Steps:
-     *
-     * <OL>
-     * <LI> Server #1 and Server #2 contain different primary LTPA keys with different LTPA keys passwords and corrupted keys in server 2
-     * <LI> Place an invalid primary key into Server #2 (different than primary key of Server #1
-     * <LI> Access a simple servlet with form login using valid credentials on Server #1
-     * <LI> Attempt to access the simple servlet with form login on Server #2 using the SSO cookie from Server #1
-     * </OL>
-     *
-     * Expected Results:
-     * <OL>
-     * <LI>
-     * <LI> Authentication should be successful and retrieve the SSO cookie on server 1
-     * <LI> Authentication fails on server 2 because the SSO token cannot be decrypted by the primary and validation key does not exist in server 2 to override the ltpa key
-     * </OL>
-     */
-
-    @Mode(TestMode.FULL)
-    @Test
-    @AllowedFFDC({ "java.lang.IllegalArgumentException" })
-    //Have to allow FFDC as the 3des key length with the word 'garbage' is not divisible by 4 and can not be decrypted properly
-    public void testLTPAValidationKeyUsage_no_validation_keys_and_bad_keys() throws Exception {
-
-        // Copy valid ltpa keys to server 1 and an invalid one to server 2
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY3_PATH, server2);
-
-        // Configure both servers, and replace the randomly generated LTPA keys with the known valid ltpa keys
-        configureServer("true", "10", true, server1);
-        configureServer("true", "10", true, server2);
-
-        renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
-
-        renameKeyAndWaitForMessage(VALIDATION_KEY3_PATH, DEFAULT_KEY_PATH, server2, "CWWKS4106E");
-
-        // Initial login to simple servlet for form login1
-        server1FlClient1.accessProtectedServletWithAuthorizedCredentials(FormLoginClient.PROTECTED_SIMPLE, validUser, validPassword);
-
-        // Get the SSO cookie from the login
-        String server1Cookie = server1FlClient1.getCookieFromLastLogin();
-        assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
-
-        // // Attempt to login to the simple servlet on server #2 and assert that the login fails as only bad key is in the IV of server 2
-        assertTrue("An invalid cookie should result in an authorization challenge",
-                   server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
-    }
-
-    /**
-     * Negative Test Case:
-     * Verify that the SSO cookie from a server with a valid key fails on a server with an invalid key. Even though an FFDC will be created for server 2
      * because an invalid key (badly formatted) can not be decrypted, we can allow it to validate the SSO failure on server 2. Even though we have validation4.keys,
      * the FFDC will still be created as all of server 2's validation keys will be monitored.
      * This will as result in an invalid IV value for server 2 because both the primary and validation keys are invalid.
@@ -820,7 +767,7 @@ public class LTPAInitializationVectorTests {
 
     @Mode(TestMode.FULL)
     @Test
-    public void testLTPAValidationKeyUsage_set_passing_validation_key_to_failing_validation_key() throws Exception {
+    public void testLTPAValidationKeyUsage_set_validationKeys_dynamically() throws Exception {
         // Copy valid ltpa keys to server1. Copy invalid keys to server 2.
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY4_PATH, server2);
@@ -911,9 +858,9 @@ public class LTPAInitializationVectorTests {
      *
      **/
 
-    @Mode(TestMode.FULL)
+    @Mode(TestMode.LITE)
     @Test
-    public void testLTPAValidationKeyUsage_set_MonitorValidationKeysDir_to_false_with_failing_validation_key() throws Exception {
+    public void testLTPAValidationKeyUsage_failing_validation_key_monitorValidationKeysDir_false() throws Exception {
         // Configure the servers
         configureServer("false", "10", false, server1);
         configureServer("false", "10", false, server2);
