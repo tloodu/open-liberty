@@ -765,7 +765,7 @@ public class LTPAInitializationVectorTests {
      * </OL>
      */
 
-    @Mode(TestMode.FULL)
+    @Mode(TestMode.LITE)
     @Test
     public void testLTPAValidationKeyUsage_set_validationKeys_dynamically() throws Exception {
         // Copy valid ltpa keys to server1. Copy invalid keys to server 2.
@@ -858,7 +858,7 @@ public class LTPAInitializationVectorTests {
      *
      **/
 
-    @Mode(TestMode.LITE)
+    @Mode(TestMode.FULL)
     @Test
     public void testLTPAValidationKeyUsage_failing_validation_key_monitorValidationKeysDir_false() throws Exception {
         // Configure the servers
