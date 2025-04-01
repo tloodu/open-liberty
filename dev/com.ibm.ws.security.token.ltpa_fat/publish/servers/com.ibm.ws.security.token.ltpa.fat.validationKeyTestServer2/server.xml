@@ -10,7 +10,7 @@
     Contributors:
         IBM Corporation - initial API and implementation
  -->
-<server description="com.ibm.ws.webcontainer.security.fat.initializationVectorTestServer2">
+<server description="com.ibm.ws.webcontainer.security.fat.validationKeyTestServer2">
 
     <featureManager>
         <feature>appSecurity-2.0</feature>
@@ -80,8 +80,7 @@
     
     <httpSession securityIntegrationEnabled="false"/>
 
-    <ltpa monitorInterval = "10" monitorValidationKeysDir="true" expiration="10m" updateTrigger="polled" keysFileName="${server.config.dir}/resources/security/ltpa.keys" keysPassword="{xor}Lz4sLCgwLTs=">
-    </ltpa>
+    <ltpa monitorInterval = "10" monitorValidationKeysDir="true" expiration="10m" updateTrigger="polled" keysFileName="${server.config.dir}/resources/security/ltpa.keys" keysPassword="{xor}Lz4sLCgwLTs=" />
 
 	<include location="../fatTestCommon.xml" />
  	<javaPermission className="javax.security.auth.AuthPermission" name="createLoginContext.system.WEB_INBOUND"/>

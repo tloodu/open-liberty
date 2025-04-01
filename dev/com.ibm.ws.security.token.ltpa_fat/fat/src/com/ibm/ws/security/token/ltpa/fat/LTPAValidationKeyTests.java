@@ -50,20 +50,20 @@ import componenttest.vulnerability.LeakedPasswordChecker;
 @SuppressWarnings("restriction")
 @RunWith(FATRunner.class)
 @Mode(TestMode.FULL)
-public class LTPAInitializationVectorTests {
+public class LTPAValidationKeyTests {
 
     // Initialize needed strings for the tests
     protected static String METHODS = null;
-    protected static final String APP_NAME = "ltpaInitializationVectorTestServer";
+    protected static final String APP_NAME = "ltpavalidationKeyTestServer";
     protected static final String PROGRAMMATIC_API_SERVLET = "ProgrammaticAPIServlet";
     protected static final String authTypeForm = "FORM";
     protected static final String cookieName = "LtpaToken2";
 
     // Initialize two liberty servers for form login
-    private static LibertyServer server1 = LibertyServerFactory.getLibertyServer("com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer1");
-    private static LibertyServer server2 = LibertyServerFactory.getLibertyServer("com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer2");
+    private static LibertyServer server1 = LibertyServerFactory.getLibertyServer("com.ibm.ws.security.token.ltpa.fat.validationKeyTestServer1");
+    private static LibertyServer server2 = LibertyServerFactory.getLibertyServer("com.ibm.ws.security.token.ltpa.fat.validationKeyTestServer2");
 
-    private static final Class<?> thisClass = LTPAInitializationVectorTests.class;
+    private static final Class<?> thisClass = LTPAValidationKeyTests.class;
 
     // Initialize the user
     private static final String validUser = "user1";
@@ -98,7 +98,7 @@ public class LTPAInitializationVectorTests {
     private static String LTPA_DEFAULT_PASSWORD = "{xor}Lz4sLCgwLTs=";
     private static String LTPA_FIPS_DEFAULT_PASSWORD = "{xor}CDo9Hgw=";
 
-    List<String> PREBUILT_KEYS = Arrays.asList(DEFAULT_KEY_PATH, DIFFERENT_PW_VALIDATION_KEY_PATH, BAD_SHARED_VALIDATION_KEY2_PATH,
+    List<String> PREBUILT_KEYS = Arrays.asList(DIFFERENT_PW_VALIDATION_KEY_PATH, BAD_SHARED_VALIDATION_KEY2_PATH,
                                                VALIDATION_KEY3_PATH,
                                                VALIDATION_KEY2_PATH, VALIDATION_KEY1_PATH);
 
@@ -192,6 +192,13 @@ public class LTPAInitializationVectorTests {
 
     @Before
     public void setUp() throws Exception {
+
+        // Reset the ltpa.keys file to default to not allow key generation
+        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
+        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
+        renameServerFileInLibertyRoot(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, false, server1);
+        renameServerFileInLibertyRoot(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, false, server2);
+
         LibertyServer[] servers = { server1, server2 };
 
         for (LibertyServer server : servers) {
@@ -258,7 +265,7 @@ public class LTPAInitializationVectorTests {
      */
     @Mode(TestMode.LITE)
     @Test
-    public void testLTPAValidationKeyUsage_twoServers_samePW_monitorValidationKeysDir_true() throws Exception {
+    public void validationKey_twoServers_sameKeyPW_monitorValidationKeysDir_true() throws Exception {
 
         // Configure the servers
         configureServer("true", "10", true, server1);
@@ -324,7 +331,7 @@ public class LTPAInitializationVectorTests {
      */
     @Mode(TestMode.FULL)
     @Test
-    public void testLTPAValidationKeyUsage_twoServers_samePW_monitorValidationKeysDir_false() throws Exception {
+    public void twoServers_SSO_sameKeyPW_monitorValidationKeysDir_false() throws Exception {
 
         // Configure the servers
         configureServer("false", "10", false, server1);
@@ -335,9 +342,8 @@ public class LTPAInitializationVectorTests {
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
 
-        // Replace the randomly generated LTPA keys with the known valid ltpa keys and assert the change occurs
+        // Replace the server generated LTPA keys with the known valid ltpa keys and assert the change occurs
         renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
-
         renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, server2);
 
         // Initial login to simple servlet for form login1
@@ -394,7 +400,7 @@ public class LTPAInitializationVectorTests {
      */
     @Mode(TestMode.LITE)
     @Test
-    public void testLTPAValidationKeyUsage_twoServers_differentPW_monitorValidationKeysDir_true() throws Exception {
+    public void twoServers_SSO_differentKeyPW_monitorValidationKeysDir_true() throws Exception {
 
         // Configure the servers
         configureServer("true", "10", true, server1);
@@ -409,7 +415,7 @@ public class LTPAInitializationVectorTests {
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server1);
 
-        // Replace the randomly generated LTPA keys with the known valid ltpa keys and assert the change occurs
+        // Replace the server generated LTPA keys with the known valid ltpa keys and assert the change occurs
         renameKeyAndWaitForLtpaConfigReady(DIFFERENT_PW_VALIDATION_KEY_PATH, DEFAULT_KEY_PATH, server1);
 
         server2.setMarkToEndOfLog();
@@ -469,7 +475,7 @@ public class LTPAInitializationVectorTests {
      */
     @Mode(TestMode.FULL)
     @Test
-    public void testLTPAValidationKeyUsage_twoServers_differentPW_monitorValidationKeysDir_false() throws Exception {
+    public void twoServers_SSO_differentKeyPW_monitorValidationKeysDir_false() throws Exception {
 
         // Configure the servers
         configureServer("false", "10", false, server1);
@@ -538,7 +544,7 @@ public class LTPAInitializationVectorTests {
 
     @Mode(TestMode.FULL)
     @Test
-    public void testLTPAValidationKeyUsage_no_validation_keys() throws Exception {
+    public void twoServers_no_validationKeys() throws Exception {
 
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
@@ -595,7 +601,10 @@ public class LTPAInitializationVectorTests {
     @Test
     @AllowedFFDC({ "java.lang.IllegalArgumentException" })
     //FFDC because validation3.keys is an incorrectly formatted corrupted key which will cause an Illegal Argument exceptions
-    public void testLTPAValidationKeyUsage_bad_keys() throws Exception {
+    public void twoServers_bad_validationKey() throws Exception {
+
+        configureServer("true", "10", true, server1);
+        configureServer("true", "10", true, server2);
 
         // Copy valid ltpa keys to server1 and invalid primary and valid key to server 2
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
@@ -604,11 +613,8 @@ public class LTPAInitializationVectorTests {
 
         // Configure both servers
 
-        //replace the randomly generated LTPA key with a known valid ltpa key
-        configureServer("true", "10", true, server1);
+        //replace the server generated LTPA key with a known valid ltpa key
         renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
-
-        configureServer("true", "10", true, server2);
         renameKeyAndWaitForMessage(VALIDATION_KEY3_PATH, DEFAULT_KEY_PATH, server2, "CWWKS4106E");
 
         // Initial login to simple servlet for form login1
@@ -705,12 +711,12 @@ public class LTPAInitializationVectorTests {
     @Mode(TestMode.FULL)
     @Test
     @AllowedFFDC({ "javax.crypto.BadPaddingException" })
-    public void testLTPAValidationKeyUsage_invalid_passwords() throws Exception {
+    public void twoServers_invalid_passwords() throws Exception {
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server2);
 
-        // Configure both servers, and replace the randomly generated LTPA keys with the known valid ltpa keys
+        // Configure both servers, and replace the server generated LTPA keys with the known valid ltpa keys
         configureServer("true", "10", true, server1);
         renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
 
@@ -767,12 +773,12 @@ public class LTPAInitializationVectorTests {
 
     @Mode(TestMode.LITE)
     @Test
-    public void testLTPAValidationKeyUsage_set_validationKeys_dynamically() throws Exception {
+    public void set_validationKeys_dynamically() throws Exception {
         // Copy valid ltpa keys to server1. Copy invalid keys to server 2.
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY4_PATH, server2);
 
-        // Configure both servers, and replace the randomly generated LTPA keys with the known validation keys
+        // Configure both servers, and replace the server generated LTPA keys with the known validation keys
         configureServer("true", "10", true, server1);
         renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
 
@@ -860,7 +866,7 @@ public class LTPAInitializationVectorTests {
 
     @Mode(TestMode.FULL)
     @Test
-    public void testLTPAValidationKeyUsage_failing_validation_key_monitorValidationKeysDir_false() throws Exception {
+    public void failing_validation_key_monitorValidationKeysDir_false() throws Exception {
         // Configure the servers
         configureServer("false", "10", false, server1);
         configureServer("false", "10", false, server2);
@@ -921,14 +927,14 @@ public class LTPAInitializationVectorTests {
 
     @Mode(TestMode.LITE)
     @Test
-    public void testLTPAValidationKeyUsage_swapped_3DESkey_or_shared_value() throws Exception {
+    public void swapped_3DESkey_or_shared_value() throws Exception {
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         //copy over invalid key
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY4_PATH, server2);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
 
-        // Configure both servers, and replace the randomly generated LTPA keys  with valid keys
+        // Configure both servers, and replace the server generated LTPA keys  with valid keys
         configureServer("true", "10", true, server1);
         renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
 
@@ -1279,8 +1285,8 @@ public class LTPAInitializationVectorTests {
             setLTPAKeyPasswordElement(ltpa, "{xor}Lz4sLCgwLTs=");
         }
         updateConfigDynamically(server, serverConfig);
-
         server.stopServer(serverShutdownMessages);
+
         Log.info(thisClass, "resetServer", "exiting");
     }
 

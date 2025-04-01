@@ -10,7 +10,7 @@
     Contributors:
         IBM Corporation - initial API and implementation
  -->
-<server description="com.ibm.ws.webcontainer.security.fat.initializationVectorTestServer2">
+<server description="com.ibm.ws.webcontainer.security.fat.validationKeyTestServer2">
 
     <featureManager>
         <feature>appSecurity-2.0</feature>
