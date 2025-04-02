@@ -285,7 +285,7 @@ public class LTPAValidationKeyTests {
      */
     @Mode(TestMode.LITE)
     @Test
-    public void validationKey_twoServers_sameKeyPW_monitorValidationKeysDir_true() throws Exception {
+    public void testValidationKeys_sameKeyPW_monitorValidationKeysDir_true() throws Exception {
 
         // Configure the servers
         configureServer("true", "10", true, server1);
@@ -351,7 +351,7 @@ public class LTPAValidationKeyTests {
      */
     @Mode(TestMode.FULL)
     @Test
-    public void twoServers_SSO_sameKeyPW_monitorValidationKeysDir_false() throws Exception {
+    public void testValidationKeys_sameKeyPW_monitorValidationKeysDir_false() throws Exception {
 
         // Configure the servers
         configureServer("false", "10", false, server1);
@@ -420,7 +420,7 @@ public class LTPAValidationKeyTests {
      */
     @Mode(TestMode.LITE)
     @Test
-    public void twoServers_SSO_differentKeyPW_monitorValidationKeysDir_true() throws Exception {
+    public void testValidationKeys_differentKeyPW_monitorValidationKeysDir_true() throws Exception {
 
         // Configure the servers
         configureServer("true", "10", true, server1);
@@ -495,7 +495,7 @@ public class LTPAValidationKeyTests {
      */
     @Mode(TestMode.FULL)
     @Test
-    public void twoServers_SSO_differentKeyPW_monitorValidationKeysDir_false() throws Exception {
+    public void testValidationKeys_differentKeyPW_monitorValidationKeysDir_false() throws Exception {
 
         // Configure the servers
         configureServer("false", "10", false, server1);
@@ -564,7 +564,7 @@ public class LTPAValidationKeyTests {
 
     @Mode(TestMode.FULL)
     @Test
-    public void twoServers_no_validationKeys() throws Exception {
+    public void testValidationKeys_no_validationKeys() throws Exception {
 
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
@@ -621,7 +621,7 @@ public class LTPAValidationKeyTests {
     @Test
     @AllowedFFDC({ "java.lang.IllegalArgumentException" })
     //FFDC because validation3.keys is an incorrectly formatted corrupted key which will cause an Illegal Argument exceptions
-    public void twoServers_bad_validationKey() throws Exception {
+    public void testValidationKeys_invalid_validationKey() throws Exception {
 
         configureServer("true", "10", true, server1);
         configureServer("true", "10", true, server2);
@@ -731,7 +731,7 @@ public class LTPAValidationKeyTests {
     @Mode(TestMode.FULL)
     @Test
     @AllowedFFDC({ "javax.crypto.BadPaddingException" })
-    public void twoServers_invalid_passwords() throws Exception {
+    public void testValidationKeys_invalid_keysPW() throws Exception {
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server2);
@@ -793,7 +793,7 @@ public class LTPAValidationKeyTests {
 
     @Mode(TestMode.LITE)
     @Test
-    public void set_validationKeys_dynamically() throws Exception {
+    public void testValidationKeys_set_validationKeys_dynamically() throws Exception {
         // Copy valid ltpa keys to server1. Copy invalid keys to server 2.
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY4_PATH, server2);
@@ -884,7 +884,7 @@ public class LTPAValidationKeyTests {
 
     @Mode(TestMode.FULL)
     @Test
-    public void failing_validation_key_monitorValidationKeysDir_false() throws Exception {
+    public void testValidationKeys_failing_validationKey_monitorValidationKeysDir_false() throws Exception {
         // Configure the servers
         configureServer("false", "10", false, server1);
         configureServer("false", "10", false, server2);
@@ -945,7 +945,7 @@ public class LTPAValidationKeyTests {
 
     @Mode(TestMode.LITE)
     @Test
-    public void swapped_3DESkey_or_shared_value() throws Exception {
+    public void testValidationKeys_swapped_3DESkey_or_sharedKey() throws Exception {
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         //copy over invalid key
