@@ -73,6 +73,8 @@ public class HealthCheck40ServiceImpl implements HealthCheck40Service {
      */
     private volatile int fileUpdateIntevalMilliseconds = -1;
 
+    protected volatile boolean isCheckPointFinished = false;
+
     /**
      *
      * Instead of relying on checking if fileUpdateIntevalMilliseconds is > 0,
@@ -222,12 +224,7 @@ public class HealthCheck40ServiceImpl implements HealthCheck40Service {
                     fileUpdateIntevalMilliseconds = Integer.parseInt(configValue) * 1000;
                 }
             } else {
-                //TODO: Create warning message with ID
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "Invalid value provided for the file update interval"
-                                 + "The value provided must consist of a number followed by an optional time unit of 'ms' or 's'."
-                                 + "Defaulting to 10 seconds.");
-                }
+                Tr.warning(tc, "file.update.interval.config.invalid.CWMMH01010W", configValue);
                 //Default of 10 seconds.
                 fileUpdateIntevalMilliseconds = 10000;
             }
@@ -280,6 +277,10 @@ public class HealthCheck40ServiceImpl implements HealthCheck40Service {
     /** {@inheritDoc} */
     @Override
     public void startFileHealthCheckProcesses() {
+        /*
+         * If we got here, that means we've been restored (or this is a normal run)
+         */
+        isCheckPointFinished = true;
 
         /*
          * Last flag in the if is the beta guard
@@ -303,7 +304,6 @@ public class HealthCheck40ServiceImpl implements HealthCheck40Service {
                 startedTimer = new Timer(false);
                 startedTimer.schedule(new FileUpdateProcess(startFile, HealthCheckConstants.HEALTH_CHECK_START, true), 0, 1000);
             }
-
             /*
              * Perform an immediate check and then start the processes for checking ready and live status.
              */
@@ -400,23 +400,51 @@ public class HealthCheck40ServiceImpl implements HealthCheck40Service {
     @Override
     public Status performFileHealthCheck(File file, String healthCheckProcedure) {
 
-        resolveDefaultStatuses();
+        /*
+         * For a checkpoint/restore environment.
+         * If an application image is ever built with more than one app,
+         * we need to make sure those immediate startup/started checks
+         * from application started don't ever get called.
+         *
+         * There may a configuration where the `started` file is created
+         * before all apps report "started".
+         *
+         * Example:
+         * Apps: A, B ,C.
+         * 1. App A starts. (async call held for starting health processes)
+         * 2. App B starts. Startup status is UP.
+         * - App C is not started, so this would traditionally return a overall DOWN Status
+         * - But if MP Config is set for default START (by accident), then overall Status is UP.
+         * - resulting in `started` file created for the checkpoint image.
+         */
+        if (!isCheckPointFinished) {
+            return null;
+        }
 
-        FileHealthCheckBuilder fhc = new FileHealthCheckBuilder(file);
+        /*
+         * Entry point through AppTracker40Impl, needs to verify that system is valid, and we're enabled
+         */
+        if (isValidSystemForFileHealthCheck && isFileHealthCheckingEnabled() && ProductInfo.getBetaEdition()) {
+            resolveDefaultStatuses();
 
-        Set<String> appSet = validateApplicationSet();
-        Set<String> unstartedAppSet = new HashSet<String>();
+            FileHealthCheckBuilder fhc = new FileHealthCheckBuilder(file);
 
-        runHealthChecks(appSet, healthCheckProcedure, unstartedAppSet,
-                        status -> fhc.setOverallStatus(status),
-                        x -> fhc.handleUndeterminedResponse(),
-                        responses -> fhc.addResponses(responses));
+            Set<String> appSet = validateApplicationSet();
+            Set<String> unstartedAppSet = new HashSet<String>();
 
-        fhc.updateFile();
+            runHealthChecks(appSet, healthCheckProcedure, unstartedAppSet,
+                            status -> fhc.setOverallStatus(status),
+                            x -> fhc.handleUndeterminedResponse(),
+                            responses -> fhc.addResponses(responses));
 
-        issueMessagesForUnstartedApps(unstartedAppSet, healthCheckProcedure);
+            fhc.updateFile();
 
-        return fhc.getOverallStatus();
+            issueMessagesForUnstartedApps(unstartedAppSet, healthCheckProcedure);
+
+            return fhc.getOverallStatus();
+        }
+
+        return null;
 
     }
 

@@ -24,6 +24,8 @@ triggers:
         - stepName: Compile FATs
         - stepName: Determine FATs Needed
         - stepName: Distributed Lite FATs
+        - stepName: z/OS FATs
+        - stepName: z/OS Unittests
     # Enable the testing of the checkpoint feature which additionally runs any compiled FATs declaring that they test the checkpoint feature in a CRIU environment.
     # Note: The FATs will run in this step will *only* run the test cases annotated with CheckpointTest. The FATs will also run in the standard FAT steps where they will only run un-annotated test cases.
     - name: spawn.checkpoint
@@ -90,6 +92,8 @@ triggers:
         - stepName: Compile Liberty Images
         - stepName: Compile FATs
         - stepName: Distributed Full FATs
+        - stepName: z/OS FATs
+        - stepName: z/OS Unittests
     # Run IM buckets.
     - name: create.im.repo
       defaultValue: true

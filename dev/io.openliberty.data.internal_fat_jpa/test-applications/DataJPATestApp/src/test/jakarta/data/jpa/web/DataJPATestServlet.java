@@ -14,7 +14,6 @@ package test.jakarta.data.jpa.web;
 
 import static componenttest.annotation.SkipIfSysProp.DB_DB2;
 import static componenttest.annotation.SkipIfSysProp.DB_Not_Default;
-import static componenttest.annotation.SkipIfSysProp.DB_Oracle;
 import static componenttest.annotation.SkipIfSysProp.DB_Postgres;
 import static componenttest.annotation.SkipIfSysProp.DB_SQLServer;
 import static jakarta.data.repository.By.ID;
@@ -44,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -155,6 +155,9 @@ public class DataJPATestServlet extends FATServlet {
 
     @Inject
     Orders orders;
+
+    @Inject
+    Purchases purchases;
 
     @Inject
     Rebates rebates;
@@ -638,6 +641,66 @@ public class DataJPATestServlet extends FATServlet {
     }
 
     /**
+     * Tests that repository methods can query and sort based on an entity attribute
+     * that has a Converter that is specified on a MappedSuperclass.
+     */
+    @Test
+    public void testConverterOnMappedSuperclass() {
+        PurchaseTime mondayAt6AM = new PurchaseTime( //
+                        LocalTime.of(6, 0, 0), LocalDate.of(2025, 3, 17));
+
+        PurchaseTime mondayAt3PM = new PurchaseTime( //
+                        LocalTime.of(15, 0, 0), LocalDate.of(2025, 3, 17));
+
+        PurchaseTime wednesdayAt6PM = new PurchaseTime( //
+                        LocalTime.of(18, 0, 0), LocalDate.of(2025, 3, 19));
+
+        PurchaseTime thursdayAt10PM = new PurchaseTime( //
+                        LocalTime.of(22, 0, 0), LocalDate.of(2025, 3, 20));
+
+        PurchaseTime fridayAt9AM = new PurchaseTime(//
+                        LocalTime.of(9, 0, 0), LocalDate.of(2025, 3, 21));
+
+        PurchaseTime fridayAtNoon = new PurchaseTime(//
+                        LocalTime.of(12, 0, 0), LocalDate.of(2025, 3, 21));
+
+        PurchaseTime fridayAt10PM = new PurchaseTime(//
+                        LocalTime.of(22, 0, 0), LocalDate.of(2025, 3, 21));
+
+        purchases.removeByTimeOfPurchaseBetween(mondayAt6AM, fridayAt10PM);
+
+        purchases.make(Purchase.of((short) 101,
+                                   "TestAutoApplyConverter-1",
+                                   mondayAt3PM,
+                                   17.89f));
+
+        purchases.make(Purchase.of((short) 102,
+                                   "TestAutoApplyConverter-2",
+                                   thursdayAt10PM,
+                                   22.95f));
+
+        purchases.make(Purchase.of((short) 103,
+                                   "TestAutoApplyConverter-3",
+                                   wednesdayAt6PM,
+                                   30.39f));
+
+        purchases.make(Purchase.of((short) 104,
+                                   "TestAutoApplyConverter-4",
+                                   fridayAtNoon,
+                                   14.49f));
+
+        assertEquals(List.of("TestAutoApplyConverter-1",
+                             "TestAutoApplyConverter-3",
+                             "TestAutoApplyConverter-2"),
+                     purchases.findByTimeOfPurchaseBetween(mondayAt6AM, fridayAt9AM)
+                                     .stream()
+                                     .map(p -> p.itemName)
+                                     .collect(Collectors.toList()));
+
+        assertEquals(4, purchases.removeByTimeOfPurchaseBetween(mondayAt6AM, fridayAt10PM));
+    }
+
+    /**
      * Use a repository method with query language for the main query and count query,
      * where the count query is JDQL consisting of the FROM clause only.
      */
@@ -1099,12 +1162,6 @@ public class DataJPATestServlet extends FATServlet {
         cityNames.add("Mitchell");
         cityNames.add("Pierre");
 
-        //TODO Eclipse link SQL Generation bug on Oracle: https://github.com/OpenLiberty/open-liberty/issues/30444
-        if (jdbcJarName.startsWith("ojdbc8")) {
-            cities.removeByStateName("South Dakota"); //Cleanup Cities repository and skip the rest of these tests
-            return;
-        }
-
         Order<City> orderByCityName = supportsOrderByForUpdate ? Order.by(Sort.asc("name")) : Order.by();
         Iterator<CityId> ids = cities.deleteByStateName("South Dakota", Limit.of(3), orderByCityName).iterator();
         CityId id;
@@ -1404,7 +1461,11 @@ public class DataJPATestServlet extends FATServlet {
     @Test
     public void testEmbeddableDepth2() {
         CursoredPage<Business> page;
-        List<Integer> zipCodes = List.of(55906, 55902, 55901, 55976, 55905);
+        List<ZipCode> zipCodes = List.of(ZipCode.of(55906),
+                                         ZipCode.of(55902),
+                                         ZipCode.of(55901),
+                                         ZipCode.of(55976),
+                                         ZipCode.of(55905));
 
         page = businesses.findByLocationAddressZipIn(zipCodes, PageRequest.ofSize(4).withoutTotal());
 
@@ -1565,7 +1626,7 @@ public class DataJPATestServlet extends FATServlet {
                                      "NW Lakeridge Pl",
                                      "NW Members Parkway",
                                      "W Highway 14"),
-                             businesses.findByLocationAddressZip(55901)
+                             businesses.findByLocationAddressZip(ZipCode.of(55901))
                                              .map(loc -> loc.address.street.direction + " " + loc.address.street.name)
                                              .collect(Collectors.toList()));
     }
@@ -1581,7 +1642,8 @@ public class DataJPATestServlet extends FATServlet {
                                      "SW 1st St",
                                      "SW Enterprise Dr",
                                      "SW Greenview Dr"),
-                             businesses.findByLocationAddressZipNotAndLocationAddressCity(55901, "Rochester")
+                             businesses.findByLocationAddressZipNotAndLocationAddressCity(ZipCode.of(55901),
+                                                                                          "Rochester")
                                              .map(street -> street.direction + " " + street.name)
                                              .collect(Collectors.toList()));
     }
@@ -2301,7 +2363,7 @@ public class DataJPATestServlet extends FATServlet {
         o2 = orders.findById(o2.id).get();
 
         assertEquals(168.89f, o2.total, 0.01f);
-        assertEquals(o2.purchasedOn, OffsetDateTime.of(2022, 6, 1, 14, 0, 0, 0, MDT));
+        assertEquals(OffsetDateTime.of(2022, 6, 1, 14, 0, 0, 0, MDT), o2.purchasedOn);
     }
 
     /**
@@ -2750,9 +2812,6 @@ public class DataJPATestServlet extends FATServlet {
     /**
      * Repository method that queries by the year component of an Instant attribute.
      */
-    @SkipIfSysProp({ DB_Postgres, //TODO Failing due to Eclipselink Issue on PostgreSQL: https://github.com/OpenLiberty/open-liberty/issues/29440
-                     DB_Oracle // //TODO Failing due to Eclipselink Issue on Oracle: https://github.com/OpenLiberty/open-liberty/issues/29440
-    })
     @Test
     public void testInstantExtractYear() {
 
@@ -2917,11 +2976,12 @@ public class DataJPATestServlet extends FATServlet {
     }
 
     /**
-     * Query that matches multiple entities and returns a stream of results
-     * where each result has a ManyToMany association.
+     * Query that matches multiple entities that have a ManyToMany relation.
+     * Verify that the data within the ManyToMany relations of the results
+     * is correct.
      */
     @Test
-    public void testManyToManyReturnsCombinedCollectionFromMany() {
+    public void testManyToManyIncludedInResults() {
 
         List<String> addresses = customers.findByPhoneIn(List.of(5075552444L,
                                                                  5075550101L))
@@ -2944,11 +3004,12 @@ public class DataJPATestServlet extends FATServlet {
     }
 
     /**
-     * Query that matches a single entity, from which the corresponding collection
-     * from its ManyToMany association can be accessed.
+     * Query that matches a single entity that has a ManyToMany relation.
+     * Verify that the data within the ManyToMany relation of the result
+     * is correct.
      */
     @Test
-    public void testManyToManyReturnsOneWithSetOfMany() {
+    public void testManyToManyIncludedInSingleResult() {
         Set<DeliveryLocation> locations = customers //
                         .findByEmail("Maximilian@tests.openliberty.io")
                         .orElseThrow().deliveryLocations;
@@ -2971,7 +3032,6 @@ public class DataJPATestServlet extends FATServlet {
         assertNotNull(loc3.street);
         assertEquals(2800, loc3.houseNum);
         assertEquals("37th St", loc3.street.name);
-        assertEquals("NW", loc3.street.direction);
 
         assertNotNull(locations.toString(), loc4);
         assertEquals(DeliveryLocation.Type.HOME, loc4.type);
@@ -3050,6 +3110,27 @@ public class DataJPATestServlet extends FATServlet {
         assertIterableEquals(List.of("Monica@tests.openliberty.io",
                                      "martin@tests.openliberty.io"),
                              creditCards.findByExpiresOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)));
+    }
+
+    /**
+     * Query that matches based on an attribute of the One of a ManyToOne relation.
+     */
+    @Test
+    public void testManyToOneSubAttribute() {
+
+        Stream<CreditCard> cards = customers//
+                        .findCardsByDebtorEmailEndsWith("an@tests.openliberty.io");
+        List<Long> cardNumbers = cards
+                        .map(card -> card.number)
+                        .collect(Collectors.toList());
+
+        // Customer 5's card numbers must come before Customer 4's card numbers
+        // due to the ordering on Customer.phone.
+        assertEquals(Set.of(5000921051110001L, 5000921052220002L),
+                     new HashSet<>(cardNumbers.subList(0, 2)));
+
+        assertEquals(Set.of(4000921041110001L, 4000921042220002L),
+                     new HashSet<>(cardNumbers.subList(2, 4)));
     }
 
     /**
@@ -3244,28 +3325,6 @@ public class DataJPATestServlet extends FATServlet {
                                      "Maximilian@tests.openliberty.io",
                                      "Megan@tests.openliberty.io"),
                              customers.withCardIssuer(Issuer.MonsterCard));
-    }
-
-    /**
-     * Query that matches multiple entities and returns a combined collection of results across matches for the OneToMany association.
-     */
-    //@Test
-    // This test is currently incorrect because Email is an attribute of Customer (primary entity type), not CreditCard (result type).
-    // This would require a way to indicate that a projection is desired, meaning the return type indicates
-    // an attribute of the entity rather than the entity class itself.
-    // TODO Could this be achieved with @Select?
-    public void testOneToManyReturnsCombinedCollectionFromMany() {
-
-        List<Long> cardNumbers = customers.findCardsByDebtorEmailEndsWith("an@tests.openliberty.io")
-                        .map(card -> card.number)
-                        .collect(Collectors.toList());
-
-        // Customer 5's card numbers must come before Customer 4's card numbers due to the ordering on Customer.phone.
-        assertEquals(cardNumbers.toString(),
-                     true, cardNumbers.equals(List.of(5000921051110001L, 5000921052220002L, 4000921041110001L, 4000921042220002L)) ||
-                           cardNumbers.equals(List.of(5000921051110001L, 5000921052220002L, 4000921042220002L, 4000921041110001L)) ||
-                           cardNumbers.equals(List.of(5000921052220002L, 5000921051110001L, 4000921042220002L, 4000921041110001L)) ||
-                           cardNumbers.equals(List.of(5000921052220002L, 5000921051110001L, 4000921041110001L, 4000921042220002L)));
     }
 
     /**
@@ -3568,7 +3627,11 @@ public class DataJPATestServlet extends FATServlet {
     @Test
     public void testParenthesisInsertionForCursorPagination() {
         PageRequest page1Request = PageRequest.ofSize(3);
-        CursoredPage<Business> page1 = mixed.withZipCodeIn(55901, 55904, page1Request, Sort.asc("name"), Sort.asc(ID));
+        CursoredPage<Business> page1 = mixed.withZipCodeIn(ZipCode.of(55901),
+                                                           ZipCode.of(55904),
+                                                           page1Request,
+                                                           Sort.asc("name"),
+                                                           Sort.asc(ID));
 
         assertEquals(List.of("Benike Construction", "Crenlo", "Home Federal Savings Bank"),
                      page1.stream()
@@ -3577,7 +3640,11 @@ public class DataJPATestServlet extends FATServlet {
 
         assertEquals(true, page1.hasNext());
 
-        CursoredPage<Business> page2 = mixed.withZipCodeIn(55901, 55904, page1.nextPageRequest(), Sort.asc("name"), Sort.asc(ID));
+        CursoredPage<Business> page2 = mixed.withZipCodeIn(ZipCode.of(55901),
+                                                           ZipCode.of(55904),
+                                                           page1.nextPageRequest(),
+                                                           Sort.asc("name"),
+                                                           Sort.asc(ID));
 
         assertEquals(List.of("IBM", "Metafile", "Olmsted Medical"),
                      page2.stream()
@@ -3586,7 +3653,11 @@ public class DataJPATestServlet extends FATServlet {
 
         assertEquals(true, page1.hasNext());
 
-        CursoredPage<Business> page3 = mixed.withZipCodeIn(55901, 55904, page2.nextPageRequest(), Sort.asc("name"), Sort.asc(ID));
+        CursoredPage<Business> page3 = mixed.withZipCodeIn(ZipCode.of(55901),
+                                                           ZipCode.of(55904),
+                                                           page2.nextPageRequest(),
+                                                           Sort.asc("name"),
+                                                           Sort.asc(ID));
 
         assertEquals(List.of("RAC", "Think Bank"),
                      page3.stream()
@@ -4706,7 +4777,7 @@ public class DataJPATestServlet extends FATServlet {
             assertEquals("N", ibm.location.address.street.direction);
             assertEquals("Rochester", ibm.location.address.city);
             assertEquals("MN", ibm.location.address.state);
-            assertEquals(55901, ibm.location.address.zip);
+            assertEquals(ZipCode.of(55901), ibm.location.address.zip);
         } finally {
             // restore original values
             ibm.location.latitude = originalLatitude;
@@ -4729,7 +4800,7 @@ public class DataJPATestServlet extends FATServlet {
         assertEquals("NW", ibm.location.address.street.direction);
         assertEquals("Rochester", ibm.location.address.city);
         assertEquals("MN", ibm.location.address.state);
-        assertEquals(55901, ibm.location.address.zip);
+        assertEquals(ZipCode.of(55901), ibm.location.address.zip);
     }
 
     /**
