@@ -79,9 +79,6 @@ public interface Primes {
 
     BigInteger countAsBigIntegerByNumberIdLessThan(long number);
 
-    // boolean return type is not allowed for count methods
-    boolean countAsBooleanByNumberIdLessThan(long number);
-
     int countAsIntByNumberIdLessThan(long number);
 
     Integer countAsIntegerByNumberIdBetween(long first, long last);
@@ -170,17 +167,10 @@ public interface Primes {
 
     Prime findByNumberIdBetween(long min, long max);
 
-    // Unsupported pattern: lacks PageRequest parameter.
-    @OrderBy("numberId")
-    CursoredPage<Prime> findByNumberIdBetween(long min, long max, Limit limit);
-
     @OrderBy(ID)
     CursoredPage<Prime> findByNumberIdBetween(long min, long max, PageRequest pagination);
 
     List<Prime> findByNumberIdBetween(long min, long max, Sort<?>... orderBy);
-
-    // Unsupported pattern: lacks PageRequest parameter.
-    CursoredPage<Prime> findByNumberIdBetweenAndBinaryDigitsNotNull(long min, long max, Sort<?>... orderBy);
 
     CursoredPage<Prime> findByNumberIdBetweenAndEvenFalse(long min, long max, PageRequest pagination, Order<Prime> order);
 
@@ -253,8 +243,6 @@ public interface Primes {
     @Find
     Prime findFirst(Sort<Prime> sort, Limit limitOf1);
 
-    Stream<Prime> findFirst2147483648ByNumberIdGreaterThan(long min); // Exceeds Integer.MAX_VALUE by 1
-
     @OrderBy(value = "name", descending = true)
     Prime[] findFirst5ByNumberIdLessThanEqual(long maxNumber);
 
@@ -316,11 +304,6 @@ public interface Primes {
            "       COUNT(o.numberId), AVG(o.numberId) " +
            "  FROM Prime o WHERE o.numberId < ?1")
     Deque<Double> minMaxSumCountAverageDeque(long numBelow);
-
-    @Query("SELECT MIN(o.numberId), MAX(o.numberId), SUM(o.numberId)," +
-           "       COUNT(o.numberId), CAST(AVG(o.numberId) AS FLOAT)" +
-           "  FROM Prime o WHERE o.numberId < ?1")
-    float[] minMaxSumCountAverageFloat(long numBelow);
 
     @Query("SELECT MIN(o.numberId), MAX(o.numberId), SUM(o.numberId)," +
            "       COUNT(o.numberId), CAST(AVG(o.numberId) AS INTEGER)" +

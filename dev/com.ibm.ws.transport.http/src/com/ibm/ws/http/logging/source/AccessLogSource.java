@@ -454,7 +454,7 @@ public class AccessLogSource implements Source {
                     case "%m": builder.add(addRequestMethodFieldTelemetry     (format)); break;
                     case "%p":
                         if (fields.get("%p") == null) {
-                            builder.add(addRequestPortField(format));
+                            builder.add(addRequestPortFieldTelemetry(format));
                         } else {
                             for (Object data : fields.get("%p")) {
                                 if (AccessLogPort.TYPE_REMOTE.equals(data)) {
@@ -497,8 +497,9 @@ public class AccessLogSource implements Source {
             }
         }
         //@formatter:off
-        builder.add(addDatetimeField(format))  // Datetime, present in all access logs
-               .add(addSequenceField(format)); // Sequence, present in all access logs
+        builder.add(addDatetimeFieldTelemetry(format))  // Datetime, present in all access logs
+               .add(addSequenceFieldTelemetry(format)) // Sequence, present in all access logs
+               .add(addRequestHeaderFieldTelemetry(format)); // Adding the 'traceparent' request header field which contains trace/span in order to correlate access logs via trace/spans
         //@formatter:on
 
         return builder.build();
@@ -521,7 +522,8 @@ public class AccessLogSource implements Source {
         .add(addUriPathField          (format))  // %U
         .add(addUserAgentField        (format))  // User agent
         .add(addDatetimeField         (format))  // Datetime, present in all access logs
-        .add(addSequenceField         (format)); // Sequence, present in all access logs
+        .add(addSequenceField         (format))  // Sequence, present in all access logs
+        .add(addRequestFirstLineField (format)); // %r
 
         return builder.build();
         //@formatter:on
@@ -545,8 +547,8 @@ public class AccessLogSource implements Source {
         .add(addUserAgentFieldTelemetry        (format))  // User agent
         .add(addDatetimeFieldTelemetry         (format))  // Datetime, present in all access logs
         .add(addSequenceFieldTelemetry         (format))  // Sequence, present in all access logs
-        .add(addRequestFirstLineFieldTelemetry (format)); // Adding requestFirstLine by default only to be used in the OTel logs body
-
+        .add(addRequestFirstLineFieldTelemetry (format))  // Adding requestFirstLine by default only to be used in the OTel logs body
+        .add(addRequestHeaderFieldTelemetry    (format)); // Adding the 'traceparent' request header field which contains trace/span in order to correlate access logs via trace/spans
         return builder.build();
         //@formatter:on
     }
@@ -592,12 +594,31 @@ public class AccessLogSource implements Source {
 
             //Include the requestFirstLine for Telemetry to be used as the body where applicable
             fieldSetters.add((ald, alrd) -> ald.setRequestFirstLine(AccessLogFirstLine.getFirstLineAsString(alrd.getResponse(), alrd.getRequest(), null)));
+            fieldSetters.add((ald, alrd) -> ald.setRequestHeader(CollectorConstants.ACCESS_TRACE_W3C_HEADER_NAME,
+                                                                 AccessLogRequestHeaderValue.getHeaderValue(alrd.getResponse(), alrd.getRequest(),
+                                                                                                            CollectorConstants.ACCESS_TRACE_W3C_HEADER_NAME)));
+            fieldSetters.add((ald, alrd) -> ald.setRequestHeader(CollectorConstants.ACCESS_TRACE_B3_HEADER_NAME,
+                                                                 AccessLogRequestHeaderValue.getHeaderValue(alrd.getResponse(), alrd.getRequest(),
+                                                                                                            CollectorConstants.ACCESS_TRACE_B3_HEADER_NAME)));
+            fieldSetters.add((ald, alrd) -> ald.setRequestHeader(CollectorConstants.ACCESS_TRACE_JAEGER_HEADER_NAME,
+                                                                 AccessLogRequestHeaderValue.getHeaderValue(alrd.getResponse(), alrd.getRequest(),
+                                                                                                            CollectorConstants.ACCESS_TRACE_JAEGER_HEADER_NAME)));
 
         } else if (accessLogFieldsTelemetryConfig.equals("logFormat")) {
             formatters[5] = populateCustomTelemetryFormatters(fieldsToAddTelemetryLogging, CollectorConstants.KEYS_TELEMETRY_LOGGING);
 
             //Include the requestFirstLine for Telemetry to be used as the body where applicable
             fieldSetters.add((ald, alrd) -> ald.setRequestFirstLine(AccessLogFirstLine.getFirstLineAsString(alrd.getResponse(), alrd.getRequest(), null)));
+            fieldSetters.add((ald, alrd) -> ald.setRequestHeader(CollectorConstants.ACCESS_TRACE_W3C_HEADER_NAME,
+                                                                 AccessLogRequestHeaderValue.getHeaderValue(alrd.getResponse(), alrd.getRequest(),
+                                                                                                            CollectorConstants.ACCESS_TRACE_W3C_HEADER_NAME)));
+            fieldSetters.add((ald, alrd) -> ald.setRequestHeader(CollectorConstants.ACCESS_TRACE_B3_HEADER_NAME,
+                                                                 AccessLogRequestHeaderValue.getHeaderValue(alrd.getResponse(), alrd.getRequest(),
+                                                                                                            CollectorConstants.ACCESS_TRACE_B3_HEADER_NAME)));
+            fieldSetters.add((ald, alrd) -> ald.setRequestHeader(CollectorConstants.ACCESS_TRACE_JAEGER_HEADER_NAME,
+                                                                 AccessLogRequestHeaderValue.getHeaderValue(alrd.getResponse(), alrd.getRequest(),
+                                                                                                            CollectorConstants.ACCESS_TRACE_JAEGER_HEADER_NAME)));
+
         }
 
         newSF.setSettersAndFormatters(fieldSetters, formatters);
@@ -799,7 +820,7 @@ public class AccessLogSource implements Source {
     private static ListFieldAdder addRequestStartTimeFieldTelemetry(int format) {
         return (keyValuePairList, ald) -> {
             String startTime = CollectorJsonHelpers.formatTime(ald.getRequestStartTime());
-            KeyValuePair kvp = new KeyValueLongPair(AccessLogData.getRequestStartTimeKey(format), Long.parseLong(startTime));
+            KeyValuePair kvp = new KeyValueStringPair(AccessLogData.getRequestStartTimeKey(format), startTime);
             keyValuePairList.add(kvp);
         };
     }

@@ -60,6 +60,7 @@ import com.ibm.websphere.csi.J2EEName;
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.websphere.ras.annotation.Trivial;
+import com.ibm.ws.runtime.metadata.ComponentMetaData;
 import com.ibm.wsspi.kernel.service.utils.FilterUtils;
 import com.ibm.wsspi.persistence.DDLGenerationParticipant;
 import com.ibm.wsspi.persistence.DatabaseStore;
@@ -75,6 +76,9 @@ import io.openliberty.data.internal.persistence.Util;
 import jakarta.data.exceptions.DataException;
 import jakarta.data.exceptions.MappingException;
 import jakarta.persistence.Convert;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Table;
@@ -127,9 +131,10 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
      * @param repositoryInterfaces  repository interfaces that use the entities.
      * @param dataStore             dataStore value from the Repository annotation,
      *                                  or the value with java:comp/env added.
-     * @param isJNDIName            indicates if the dataStore name is a JNDI name (begins with java: or is inferred to be java:comp/env/...)
-     * @param metaDataIdentifier    metadata identifier for the class loader of the repository interface.
-     * @param jeeName               application/module/component in which the repository interface is defined.
+     * @param isJNDIName            indicates if the dataStore name is a JNDI name
+     *                                  (begins with java: or is inferred to be java:comp/env/...)
+     * @param metadata              metadata of the application artifact that
+     *                                  contains the repository interface.
      *                                  Module and component might be null or absent.
      * @param entityTypes           entity classes as known by the user, not generated.
      * @throws Exception if an error occurs.
@@ -139,14 +144,14 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
                             Set<Class<?>> repositoryInterfaces,
                             String dataStore,
                             boolean isJNDIName,
-                            String metadataIdentifier,
-                            J2EEName jeeName,
+                            ComponentMetaData metadata,
                             Set<Class<?>> entityTypes) throws Exception {
         super(provider, repositoryClassLoader, repositoryInterfaces, dataStore);
         final boolean trace = TraceComponent.isAnyTracingEnabled();
 
         String qualifiedName = null;
         boolean javaApp = false, javaModule = false, javaComp = false;
+        J2EEName jeeName = metadata.getJ2EEName();
         String application = jeeName == null ? null : jeeName.getApplication();
         String module = jeeName == null ? null : jeeName.getModule();
 
@@ -219,7 +224,7 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
             }
             if (dbStoreId == null) {
                 // Create a ResourceFactory that can delegate back to a resource reference lookup
-                ResourceFactory delegator = new ResRefDelegator(dataStore, metadataIdentifier, provider);
+                ResourceFactory delegator = new ResRefDelegator(dataStore, metadata);
                 Hashtable<String, Object> svcProps = new Hashtable<String, Object>();
                 dbStoreId = isJNDIName ? qualifiedName : ("application[" + application + "]/databaseStore[" + dataStore + ']');
                 String id = dbStoreId + "/ResourceFactory";
@@ -319,11 +324,11 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
         if (trace && tc.isDebugEnabled())
             Tr.debug(this, tc, configDisplayId + " databaseStore reference", ref);
 
+        ArrayList<InMemoryMappingFile> generatedEntities = new ArrayList<InMemoryMappingFile>();
+
         // Classes explicitly annotated with JPA @Entity:
         Set<String> entityClassNames = new LinkedHashSet<>(entityTypes.size() * 2);
         Set<String> entityTableNames = new LinkedHashSet<>(entityClassNames.size());
-
-        ArrayList<InMemoryMappingFile> generatedEntities = new ArrayList<InMemoryMappingFile>();
 
         // List of classes to inspect for the above
         Queue<Class<?>> annotatedEntityClassQueue = new LinkedList<>();
@@ -331,40 +336,19 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
         // XML to make all other classes into JPA entities:
         ArrayList<String> entityClassInfo = new ArrayList<>(entityTypes.size());
 
-        /*
-         * Note: When creating a persistence unit, managed classes (such as entities) are declared in an
-         * all or nothing fashion. Therefore, if we create a persistence unit with a list of entities
-         * we are also required to provide a list of converters, otherwise the persistence provider
-         * will not use them. Ideally, our internal persistence service unit would have a method to
-         * include converter classes alongside entity classes, but the persistence provider API lacks
-         * such function so the converters need to be put into the generated orm.xml file.
-         */
-        Set<Class<?>> converterTypes = new HashSet<>();
-
-        Map<Class<?>, Map<String, Class<?>>> embeddableTypes = //
-                        new LinkedHashMap<>();
+        // Attribute types that are inferred to be embeddable on unannotated entities
+        Map<Class<?>, Map<String, Class<?>>> embeddableTypes = new LinkedHashMap<>();
 
         for (Class<?> c : entityTypes) {
             if (c.isAnnotationPresent(Entity.class)) {
                 annotatedEntityClassQueue.add(c);
-
-                for (Field field : c.getFields()) {
-                    Convert convert = field.getAnnotation(Convert.class);
-                    if (convert != null)
-                        converterTypes.add(convert.converter());
-                }
-
-                for (Method method : c.getMethods()) {
-                    Convert convert = method.getAnnotation(Convert.class);
-                    if (convert != null)
-                        converterTypes.add(convert.converter());
-                }
             } else {
                 // The table is named from the class name of the entity or
                 // record that is specified by the user, not from the generated
                 // entity class that is used internally in place of a record.
                 String tableName = c.getSimpleName();
 
+                Class<?> ec = c;
                 if (c.isRecord()) {
                     // an entity class is generated for the record
                     String entityClassName = c.getName() + EntityInfo.RECORD_ENTITY_SUFFIX;
@@ -375,17 +359,15 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
                                                               repositoryInterfaces);
                     String name = entityClassName.replace('.', '/') + ".class";
                     generatedEntities.add(new InMemoryMappingFile(generatedEntityBytes, name));
-                    Class<?> generatedEntity = classDefiner //
-                                    .findLoadedOrDefineClass(getRepositoryClassLoader(),
-                                                             entityClassName,
-                                                             generatedEntityBytes);
-                    generatedToRecordClass.put(generatedEntity, c);
-                    c = generatedEntity;
+                    ec = classDefiner.findLoadedOrDefineClass(getRepositoryClassLoader(),
+                                                              entityClassName,
+                                                              generatedEntityBytes);
+                    generatedToRecordClass.put(ec, c);
                 }
 
                 StringBuilder xml = new StringBuilder(500);
 
-                xml.append(" <entity class=\"").append(c.getName()) //
+                xml.append(" <entity class=\"").append(ec.getName()) //
                                 .append("\">").append(EOLN);
 
                 xml.append("  <table name=\"") //
@@ -397,6 +379,93 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
                 xml.append(" </entity>").append(EOLN);
 
                 entityClassInfo.add(xml.toString());
+            }
+        }
+
+        /*
+         * Note: When creating a persistence unit, managed classes (such as entities) are declared in an
+         * all or nothing fashion. Therefore, if we create a persistence unit with a list of entities
+         * we are also required to provide a list of converters, otherwise the persistence provider
+         * will not use them. Ideally, our internal persistence service unit would have a method to
+         * include converter classes alongside entity classes, but the persistence provider API lacks
+         * such function so the converters need to be put into the generated orm.xml file.
+         */
+        Set<Class<?>> converterTypes = new HashSet<>();
+
+        Queue<Class<?>> annotatedEmbeddedClassQueue = new LinkedList<>();
+        Set<Class<?>> embeddedClassesProcessed = new HashSet<>();
+
+        // Discover entities that are indirectly referenced via OneToOne, ManyToMany,
+        // and so forth. Also discover AttributeConverters that are referenced from
+        // classes, fields, and methods.
+        for (Class<?> c, emb = null; //
+                        (c = annotatedEntityClassQueue.poll()) != null ||
+                                     (emb = annotatedEmbeddedClassQueue.poll()) != null;) {
+            if (c != null) {
+                if (entityClassNames.add(c.getName())) {
+                    Table table = c.getAnnotation(Table.class);
+                    String tableName = table == null || table.name().length() == 0 //
+                                    ? c.getSimpleName() //
+                                    : table.name();
+                    entityTableNames.add(tableName);
+
+                    if (trace && tc.isDebugEnabled())
+                        Tr.debug(this, tc, "entity class " + c.getName() +
+                                           " will use table " + tableName);
+                } else {
+                    c = null;
+                }
+            } else if (emb != null) {
+                embeddedClassesProcessed.add(c = emb);
+
+                if (trace && tc.isDebugEnabled())
+                    Tr.debug(this, tc, "embedded class " + emb.getName());
+            } else {
+                c = null;
+            }
+
+            for (Class<?> sc = c; //
+                            sc != null && sc != Object.class; //
+                            sc = sc.getSuperclass()) {
+                for (Convert convert : sc.getAnnotationsByType(Convert.class))
+                    if (convert.converter() != null)
+                        converterTypes.add(convert.converter());
+
+                for (Field f : sc.getDeclaredFields()) {
+                    if (f.isAnnotationPresent(Embedded.class) ||
+                        f.isAnnotationPresent(EmbeddedId.class)) {
+                        if (f.getType().isAnnotationPresent(Embeddable.class))
+                            annotatedEmbeddedClassQueue.add(f.getType());
+                        else if ((c = getEmbeddableClass(f.getGenericType())) != null)
+                            annotatedEmbeddedClassQueue.add(c);
+                    } else if (f.getType().isAnnotationPresent(Entity.class)) {
+                        annotatedEntityClassQueue.add(f.getType());
+                    } else if ((c = getEntityClass(f.getGenericType())) != null) {
+                        annotatedEntityClassQueue.add(c);
+                    }
+
+                    for (Convert convert : f.getAnnotationsByType(Convert.class))
+                        if (convert.converter() != null)
+                            converterTypes.add(convert.converter());
+                }
+
+                for (Method m : sc.getDeclaredMethods()) {
+                    if (m.isAnnotationPresent(Embedded.class) ||
+                        m.isAnnotationPresent(EmbeddedId.class)) {
+                        if (m.getReturnType().isAnnotationPresent(Embeddable.class))
+                            annotatedEmbeddedClassQueue.add(m.getReturnType());
+                        else if ((c = getEmbeddableClass(m.getGenericReturnType())) != null)
+                            annotatedEmbeddedClassQueue.add(c);
+                    } else if (m.getReturnType().isAnnotationPresent(Entity.class)) {
+                        annotatedEntityClassQueue.add(m.getReturnType());
+                    } else if ((c = getEntityClass(m.getGenericReturnType())) != null) {
+                        annotatedEntityClassQueue.add(c);
+                    }
+
+                    for (Convert convert : m.getAnnotationsByType(Convert.class))
+                        if (convert.converter() != null)
+                            converterTypes.add(convert.converter());
+                }
             }
         }
 
@@ -420,24 +489,6 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
                             .append(EOLN);
             entityClassInfo.add(xml.toString());
         }
-
-        // Discover entities that are indirectly referenced via OneToOne, ManyToMany, and so forth
-        for (Class<?> c; (c = annotatedEntityClassQueue.poll()) != null;)
-            if (entityClassNames.add(c.getName())) {
-                Table table = c.getAnnotation(Table.class);
-                entityTableNames.add(table == null || table.name().length() == 0 ? c.getSimpleName() : table.name());
-                Class<?> e;
-                for (Field f : c.getFields())
-                    if (f.getType().isAnnotationPresent(Entity.class))
-                        annotatedEntityClassQueue.add(f.getType());
-                    else if ((e = getEntityClass(f.getGenericType())) != null)
-                        annotatedEntityClassQueue.add(e);
-                for (Method m : c.getMethods())
-                    if (m.getReturnType().isAnnotationPresent(Entity.class))
-                        annotatedEntityClassQueue.add(m.getReturnType());
-                    else if ((e = getEntityClass(m.getGenericReturnType())) != null)
-                        annotatedEntityClassQueue.add(e);
-            }
 
         Map<String, Object> properties = new HashMap<>();
 
@@ -491,9 +542,14 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
                 if (propertyDescriptors != null)
                     for (PropertyDescriptor p : propertyDescriptors) {
                         Method setter = p.getWriteMethod();
-                        if (setter != null)
-                            attributes.putIfAbsent(p.getName(),
-                                                   p.getPropertyType());
+                        if (setter != null) {
+                            String n = setter.getName();
+                            String name = new StringBuilder(n.length() - 3) //
+                                            .append(Character.toLowerCase(n.charAt(3))) //
+                                            .append(n.substring(4)) //
+                                            .toString(); //
+                            attributes.putIfAbsent(name, p.getPropertyType());
+                        }
                     }
             } catch (IntrospectionException x) {
                 throw new MappingException(x);
@@ -662,6 +718,27 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
     }
 
     /**
+     * Obtains the embeddable class (if any) for a type that might be parameterized.
+     *
+     * @param type a type that might be parameterized.
+     * @return embeddable class or null.
+     */
+    @Trivial
+    private Class<?> getEmbeddableClass(java.lang.reflect.Type type) {
+        if (type instanceof ParameterizedType) {
+            java.lang.reflect.Type[] typeParams = //
+                            ((ParameterizedType) type).getActualTypeArguments();
+            for (java.lang.reflect.Type t : typeParams)
+                if (t instanceof Class && ((Class<?>) t).isAnnotationPresent(Embeddable.class)) {
+                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
+                        Tr.debug(this, tc, "getEmbeddableClass from parameterized " + type + ": " + t);
+                    return (Class<?>) t;
+                }
+        }
+        return null;
+    }
+
+    /**
      * Obtains the entity class (if any) for a type that might be parameterized.
      *
      * @param type a type that might be parameterized.
@@ -669,16 +746,17 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
      */
     @Trivial
     private Class<?> getEntityClass(java.lang.reflect.Type type) {
-        Class<?> c = null;
         if (type instanceof ParameterizedType) {
-            java.lang.reflect.Type[] typeParams = ((ParameterizedType) type).getActualTypeArguments();
-            type = typeParams.length == 1 ? typeParams[0] : null;
-            if (type instanceof Class && ((Class<?>) type).isAnnotationPresent(Entity.class))
-                c = (Class<?>) type;
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
-                Tr.debug(this, tc, "getEntityClass from parameterized " + type + ": " + c);
+            java.lang.reflect.Type[] typeParams = //
+                            ((ParameterizedType) type).getActualTypeArguments();
+            for (java.lang.reflect.Type t : typeParams)
+                if (t instanceof Class && ((Class<?>) t).isAnnotationPresent(Entity.class)) {
+                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
+                        Tr.debug(this, tc, "getEntityClass from parameterized " + type + ": " + t);
+                    return (Class<?>) t;
+                }
         }
-        return c;
+        return null;
     }
 
     @Override

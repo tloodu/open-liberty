@@ -56,11 +56,8 @@ public class CloudantTest extends FATServletClient {
 
         cloudant.createDb(DB_NAME);
 
-        // TODO extract security files from container prior to server start
-        // TODO delete security files from git
-
-//        cloudant.copyFileFromContainer("/etc/couchdb/cert/server.crt", server.getServerRoot() + "/security/server.crt");
-//        FATSuite.createKeystore(server.getServerRoot() + "/security/keystore.jks", server.getServerRoot() + "/security/server.crt");
+        cloudant.copyFileFromContainer("/etc/couchdb/cert/server.crt", server.getServerRoot() + "/security/server.crt");
+        FATSuite.createKeystore(server.getServerRoot() + "/security/keystore.jks", server.getServerRoot() + "/security/server.crt");
 
         ShrinkHelper.defaultApp(server, JEE_APP, "cloudant.web");
         server.startServer();
@@ -150,7 +147,8 @@ public class CloudantTest extends FATServletClient {
 
     @Test
     @AllowedFFDC({ "java.security.cert.CertPathBuilderException",
-                   "sun.security.validator.ValidatorException" })
+                   "sun.security.validator.ValidatorException",
+                   "com.ibm.security.cert.IBMCertPathBuilderException" })
     public void testInvalidSSL() throws Exception {
         runTest();
     }

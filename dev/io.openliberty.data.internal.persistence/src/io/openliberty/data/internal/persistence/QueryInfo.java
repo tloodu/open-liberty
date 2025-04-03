@@ -1378,13 +1378,22 @@ public class QueryInfo {
                                                           Set<String> qlRequired) {
         String firstExtraParam = null;
         StringBuilder extraParamNames = new StringBuilder();
-        for (String name : extras) {
-            if (firstExtraParam == null)
-                firstExtraParam = name;
-            else
-                extraParamNames.append(", ");
-            extraParamNames.append(name);
-        }
+        for (String name : extras)
+            if (name.length() > 0) {
+                if (firstExtraParam == null)
+                    firstExtraParam = name;
+                else
+                    extraParamNames.append(", ");
+                extraParamNames.append(name);
+            }
+
+        if (firstExtraParam == null && !extras.isEmpty())
+            // @Param("") with empty String is not valid
+            return exc(MappingException.class,
+                       "CWWKD1104.empty.anno.value",
+                       Param.class.getSimpleName(),
+                       method.getName(),
+                       repositoryInterface.getName());
 
         boolean isFirst = true;
         StringBuilder qlParamNames = new StringBuilder();
@@ -2975,7 +2984,7 @@ public class QueryInfo {
         String o_ = entityVar_;
 
         String[] cols, selections = entityInfo.builder.provider.compat.getSelections(method);
-        if (selections == null || selections.length == 0) {
+        if (selections.length == 0) {
             cols = null;
         } else if (type == Type.FIND_AND_DELETE) {
             // Unreachable in version 1.0 and uncertain what will be added to
@@ -2984,7 +2993,8 @@ public class QueryInfo {
             ("The " + method.getName() + " method of the " +
              repositoryInterface.getName() + " repository has a " +
              method.getGenericReturnType().getTypeName() + " return type and" +
-             " specifies to return the " + selections + " entity attributes," +
+             " specifies to return the " +
+             Arrays.toString(selections) + " entity attributes," +
              " but delete operations can only return void, a deletion count," +
              " a boolean deletion indicator, or the removed entities.");
         } else {
@@ -3075,8 +3085,14 @@ public class QueryInfo {
 
                     String[] names = new String[recordComponents.length];
                     for (int i = 0; i < recordComponents.length; i++) {
-                        // 1.1 TODO first check for Select annotation on record component
-                        names[i] = recordComponents[i].getName();
+                        String[] select = entityInfo.builder.provider.compat //
+                                        .getSelections(recordComponents[i]);
+                        if (select == null || select.length == 0)
+                            names[i] = recordComponents[i].getName();
+                        else if (select.length == 1)
+                            names[i] = select[0];
+                        else
+                            throw new UnsupportedOperationException("@Select " + Arrays.toString(select)); // 1.1 TODO
                     }
 
                     try {
@@ -3452,46 +3468,45 @@ public class QueryInfo {
                           method.getName(),
                           repositoryInterface.getName(),
                           entityInfo.attributeTypes.keySet());
+        } else if (len == 0) {
+            throw exc(MappingException.class,
+                      "CWWKD1024.missing.entity.attr",
+                      method.getName(),
+                      repositoryInterface.getName(),
+                      entityInfo.getType().getName(),
+                      entityInfo.attributeTypes.keySet());
         } else {
             String lowerName = name.toLowerCase();
             attributeName = entityInfo.attributeNames.get(lowerName);
-            if (attributeName == null)
-                if (name.length() == 0) {
-                    throw exc(MappingException.class,
-                              "CWWKD1024.missing.entity.attr",
-                              method.getName(),
-                              repositoryInterface.getName(),
-                              entityInfo.getType().getName(),
-                              entityInfo.attributeTypes.keySet());
-                } else {
-                    // tolerate possible mixture of . and _ separators:
-                    lowerName = lowerName.replace('.', '_');
+            if (attributeName == null) {
+                // tolerate possible mixture of . and _ separators:
+                lowerName = lowerName.replace('.', '_');
+                attributeName = entityInfo.attributeNames.get(lowerName);
+                if (attributeName == null) {
+                    // tolerate possible mixture of . and _ separators with lack of separators:
+                    lowerName = lowerName.replace("_", "");
                     attributeName = entityInfo.attributeNames.get(lowerName);
-                    if (attributeName == null) {
-                        // tolerate possible mixture of . and _ separators with lack of separators:
-                        lowerName = lowerName.replace("_", "");
-                        attributeName = entityInfo.attributeNames.get(lowerName);
-                        if (attributeName == null && failIfNotFound) {
-                            if (Util.hasOperationAnno(method))
-                                throw exc(MappingException.class,
-                                          "CWWKD1010.unknown.entity.attr",
-                                          name,
-                                          entityInfo.getType().getName(),
-                                          method.getName(),
-                                          repositoryInterface.getName(),
-                                          entityInfo.attributeTypes.keySet());
-                            else
-                                throw exc(MappingException.class,
-                                          "CWWKD1091.method.name.parse.err",
-                                          name,
-                                          entityInfo.getType().getName(),
-                                          method.getName(),
-                                          repositoryInterface.getName(),
-                                          Util.OP_ANNOS,
-                                          entityInfo.attributeTypes.keySet());
-                        }
+                    if (attributeName == null && failIfNotFound) {
+                        if (Util.hasOperationAnno(method))
+                            throw exc(MappingException.class,
+                                      "CWWKD1010.unknown.entity.attr",
+                                      name,
+                                      entityInfo.getType().getName(),
+                                      method.getName(),
+                                      repositoryInterface.getName(),
+                                      entityInfo.attributeTypes.keySet());
+                        else
+                            throw exc(MappingException.class,
+                                      "CWWKD1091.method.name.parse.err",
+                                      name,
+                                      entityInfo.getType().getName(),
+                                      method.getName(),
+                                      repositoryInterface.getName(),
+                                      Util.OP_ANNOS,
+                                      entityInfo.attributeTypes.keySet());
                     }
                 }
+            }
         }
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
             Tr.debug(this, tc, "getAttributeName " + name + ": " + attributeName);
@@ -4246,14 +4261,23 @@ public class QueryInfo {
 
             StringBuilder q;
             if (selectLen > 0) {
-                q = new StringBuilder(ql.length() + (selectLen >= 0 ? 0 : 50) + (fromLen >= 0 ? 0 : 50) + 2);
                 String selection = ql.substring(select0, select0 + selectLen);
+                q = new StringBuilder(ql.length() + (selectLen >= 0 ? 0 : 50) + (fromLen >= 0 ? 0 : 50) + 2);
+                q.append("SELECT");
+                // TODO 1.1 use Jakarta Persistence enhancement issue 420 instead of
+                // editing the query
+                boolean insertConstructor = compat.atLeast(1, 1) &&
+                                            singleType.isRecord() &&
+                                            !selection.toUpperCase().contains(" NEW ");
+                if (insertConstructor)
+                    q.append(" NEW ").append(singleType.getName()).append('(');
                 if (insertEntityVar) {
-                    q.append("SELECT");
                     appendWithIdentifierName(ql, select0, select0 + selectLen, entityVar_, q);
                 } else {
-                    q.append("SELECT").append(selection);
+                    q.append(selection);
                 }
+                if (insertConstructor)
+                    q.append(") ");
                 if (fromLen == 0 && whereLen == 0 && orderLen == 0 &&
                     !Character.isWhitespace(q.charAt(q.length() - 1)))
                     q.append(' ');
@@ -4910,10 +4934,11 @@ public class QueryInfo {
      */
     private int parseFirst(int start, int endBefore) {
         String methodName = method.getName();
+        int i = start;
         int num = start == endBefore ? 1 : 0;
         if (num == 0)
-            while (start < endBefore) {
-                char ch = methodName.charAt(start);
+            while (i < endBefore) {
+                char ch = methodName.charAt(i);
                 if (ch >= '0' && ch <= '9') {
                     if (num <= (Integer.MAX_VALUE - (ch - '0')) / 10)
                         num = num * 10 + (ch - '0');
@@ -4922,9 +4947,9 @@ public class QueryInfo {
                                   "CWWKD1028.first.exceeds.max",
                                   methodName,
                                   repositoryInterface.getName(),
-                                  methodName.substring(0, endBefore),
+                                  methodName.substring(start, endBefore),
                                   "Integer.MAX_VALUE (" + Integer.MAX_VALUE + ")");
-                    start++;
+                    i++;
                 } else {
                     if (num == 0)
                         num = 1;
@@ -4940,7 +4965,7 @@ public class QueryInfo {
         else
             maxResults = num;
 
-        return start;
+        return i;
     }
 
     /**
@@ -4966,6 +4991,25 @@ public class QueryInfo {
                 endBefore -= 10;
 
             String attribute = methodName.substring(i, endBefore);
+
+            if (attribute.length() == 0) {
+                // Error handling for missing attribute name due to Asc or Desc
+                // appearing within an attribute name that is used in the OrderBy
+                String lowerOrderBy = methodName.substring(orderBy + 7).toLowerCase();
+                for (String lowerAttrName : entityInfo.attributeNames.keySet()) {
+                    String keyword = lowerAttrName.contains("asc") ? "Asc" //
+                                    : lowerAttrName.contains("desc") ? "Desc" //
+                                                    : null;
+                    if (keyword != null && lowerOrderBy.contains(lowerAttrName))
+                        throw exc(MappingException.class,
+                                  "CWWKD1105.keyword.in.orderby",
+                                  methodName,
+                                  repositoryInterface.getName(),
+                                  entityInfo.attributeNames.get(lowerAttrName),
+                                  entityInfo.getType().getName(),
+                                  keyword);
+                }
+            }
 
             addSort(ignoreCase, attribute, descending);
 
