@@ -74,8 +74,8 @@ autoFVT.doLast {
     'com.ibm.ws.security.token.ltpa.fat',
     'com.ibm.ws.security.token.ltpa.fat.contextRootCookiePathTestServer',
     'com.ibm.ws.security.token.ltpa.fat.ltpaKeyRotationTestServer',
-    'com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer1',
-    'com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer2'
+    'com.ibm.ws.security.token.ltpa.fat.validationKeyTestServer1',
+    'com.ibm.ws.security.token.ltpa.fat.validationKeyTestServer2'
   ]
   servers.each { server ->
     copy { 
@@ -108,14 +108,14 @@ autoFVT.doLast {
       rename 'server.xml', 'ltpaKeyRotationTestServer.server.orig.xml'
     }
     copy { 
-      from new File(projectDir, 'publish/servers/com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer1/server.xml')
+      from new File(projectDir, 'publish/servers/com.ibm.ws.security.token.ltpa.fat.validationKeyTestServer1/server.xml')
       into new File(autoFvtDir, 'lib/LibertyFATTestFiles')
-      rename 'server.xml', 'initializationVectorTestServer1.server.orig.xml'
+      rename 'server.xml', 'validationKeyTestServer1.server.orig.xml'
     }
     copy { 
-      from new File(projectDir, 'publish/servers/com.ibm.ws.security.token.ltpa.fat.initializationVectorTestServer2/server.xml')
+      from new File(projectDir, 'publish/servers/com.ibm.ws.security.token.ltpa.fat.validationKeyTestServer2/server.xml')
       into new File(autoFvtDir, 'lib/LibertyFATTestFiles')
-      rename 'server.xml', 'initializationVectorTestServer2.server.orig.xml'
+      rename 'server.xml', 'validationKeyTestServer2.server.orig.xml'
     }
     copy { 
       from new File(projectDir, 'publish/files/server.xml')
