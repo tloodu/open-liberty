@@ -468,75 +468,7 @@ public class LTPAValidationKeyTests {
         server2FlClient1.accessProtectedServletWithAuthorizedCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie);
     }
 
-    /**
-     * Verify that an SSO cookie retrieved from authentication on one server can be used on a second server using a validation key and derived IV where both servers use different
-     * keysPassword and with the server monitorValidationKeysDir variable set to false.
-     *
-     * Steps:
-     * <OL>
-     * <LI> Configure Server #1 and Server #2 to contain different primary LTPA Keys with different LTPA keys passwords with monitorValidationKeysDir set to False
-     * <LI> Configure Server #1 with the correct password of the key to-be added (Server #1 will be configured with a different password than server #2)
-     * <LI> Access a simple servlet with form login using valid credentials on Server #1 and retrieve the SSO cookie
-     * <LI> Copy the LTPA primary key from Server #1 and place it in Server #2
-     * <LI> Attempt to access the simple servlet with form login on Server #2 using the SSO cookie from Server #1
-     * <LI> Configure the previously added validation key and password in Server #2 server.xml
-     * <LI> Attempt to access the simple servlet with form login on Server #2 using the SSO cookie from Server #1
-     * </OL>
-     *
-     * Expected Results:
-     * <OL>
-     * <LI> Successful authentication to simple servlet application on server #1 using valid credentials
-     * <LI> Successful retrieval of SSO cookie from server #1
-     * <LI> Successful copy of ltpa.keys file to server #2 to be used as validation keys
-     * <LI> Unsuccessful authentication to simple servlet application on server #2 using SSO cookie due to monitorKeysValidationDir not recognizing unspecified keys
-     * <LI> Successful rename of the validation keys file to that specified in server.xml
-     * <LI> Successful authentication to simple servlet application on server #2 using SSO cookie
-     * </OL>
-     */
-    @Mode(TestMode.FULL)
-    @Test
-    public void testValidationKeys_differentKeyPW_monitorValidationKeysDir_false() throws Exception {
 
-        // Configure the servers
-        configureServer("false", "10", false, server1);
-        configureServer("false", "10", false, server2);
-
-        // Change the default keysPassword configured in server.xml to that of the added ltpa keys file (Liberty)
-        ServerConfiguration serverConfig = server1.getServerConfiguration();
-        LTPA ltpa = serverConfig.getLTPA();
-        setLTPAKeyPasswordElement(ltpa, "{xor}EzY9Oi0rJg==");
-        updateConfigDynamically(server1, serverConfig);
-
-        // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server1);
-        renameKeyAndWaitForLtpaConfigReady(DIFFERENT_PW_VALIDATION_KEY_PATH, DEFAULT_KEY_PATH, server1);
-
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
-        renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, server2);
-
-        // Initial login to simple servlet for form login1
-        server1FlClient1.accessProtectedServletWithAuthorizedCredentials(FormLoginClient.PROTECTED_SIMPLE, validUser, validPassword);
-
-        // Get the SSO cookie from the login
-        String server1Cookie = server1FlClient1.getCookieFromLastLogin();
-        assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
-
-        // Copy the ltpa.keys file to server #2 as validation9.keys (server #2 contains the ltpa.keys file from server #1 as a validation key)
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server2);
-
-        // Attempt to login to the simple servlet on server #2 and assert that the login fails because with monitorValidationKeysDir means the server does not recognize unspecified keys file
-        assertTrue("An invalid cookie should result in an authorization challenge",
-                   server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
-
-        // Dynamically add the validation key element into the server2 configuration
-        ServerConfiguration server2Config = server2.getServerConfiguration();
-        LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY9, LTPA_LIBERTY_PASSWORD);
-        updateConfigDynamically(server2, server2Config);
-
-        // Attempt to login to the simple servlet on server #2 and assert that the login is successful
-        server2FlClient1.accessProtectedServletWithAuthorizedCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie);
-    }
 
     /**
      * Negative Test Case:
@@ -677,7 +609,7 @@ public class LTPAValidationKeyTests {
     @Mode(TestMode.FULL)
     @Test
     @AllowedFFDC({ "javax.crypto.BadPaddingException" })
-    public void testValidationKeys_different_keysPW() throws Exception {
+    public void testValidationKeys_different_Validation_keysPW() throws Exception {
         // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
         copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server2);
@@ -797,134 +729,7 @@ public class LTPAValidationKeyTests {
 
     }
 
-    /**
-     * Negative Test Case:
-     *
-     * Since MonitorValidationKeysDir is false, verify that a server 2 continues to fail authentication using a cookie from server 1
-     * even if a valid validation keys file is copied over to server 2. This is because the IV can only be set to validation files set in
-     * the server.xml as the feature to monitor all existing validation keys file is disabled.
-     *
-     * Steps:
-     * <OL>
-     * <LI> Server #1 and Server #2 contain different primary LTPA keys
-     * <LI> Access a simple servlet with form login using valid credentials on server #1
-     * <LI> Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * <LI> Copy over validation9.keys
-     * <LI> Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * <LI> Copy the LTPA Primary key as in Server #1 and place it in Server #2, renamed as validation1.keys
-     * <LI> Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * </OL>
-     *
-     * Expected Results:
-     * <OL>
-     * <LI> Succesful file copy and rename to ltpa.keys in server 1 and server 2
-     * <LI> Authentication should be successful and retrieve the SSO cookie on server 1
-     * <LI> Succesful copy of validation9.keys created in server 2
-     * <LI> Authentication should fail on server 2
-     * <LI> Succesful copy of validation1.keys created in server 2
-     * <LI> Authentication should fail on server 2
-     * </OL>
-     *
-     *
-     **/
 
-    @Mode(TestMode.FULL)
-    @Test
-    public void testValidationKeys_failing_validationKey_monitorValidationKeysDir_false() throws Exception {
-        // Configure the servers
-        configureServer("false", "10", false, server1);
-        configureServer("false", "10", false, server2);
-
-        // // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
-        renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
-
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
-        renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, server2);
-
-        // Initial login to simple servlet for form login1
-        server1FlClient1.accessProtectedServletWithAuthorizedCredentials(FormLoginClient.PROTECTED_SIMPLE, validUser, validPassword);
-
-        // Get the SSO cookie from the login
-        String server1Cookie = server1FlClient1.getCookieFromLastLogin();
-        assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
-
-        // Copy the ltpa.keys file to server #2 as validation9.keys
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY9_PATH, server2);
-
-        // Attempt to login to the simple servlet on server #2 and assert that the login fails because with monitorValidationKeysDir means the server does not recognize unspecified keys file
-        assertTrue("An invalid cookie should result in an authorization challenge",
-                   server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
-
-        // Copy the ltpa.keys file to server #2 as validation1.keys (server #2 contains the ltpa.keys file from server #1 as a validation key)
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server2);
-
-        // Attempt to login to the simple servlet on server #2 and assert that the login fails because with monitorValidationKeysDir means the server does not recognize unspecified keys file
-        assertTrue("An invalid cookie should result in an authorization challenge",
-                   server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
-
-    }
-
-    /**
-     * Negative Test Case:
-     *
-     * Verify that an SSO cookie from server 1 fails auth in server 2 because the IV is set to an invalid key with a swapped 3DES value
-     *
-     * Steps:
-     *
-     * <OL>
-     * <LI> Server #1 and Server #2 contain different primary LTPA keys with same LTPA keys passwords
-     * <LI> Access a simple servlet with form login using valid credentials on server #1
-     * <LI> Copy over validation4.keys to server2
-     * <LI> Replace the `password` property of the validation key to that of server 1's keypassword
-     * <LI> Attempt to access the SimpleServlet with form login on server #2 using the same cookie token from Server #1
-     * </OL>
-     *
-     * Expected results:
-     * <OL>
-     * <LI> Successful file copy and rename to ltpa.keys in server 1 and server 2
-     * <LI> Succesful file copy of validation4.keys in server 2
-     * <LI> Authentication should be successful and retrieve the SSO cookie on server 1
-     * <LI> Authentication fails because although IV and keys file is valid, the 3des key is incorrect
-     * </OL>
-     */
-
-    @Mode(TestMode.LITE)
-    @Test
-    public void testValidationKeys_swapped_3DESkey_or_sharedKey() throws Exception {
-        // Copy valid ltpa keys to each server, the ltpa keys are configured using different keysPassword
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
-        //copy over invalid key
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY4_PATH, server2);
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
-
-        // Configure both servers, and replace the server generated LTPA keys  with valid keys
-        configureServer("true", "10", true, server1);
-        renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, server1);
-
-        configureServer("true", "10", true, server2);
-
-        renameKeyAndWaitForLtpaConfigReady(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, server2);
-
-        // Initial login to simple servlet for form login1
-        server1FlClient1.accessProtectedServletWithAuthorizedCredentials(FormLoginClient.PROTECTED_SIMPLE, validUser, validPassword);
-
-        // Get the SSO cookie from the login
-        String server1Cookie = server1FlClient1.getCookieFromLastLogin();
-        assertNotNull("Expected SSO Cookie 1 is missing.", server1Cookie);
-
-        // Change the default password of the validation key to that of the added ltpa keys file
-        // set the key file element as the failing key
-        ServerConfiguration server2Config = server2.getServerConfiguration();
-        LTPA ltpa2 = server2Config.getLTPA();
-        setLTPAValidationKey(ltpa2, VALIDATION_KEY4, LTPA_DEFAULT_PASSWORD);
-
-        updateConfigDynamically(server2, server2Config);
-
-        // Attempt should fail as the IV is set to an invalid validation key
-        assertTrue("An invalid cookie should result in an authorization challenge",
-                   server2FlClient1.accessProtectedServletWithInvalidCookie(FormLoginClient.PROTECTED_SIMPLE, server1Cookie));
-    }
 
     public void moveLogMarkForServer(LibertyServer server) throws Exception {
         server.setMarkToEndOfLog();
