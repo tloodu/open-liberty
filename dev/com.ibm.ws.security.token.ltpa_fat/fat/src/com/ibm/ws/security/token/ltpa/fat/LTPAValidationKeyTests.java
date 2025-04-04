@@ -490,7 +490,7 @@ public class LTPAValidationKeyTests {
      *
      */
 
-    @Mode(TestMode.LITE)
+    @Mode(TestMode.FULL)
     @Test
     @AllowedFFDC({ "java.lang.IllegalArgumentException" })
     //FFDC because validation3.keys is an incorrectly formatted corrupted key which will cause an Illegal Argument exceptions
@@ -652,7 +652,7 @@ public class LTPAValidationKeyTests {
      * </OL>
      */
 
-    @Mode(TestMode.LITE)
+    @Mode(TestMode.FULL)
     @Test
     public void testValidationKeys_switch_validationKeys() throws Exception {
 
