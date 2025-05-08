@@ -66,7 +66,7 @@ public class LTPAValidationKeyTests {
     private static final String validUser = "user1";
     private static final String validPassword = "user1pwd";
 
-    private static final String[] serverShutdownMessages = { "CWWKS9113E", "CWWKS4102E", "CWWKG0058E", "CWWKG0083W", "CWWKS4106E", "CWWKS4109W", "CWWKS4110E", "CWWKS4111E", "CWWKS4112E",
+    private static final String[] serverShutdownMessages = { "CWWKS4102E", "CWWKG0058E", "CWWKG0083W", "CWWKS4106E", "CWWKS4109W", "CWWKS4110E", "CWWKS4111E", "CWWKS4112E",
                                                              "CWWKS4113W",
                                                              "CWWKS4114W", "CWWKS4115W", "CWWKS1859E" };
 
@@ -162,6 +162,8 @@ public class LTPAValidationKeyTests {
     @BeforeClass
     public static void setUpClass() throws Exception {
 
+        Log.info(thisClass, "setUpClass", "entering");
+
         // Copy validation key file (validation1.keys) to the server
         server2.useSecondaryHTTPPort();
 
@@ -204,27 +206,38 @@ public class LTPAValidationKeyTests {
         server1FlClient1 = new FormLoginClient(server1, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
         server2FlClient1 = new FormLoginClient(server2, FormLoginClient.DEFAULT_SERVLET_NAME, "/formlogin1");
 
+        Log.info(thisClass, "setUpClass", "exiting");
+
     }
 
     @Before
     public void setUp() throws Exception {
 
+        Log.info(thisClass, "setUpTest", "entering");
+
         // Reset the ltpa.keys file to allow for clean start of subsequent tests
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY1_PATH, server1);
-        copyFileToServerResourcesSecurityDir(ALT_VALIDATION_KEY2_PATH, server2);
-        renameServerFileInLibertyRoot(VALIDATION_KEY1_PATH, DEFAULT_KEY_PATH, false, server1);
-        renameServerFileInLibertyRoot(VALIDATION_KEY2_PATH, DEFAULT_KEY_PATH, false, server2);
 
         LibertyServer[] servers = { server1, server2 };
+        String[] alternativeKeyPaths = { ALT_VALIDATION_KEY1_PATH, ALT_VALIDATION_KEY2_PATH };
+        String[] serverKeysPaths = { VALIDATION_KEY1_PATH, VALIDATION_KEY2_PATH };
 
+        int index = 0;
         for (LibertyServer server : servers) {
+            String altValidationKeyPath = alternativeKeyPaths[index];
+            String validationKeyPath = serverKeysPaths[index];
+
             if (!server.isStarted()) {
-                // Delete on setUp so that old keys are saved when the server is backed up by the framework
+                // Only copy and rename files if this specific server is off
+                copyFileToServerResourcesSecurityDir(altValidationKeyPath, server);
+                renameServerFileInLibertyRoot(validationKeyPath, DEFAULT_KEY_PATH, false, server);
+
+                // Delete pre-built keys for the current server
                 for (String path : PREBUILT_KEYS) {
                     deleteFileIfExists(path, true, server);
                 }
                 server.startServer(true);
             }
+            index++;
         }
 
         //Copy over server.xml on set up to restore the server.xml between tests
@@ -237,6 +250,8 @@ public class LTPAValidationKeyTests {
         for (LibertyServer server : servers) {
             moveLogMarkForServer(server);
         }
+
+        Log.info(thisClass, "setUpTest", "exiting");
 
     }
 
