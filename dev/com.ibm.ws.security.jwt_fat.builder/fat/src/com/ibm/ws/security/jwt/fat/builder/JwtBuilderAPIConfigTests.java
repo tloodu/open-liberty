@@ -47,6 +47,8 @@ import componenttest.annotation.Server;
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled.SkipJavaSemeruWithFipsEnabledRule;
 import componenttest.topology.impl.JavaInfo;
 import componenttest.topology.impl.LibertyServer;
 
@@ -84,6 +86,9 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
         builderServer.addIgnoredErrors(Arrays.asList(JwtBuilderMessageConstants.CWWKG0032W_CONFIG_INVALID_VALUE, JwtBuilderMessageConstants.CWPKI0812E_CANT_FIND_KEY, JwtBuilderMessageConstants.CWWKS6059W_KEY_MANAGEMENT_KEY_ALIAS_MISSING));
 
     }
+    
+    @Rule
+    public static final SkipJavaSemeruWithFipsEnabled skipJavaSemeruWithFipsEnabled = new SkipJavaSemeruWithFipsEnabled("com.ibm.ws.security.jwt_fat.builder");
 
     /**
      * <p>
@@ -1867,6 +1872,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * <LI>We will create a jwt token with a signature length of 1024
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_jwkEnabled_jwkSigningKeySize_1024() throws Exception {
 
@@ -1960,6 +1966,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * <LI>We will create a JWE instead of just a JWS (the content of the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodRS256Alias_goodContentEncryptAlg() throws Exception {
 
@@ -1990,6 +1997,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * <LI>We will create a JWE instead of just a JWS (the content of the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodRS384Alias_goodContentEncryptAlg() throws Exception {
 
@@ -2019,6 +2027,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * <LI>We will create a JWE instead of just a JWS (the content of the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodRS512Alias_goodContentEncryptAlg() throws Exception {
 
@@ -2050,6 +2059,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_invalidKeyMgmtKeyAlg_goodRS256Alias_goodContentEncryptAlg() throws Exception {
 
@@ -2083,6 +2093,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_missingKeyMgmtKeyAlg_goodRS256Alias_goodContentEncryptAlg() throws Exception {
 
@@ -2115,6 +2126,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_RSAOAEP256KeyMgmtKeyAlg_goodRS256Alias_goodContentEncryptAlg() throws Exception {
 
@@ -2149,6 +2161,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodRS256Alias_invalidContentEncryptAlg() throws Exception {
 
@@ -2181,6 +2194,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodRS256Alias_missingContentEncryptAlg() throws Exception {
 
@@ -2211,6 +2225,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * <LI>We will create a JWE instead of just a JWS (the content of the token will be validated)
      * </OL>
      */
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodRS256Alias_goodContentEncryptAlg_SigAlgES384() throws Exception {
 
@@ -2245,6 +2260,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
      * </OL>
      */
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodES256Alias_goodContentEncryptAlg() throws Exception {
 
@@ -2319,6 +2335,7 @@ public class JwtBuilderAPIConfigTests extends CommonSecurityFat {
 
     }
 
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIConfigTests_encryption_goodKeyMgmtKeyAlg_goodServerWideKeyManagementKeyAlias_goodContentEncryptAlg_trustStoreRefMissing() throws Exception {
 

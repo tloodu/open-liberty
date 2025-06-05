@@ -60,6 +60,8 @@ import componenttest.annotation.SkipForRepeat;
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled.SkipJavaSemeruWithFipsEnabledRule;
 import componenttest.rules.repeater.RepeatTests;
 import componenttest.topology.impl.LibertyServer;
 
@@ -138,8 +140,10 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
         } else {
             processClaimsAs = JWTBuilderConstants.AS_SINGLE;
         }
-
     }
+    
+    @Rule
+    public static final SkipJavaSemeruWithFipsEnabled skipJavaSemeruWithFipsEnabled = new SkipJavaSemeruWithFipsEnabled("com.ibm.ws.security.jwt_fat.builder");
 
     /**************************************************************
      * Test Builder create specific Tests
@@ -4328,6 +4332,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
      * @throws Exception
      */
     @Mode(TestMode.LITE)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_claimsFrom_jwtToken_to_jweToken_allClaims() throws Exception {
 
@@ -4356,6 +4361,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
 
     }
 
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_claimsFrom_jweToken_to_jwtToken_allClaims() throws Exception {
 
@@ -4381,6 +4387,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
 
     }
 
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_claimsFrom_jweTokenRS256_to_jweTokenRS384_allClaims() throws Exception {
 
@@ -4409,6 +4416,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
 
     }
 
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_claimsFrom_jwtString_to_jweToken_allClaims() throws Exception {
 
@@ -4440,6 +4448,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     // TODO - new error message is in the works
     @Test
     @ExpectedFFDC({ "org.jose4j.lang.JoseException" })
+    @SkipJavaSemeruWithFipsEnabledRule
     public void JwtBuilderAPIBasicTests_claimsFrom_jweString_to_jwtToken_allClaims() throws Exception {
 
         // build a token using the alternate builder config (we'll get claims from it)
@@ -4463,6 +4472,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
 
     }
 
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_claimsFrom_jweString_encodedPayload_allClaims() throws Exception {
 
@@ -4492,6 +4502,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
 
     }
 
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_claimsFrom_jweString_decodedPayload_allClaims() throws Exception {
 
@@ -5616,6 +5627,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     // encryptWith(String  keyManagementAlg,  Key keyManagementKey,  String  contentEncryptionAlg)
     //"RSA-OAEP",  rsaPublicKey, "A256GCM"
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_publicKey_A256GCM() throws Exception {
 
@@ -5643,6 +5655,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_shortPublicKey_A256GCM() throws Exception {
@@ -5670,6 +5683,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_privateKey_A256GCM() throws Exception {
@@ -5697,6 +5711,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_publicKey_A256GCM_signWith_RS256() throws Exception {
 
@@ -5737,6 +5752,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_publicKey_A256GCM_signWith_ES384() throws Exception {
 
@@ -5777,6 +5793,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_publicKey_A256GCM_signWith_HS512() throws Exception {
 
@@ -5818,6 +5835,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS384_publicKey_A256GCM() throws Exception {
 
@@ -5845,6 +5863,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS384_shortPublicKey_A256GCM() throws Exception {
@@ -5872,6 +5891,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS384_privateKey_A256GCM() throws Exception {
@@ -5899,6 +5919,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS384_publicKey_A256GCM_signWith_RS384() throws Exception {
 
@@ -5939,6 +5960,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS384_publicKey_A256GCM_signWith_ES512() throws Exception {
 
@@ -5979,6 +6001,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS384_publicKey_A256GCM_signWith_HS256() throws Exception {
 
@@ -6020,6 +6043,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS512_publicKey_A256GCM() throws Exception {
 
@@ -6047,6 +6071,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS512_shortPublicKey_A256GCM() throws Exception {
@@ -6074,6 +6099,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @ExpectedFFDC({ "org.jose4j.lang.InvalidKeyException", "com.ibm.ws.security.jwt.internal.JwtTokenException" })
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS512_privateKey_A256GCM() throws Exception {
@@ -6101,6 +6127,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS512_publicKey_A256GCM_signWith_RS512() throws Exception {
 
@@ -6141,6 +6168,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS512_publicKey_A256GCM_signWith_ES256() throws Exception {
 
@@ -6181,6 +6209,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS512_publicKey_A256GCM_signWith_HS256() throws Exception {
 
@@ -6222,6 +6251,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_256_RS256_publicKey_A256GCM() throws Exception {
 
@@ -6275,6 +6305,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_256_RS384_publicKey_A256GCM() throws Exception {
 
@@ -6302,6 +6333,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_256_RS512_publicKey_A256GCM() throws Exception {
 
@@ -6329,6 +6361,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_publicKey_A192GCM() throws Exception {
 
@@ -6382,6 +6415,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_nullKeyMgmtKeyAlg_RS256_publicKey_A256GCM() throws Exception {
 
@@ -6408,6 +6442,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_nullKeyMgmtKeyAlg_goodBuilderConfig() throws Exception {
 
@@ -6472,6 +6507,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_RSA_OAEP_RS256_publicKey_nullContentEncryptAlg() throws Exception {
 
@@ -6498,6 +6534,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_nullContentEncryptAlg_goodBuilderConfig() throws Exception {
 
@@ -6524,6 +6561,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_useSameSettingsAsBuilderConfig() throws Exception {
 
@@ -6551,6 +6589,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_useDifferentKeyMgmtKeyAlgThanBuilderConfig() throws Exception {
 
@@ -6578,6 +6617,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.SingleID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_useDifferentPublicKeyThanBuilderConfig() throws Exception {
 
@@ -6605,6 +6645,7 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     }
 
     @SkipForRepeat(JwtBuilderClaimRepeatActions.CollectionID)
+    @SkipJavaSemeruWithFipsEnabledRule
     @Test
     public void JwtBuilderAPIBasicTests_encryptWith_useDifferentContentEncryptAlgThanBuilderConfig() throws Exception {
 

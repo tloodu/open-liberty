@@ -56,6 +56,8 @@ import componenttest.annotation.Server;
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled.SkipJavaSemeruWithFipsEnabledRule;
 import componenttest.topology.impl.JavaInfo;
 import componenttest.topology.impl.LibertyServer;
 
@@ -129,7 +131,11 @@ public class JwkEndpointValidationUrlTests extends CommonSecurityFat {
         } else {
             Log.info(thisClass, "setUp", "Will NOT start the RS server because we can not connect to the builder server using the ip address");
         }
+        
     }
+    
+    @Rule
+    public static final SkipJavaSemeruWithFipsEnabled skipJavaSemeruWithFipsEnabled = new SkipJavaSemeruWithFipsEnabled("com.ibm.ws.security.jwt_fat.builder");
 
     /**
      * <p>
@@ -440,6 +446,7 @@ public class JwkEndpointValidationUrlTests extends CommonSecurityFat {
      */
     @Test
     @ConditionalIgnoreRule.ConditionalIgnore(condition = skipIfAddressDoesNotResolve.class)
+    @SkipJavaSemeruWithFipsEnabledRule
     public void JwkEndpointValidationUrlTests_jwkSigningKeySize_1024() throws Exception {
 
         String builderId = "jwkEnabled_size_1024";
@@ -966,6 +973,7 @@ public class JwkEndpointValidationUrlTests extends CommonSecurityFat {
      */
     @Test
     @ConditionalIgnoreRule.ConditionalIgnore(condition = skipIfAddressDoesNotResolve.class)
+    @SkipJavaSemeruWithFipsEnabledRule
     public void JwkEndpointValidationUrlTests_encrypt_RS256() throws Exception {
 
         String builderId = "key_encrypt_good_RS256";
@@ -990,6 +998,7 @@ public class JwkEndpointValidationUrlTests extends CommonSecurityFat {
 
     @Test
     @ConditionalIgnoreRule.ConditionalIgnore(condition = skipIfAddressDoesNotResolve.class)
+    @SkipJavaSemeruWithFipsEnabledRule
     public void JwkEndpointValidationUrlTests_encrypt_RS384() throws Exception {
 
         String builderId = "key_encrypt_good_RS384";
@@ -1014,6 +1023,7 @@ public class JwkEndpointValidationUrlTests extends CommonSecurityFat {
 
     @Test
     @ConditionalIgnoreRule.ConditionalIgnore(condition = skipIfAddressDoesNotResolve.class)
+    @SkipJavaSemeruWithFipsEnabledRule
     public void JwkEndpointValidationUrlTests_encrypt_RS512() throws Exception {
 
         String builderId = "key_encrypt_good_RS512";
