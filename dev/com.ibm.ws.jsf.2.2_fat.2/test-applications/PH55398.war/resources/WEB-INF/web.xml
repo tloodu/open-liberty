@@ -13,6 +13,16 @@
     xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
 	<display-name>PH55398</display-name>
 
+	<context-param>
+		<param-name>org.apache.myfaces.MAC_ALGORITHM</param-name>
+		<param-value>HmacSHA256</param-value>
+	</context-param>
+
+	<context-param>
+		<param-name>org.apache.myfaces.ALGORITHM</param-name>
+		<param-value>AES</param-value>
+	</context-param>
+
 	<servlet>
 		<servlet-name>Faces Servlet</servlet-name>
 		<servlet-class>javax.faces.webapp.FacesServlet</servlet-class>
