@@ -1191,7 +1191,7 @@ public class JakartaDataRecreateServlet extends FATServlet {
     }
 
     @Test
-    @Ignore("Reference issue: https://github.com/OpenLiberty/open-liberty/issues/24926")
+    //Reference issue: https://github.com/OpenLiberty/open-liberty/issues/24926
     public void testOLGH24926() throws Exception {
         Line unitRadius = Line.of(0, 0, 1, 1);
 

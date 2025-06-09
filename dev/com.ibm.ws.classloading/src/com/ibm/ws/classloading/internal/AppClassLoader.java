@@ -846,4 +846,9 @@ public class AppClassLoader extends ContainerClassLoader implements SpringLoader
 
         return sb.toString();
     }
+
+    @Override
+    public Class<?> publicDefineClass(String name, byte[] b, ProtectionDomain protectionDomain) {
+        return defineClass(name, b, 0, b.length, protectionDomain);
+    }
 }

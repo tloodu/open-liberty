@@ -180,6 +180,15 @@ public class TelemetryActions {
         return telemetry20Repeats(FeatureReplacementAction.ALL_SERVERS);
     }
 
+    public static RepeatTests telemetry21Repeats(String serverName) {
+        return repeat(serverName, MicroProfileActions.MP71_EE11, MP14_MPTEL21, MP41_MPTEL21, MP50_MPTEL21,
+                      MP50_MPTEL21_JAVA8, MicroProfileActions.MP71_EE10);
+    }
+
+    public static RepeatTests telemetry21Repeats() {
+        return telemetry20Repeats(FeatureReplacementAction.ALL_SERVERS);
+    }
+
 
     public static RepeatTests telemetry20and21Repeats(String serverName) {
         return repeat(serverName, MicroProfileActions.MP71_EE11, MP14_MPTEL21, MP41_MPTEL21, MP50_MPTEL21,
@@ -281,17 +290,9 @@ public class TelemetryActions {
     }
 
     public static boolean EE7orEE8IsActive(){
-        if (RepeatTestFilter.isRepeatActionActive(MP14_MPTEL20_ID) ||
-            RepeatTestFilter.isRepeatActionActive(MP41_MPTEL20_ID) ||
-            RepeatTestFilter.isRepeatActionActive(MP14_MPTEL11_ID) ||
-            RepeatTestFilter.isRepeatActionActive(MP41_MPTEL11_ID)) {
-            return true;
-       }
-       return false;
-    }
-
-    public static boolean EE7orEE8Mp20IsActive(){
-        if (RepeatTestFilter.isRepeatActionActive(MP14_MPTEL20_ID) ||
+        if (RepeatTestFilter.isRepeatActionActive(MP14_MPTEL21_ID) ||
+            RepeatTestFilter.isRepeatActionActive(MP41_MPTEL21_ID) ||
+            RepeatTestFilter.isRepeatActionActive(MP14_MPTEL20_ID) ||
             RepeatTestFilter.isRepeatActionActive(MP41_MPTEL20_ID) ||
             RepeatTestFilter.isRepeatActionActive(MP14_MPTEL11_ID) ||
             RepeatTestFilter.isRepeatActionActive(MP41_MPTEL11_ID)) {
@@ -308,8 +309,17 @@ public class TelemetryActions {
        return false;
     }
 
+    public static boolean mpTelemetry21EE7orEE8IsActive(){
+        if (RepeatTestFilter.isRepeatActionActive(MP14_MPTEL21_ID) ||
+            RepeatTestFilter.isRepeatActionActive(MP41_MPTEL21_ID)) {
+            return true;
+       }
+       return false;
+    }
+
     public static boolean mpTelemetryEE7IsActive(){
-        if (RepeatTestFilter.isRepeatActionActive(MP14_MPTEL20_ID) ||
+        if (RepeatTestFilter.isRepeatActionActive(MP14_MPTEL21_ID) ||
+            RepeatTestFilter.isRepeatActionActive(MP14_MPTEL20_ID) ||
             RepeatTestFilter.isRepeatActionActive(MP14_MPTEL11_ID)) {
             return true;
        }

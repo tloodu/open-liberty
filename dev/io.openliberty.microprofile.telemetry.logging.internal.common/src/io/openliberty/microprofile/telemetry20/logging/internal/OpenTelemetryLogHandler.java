@@ -23,11 +23,13 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.propertytypes.SatisfyingConditionTarget;
 import org.osgi.service.condition.Condition;
 
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
+import com.ibm.websphere.ras.annotation.Trivial;
 import com.ibm.ws.logging.collector.CollectorConstants;
 import com.ibm.ws.logging.data.AccessLogConfig;
 import com.ibm.ws.logging.data.FFDCData;
@@ -41,17 +43,23 @@ import com.ibm.wsspi.collector.manager.SynchronousHandler;
 import io.openliberty.checkpoint.spi.CheckpointPhase;
 import io.openliberty.microprofile.telemetry.internal.common.AgentDetection;
 import io.openliberty.microprofile.telemetry.internal.common.constants.OpenTelemetryConstants;
+import io.openliberty.microprofile.telemetry.internal.common.info.OpenTelemetryLifecycleManager;
+import io.openliberty.microprofile.telemetry.internal.common.info.OpenTelemtryLifecycleManagerImpl;
 import io.openliberty.microprofile.telemetry.internal.interfaces.OpenTelemetryAccessor;
 import io.openliberty.microprofile.telemetry.spi.OpenTelemetryInfo;
 import io.opentelemetry.api.logs.LogRecordBuilder;
 
 @Component(name = OpenTelemetryLogHandler.COMPONENT_NAME, service = { Handler.class }, configurationPolicy = ConfigurationPolicy.OPTIONAL, property = { "service.vendor=IBM" })
 @SatisfyingConditionTarget("(" + Condition.CONDITION_ID + "=" + CheckpointPhase.CONDITION_PROCESS_RUNNING_ID + ")")
-public class OpenTelemetryLogHandler implements SynchronousHandler {
+public class OpenTelemetryLogHandler implements SynchronousHandler, OpenTelemtryLifecycleManagerImpl.OpenTelemetryInfoReadyListener {
 
     private static final TraceComponent tc = Tr.register(OpenTelemetryLogHandler.class, "TELEMETRY", "io.openliberty.microprofile.telemetry.internal.common.resources.MPTelemetry");
 
     public static final String COMPONENT_NAME = "io.openliberty.microprofile.telemetry20.logging.internal.OpenTelemetryLogHandler";
+
+    @Reference //needed to access the hidden part of the API
+    OpenTelemetryLifecycleManager openTelemetryLifecycleManager;
+    OpenTelemtryLifecycleManagerImpl openTelemtryLifecycleManagerImpl;
 
     protected static volatile boolean isInit = false;
 
@@ -79,6 +87,9 @@ public class OpenTelemetryLogHandler implements SynchronousHandler {
         this.sourcesList = validateSources(configuration);
 
         setAccessLogField(configuration);
+
+        //Cast here to save having to do it every log event
+        openTelemtryLifecycleManagerImpl = (OpenTelemtryLifecycleManagerImpl) openTelemetryLifecycleManager;
     }
 
     @Deactivate
@@ -162,6 +173,8 @@ public class OpenTelemetryLogHandler implements SynchronousHandler {
         MpTelemetryLogMappingUtils.mapLibertyEventToOpenTelemetry(builder, eventType, event);
     }
 
+    private final ThreadLocal<List<Object>> queuedMessages = ThreadLocal.withInitial(() -> new ArrayList<Object>());
+
     /** {@inheritDoc} */
     @Override
     public void synchronousWrite(Object event) {
@@ -170,10 +183,37 @@ public class OpenTelemetryLogHandler implements SynchronousHandler {
         if (OpenTelemetryAccessor.isRuntimeEnabled()) {
             // Runtime OpenTelemetry instance
             otelInstance = this.runtimeOtelInfo;
+            synchronousWriteInternal(event, otelInstance);
+        } else if (!openTelemtryLifecycleManagerImpl.isOpenTelemetryInitalized()) {
+
+            /*
+             * There is an issue where trace can trigger this method inside the routine to create an OpenTelemetryInfo, we need to ensure that doesn't lead to creating a second
+             * OpenTelemetryInfo so we check if the OpenTelemetryInfo is ready, if it is not we stick the event on a queue and process the lot when it is ready.
+             *
+             * As this is all happening on one thread, we don't need to worry about race conditions. Just ensure that we don't call getOpenTelemetryInfo() from this method before
+             * OpenTelemetryInfo is ready. And that we call notifyOpenTelemetryInfoReady once when it actually is ready.
+             */
+
+            queuedMessages.get().add(event);
         } else {
+
             // Application OpenTelemetry Instance
             otelInstance = OpenTelemetryAccessor.getOpenTelemetryInfo();
+            synchronousWriteInternal(event, otelInstance);
         }
+    }
+
+    @Override
+    public void notifyOpenTelemetryInfoReady(OpenTelemetryInfo otelInstance) {
+        for (Object event : queuedMessages.get()) {
+            synchronousWriteInternal(event, otelInstance);
+        }
+        queuedMessages.set(null);
+    }
+
+    //Methods called via OpenTelemetryLogHandler.synchronousWrite must be Trivial to prevent enormous amounts of trace about trace.
+    @Trivial
+    private void synchronousWriteInternal(Object event, OpenTelemetryInfo otelInstance) {
 
         if (otelInstance != null && otelInstance.isEnabled()) {
             /*
@@ -364,4 +404,5 @@ public class OpenTelemetryLogHandler implements SynchronousHandler {
     public void setBufferManager(String arg0, BufferManager arg1) {
         //Not needed in a Synchronized Handler
     }
+
 }

@@ -173,7 +173,7 @@ public class AgentConfigMultiAppTest {
         if (RepeatTestFilter.isRepeatActionActive(MicroProfileActions.MP60_ID)) {
             // MP6.0 uses JavaAgent 1.19 therefore the internal span is not created
             assertThat(serverSpan, hasName("/multiApp1/"));
-        } else if (TelemetryActions.EE7orEE8Mp20IsActive()) {
+        } else if (TelemetryActions.EE7orEE8IsActive()) {
             assertThat(serverSpan, hasName("GET /multiApp1"));
             assertThat(serverSpan, JaegerSpanMatcher.isSpan().withTraceId(traceId)
                                                     .withAttribute(SemanticAttributes.HTTP_ROUTE, "/multiApp1")
@@ -212,7 +212,7 @@ public class AgentConfigMultiAppTest {
                                                      .withAttribute(SemanticAttributes.HTTP_ROUTE, "/multiApp2/")
                                                      .withAttribute(SemanticAttributes.HTTP_TARGET, "/multiApp2")
                                                      .withAttribute(SemanticAttributes.HTTP_METHOD, "GET"));
-        } else if (TelemetryActions.EE7orEE8Mp20IsActive()) {
+        } else if (TelemetryActions.EE7orEE8IsActive()) {
             assertThat(serverSpan2, hasName("GET /multiApp2"));
             assertThat(serverSpan2, JaegerSpanMatcher.isSpan().withTraceId(traceId2)
                                                      .withAttribute(SemanticAttributes.HTTP_ROUTE, "/multiApp2")

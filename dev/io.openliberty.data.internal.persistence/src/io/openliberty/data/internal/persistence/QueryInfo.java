@@ -499,7 +499,7 @@ public class QueryInfo {
      * Temporary code to append the portion of the query language ql starting from startAt
      * where the entity identify variable is inserted before references to entity attributes.
      * This method does not cover all scenarios but should be sufficient for simulating.
-     * TODO remove this method once we have Jakarta Persistence 3.2.
+     * TODO remove this method once EclipseLink issue #30351 is fixed
      *
      * @param ql        Jakarta Data Query Language
      * @param startAt   position in query language to start at.

@@ -114,7 +114,9 @@ public interface Cities {
     @Query("SELECT " + ID)
     @OrderBy("stateName")
     @OrderBy("name")
-    Stream<CityId> ids();
+    // TODO once #29073 is fixed, and update usage
+    // Stream<CityId> ids();
+    Stream<Object[]> ids();
 
     @Update
     City[] modifyData(City... citiesToUpdate);

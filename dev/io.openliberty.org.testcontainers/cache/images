@@ -11,6 +11,7 @@ wasliberty-docker-remote/ibmcom/cloudant-developer:2.0.1
 wasliberty-ghcr-docker-remote/gvenzl/oracle-free:23-full-faststart
 wasliberty-ghcr-docker-remote/gvenzl/oracle-free:23-slim-faststart
 wasliberty-icr-docker-remote/db2_community/db2:12.1.1.0
+wasliberty-icr-docker-remote/ibm-messaging/mq:9.3.2.0-r2
 wasliberty-infrastructure-docker/confluentinc/cp-kafka:7.1.1
 wasliberty-infrastructure-docker/elastic/logstash:7.16.3
 wasliberty-infrastructure-docker/fbicodex/spnego-kdc-server:1.0

@@ -211,8 +211,6 @@ public class TestContainerSuite {
                 // NOTE: if we want to increase this timeout in the future, we also need to increase the timeout of
                 // the ExternalDockerClientFilter which tests the connection to the docker host prior.
                 tcProps.setProperty("client.ping.timeout", FATRunner.FAT_TEST_LOCALRUN ? "5" : "10");
-
-                tcProps.setProperty("tinyimage.container.image", "public.ecr.aws/docker/library/alpine:3.17");
             } else {
                 Log.warning(c, "Unable to find valid External Docker Client");
             }
@@ -220,6 +218,11 @@ public class TestContainerSuite {
 
         //Always use LibertyImageNameSubstitutor
         tcProps.setProperty("image.substitutor", LibertyImageNameSubstitutor.class.getCanonicalName().toString());
+
+        //Always use TinyImage from AWS
+        tcProps.setProperty("tinyimage.container.image", "public.ecr.aws/docker/library/alpine:3.17");
+
+        //TODO Switch Ryuk to version from ghcr.io
 
         try {
             tcProps.store(new FileOutputStream(configSource.toFile()), "Modified by FAT framework");
