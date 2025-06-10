@@ -466,13 +466,13 @@ public class Utils {
 
         String inputKey = key + Constants.GUID;
 
-        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
         byte[] arrayKey = inputKey.getBytes(StandardCharsets.ISO_8859_1);
         // Question: should it be:  "utf-8" above?
         md.update(arrayKey, 0, arrayKey.length);
-        byte[] sha1hash = md.digest();
+        byte[] sha256hash = md.digest();
 
-        return Base64Coder.encode(sha1hash);
+        return Base64Coder.encode(sha256hash);
 
     }
 
