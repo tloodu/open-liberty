@@ -24,6 +24,16 @@
     <param-name>javax.faces.PROJECT_STAGE</param-name>
     <param-value>Development</param-value>
   </context-param>
+
+  <context-param>
+    <param-name>org.apache.myfaces.MAC_ALGORITHM</param-name>
+    <param-value>HmacSHA256</param-value>
+  </context-param>
+
+  <context-param>
+    <param-name>org.apache.myfaces.ALGORITHM</param-name>
+    <param-value>AES</param-value>
+  </context-param>
  
   <servlet>
     <servlet-name>Faces Servlet</servlet-name>
@@ -34,7 +44,6 @@
     <welcome-file>index.jsf</welcome-file>
   </welcome-file-list>
 	
-  
   <servlet-mapping>
     <servlet-name>Faces Servlet</servlet-name>
     <url-pattern>*.jsf</url-pattern>
