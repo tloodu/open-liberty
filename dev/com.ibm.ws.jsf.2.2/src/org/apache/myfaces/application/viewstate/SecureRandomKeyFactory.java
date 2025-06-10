@@ -18,6 +18,7 @@
  */
 package org.apache.myfaces.application.viewstate;
 
+import com.ibm.ws.common.crypto.CryptoUtils;
 import java.util.Map;
 import javax.faces.context.ExternalContext;
 import javax.faces.context.FacesContext;
@@ -44,6 +45,9 @@ class SecureRandomKeyFactory extends KeyFactory<byte[]>
             ServerSideStateCacheImpl.RANDOM_KEY_IN_VIEW_STATE_SESSION_TOKEN_LENGTH_PARAM_DEFAULT);
         sessionIdGenerator = new SessionIdGenerator();
         sessionIdGenerator.setSessionIdLength(length);
+        if (CryptoUtils.isFips140_3EnabledWithBetaGuard()){
+            sessionIdGenerator.setSecureRandomAlgorithm("SHA256DRBG");
+        }
         String secureRandomClass = WebConfigParamUtils.getStringInitParameter(
             facesContext.getExternalContext(), 
             ServerSideStateCacheImpl.RANDOM_KEY_IN_VIEW_STATE_SESSION_TOKEN_SECURE_RANDOM_CLASS_PARAM);
