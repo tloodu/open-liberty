@@ -61,6 +61,8 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
 import componenttest.rules.repeater.RepeatTests;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled.SkipJavaSemeruWithFipsEnabledRule;
 import componenttest.topology.impl.LibertyServer;
 
 /**
@@ -83,6 +85,7 @@ import componenttest.topology.impl.LibertyServer;
 
 @Mode(TestMode.FULL)
 @RunWith(FATRunner.class)
+@SkipJavaSemeruWithFipsEnabledRule
 public class JwtBuilderApiBasicTests extends CommonSecurityFat {
 
     @Server("com.ibm.ws.security.jwt_fat.builder")
@@ -96,6 +99,9 @@ public class JwtBuilderApiBasicTests extends CommonSecurityFat {
     // This allows us to use the same tests with a variety of claims without having to duplicate test cases
     @ClassRule
     public static RepeatTests r = RepeatTests.with(JwtBuilderClaimRepeatActions.asCollection()).andWith(JwtBuilderClaimRepeatActions.asSingle());
+
+    @ClassRule
+    public static final SkipJavaSemeruWithFipsEnabled skipJavaSemeruWithFipsEnabled = new SkipJavaSemeruWithFipsEnabled("com.ibm.ws.security.jwt_fat.builder");
 
     @Rule
     public static final TestRule conditIgnoreRule = new ConditionalIgnoreRule();
