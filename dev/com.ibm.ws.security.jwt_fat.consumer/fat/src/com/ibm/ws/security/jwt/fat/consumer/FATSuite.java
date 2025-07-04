@@ -24,6 +24,8 @@ import com.ibm.ws.security.fat.common.actions.SecurityTestRepeatAction;
 import componenttest.custom.junit.runner.AlwaysPassesTest;
 import componenttest.rules.repeater.EmptyAction;
 import componenttest.rules.repeater.RepeatTests;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled;
+import componenttest.rules.SkipJavaSemeruWithFipsEnabled.SkipJavaSemeruWithFipsEnabledRule;
 
 @RunWith(Suite.class)
 @SuiteClasses({
@@ -39,7 +41,12 @@ import componenttest.rules.repeater.RepeatTests;
 
 })
 
+
+@SkipJavaSemeruWithFipsEnabledRule
 public class FATSuite {
+
+    @ClassRule
+    public static final SkipJavaSemeruWithFipsEnabled skipJavaSemeruWithFipsEnabled = new SkipJavaSemeruWithFipsEnabled();
 
     /*
      * Run EE9 and EE10 tests in LITE mode (but not on Windows) and run all tests in FULL mode.
@@ -49,5 +56,4 @@ public class FATSuite {
             .andWith(new SecurityTestRepeatAction().onlyOnWindows().liteFATOnly())
             .andWith(new SecurityTestFeatureEE9RepeatAction().notOnWindows().forServerConfigPaths("publish/servers", "publish/shared/config").liteFATOnly())
             .andWith(new SecurityTestFeatureEE10RepeatAction().notOnWindows().forServerConfigPaths("publish/servers", "publish/shared/config").liteFATOnly());
-
 }

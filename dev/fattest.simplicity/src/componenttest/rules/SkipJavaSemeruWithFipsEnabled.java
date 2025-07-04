@@ -61,6 +61,15 @@ public class SkipJavaSemeruWithFipsEnabled implements TestRule {
 
     }
 
+     public SkipJavaSemeruWithFipsEnabled() {
+        this.server = null;
+        JavaInfo javaInfo = null;
+        javaInfo = JavaInfo.forCurrentVM(); 
+
+        this.IS_SEMERU_JAVA = javaInfo.runtimeName().contains("Semeru");
+        this.majorVersion = javaInfo.majorVersion();
+    }
+
     @Override
     public Statement apply(Statement statement, Description description) {
         if (description.getAnnotation(SkipJavaSemeruWithFipsEnabledRule.class) != null) {
