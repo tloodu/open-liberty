@@ -11,7 +11,10 @@ package com.ibm.ws.http.netty.inbound;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
@@ -34,6 +37,9 @@ import com.ibm.wsspi.tcpchannel.TCPReadCompletedCallback;
 import com.ibm.wsspi.tcpchannel.TCPReadRequestContext;
 
 import io.netty.channel.Channel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.openliberty.http.netty.channel.ReadOnlySocket;
 
 /**
  *
@@ -61,6 +67,8 @@ public class NettyTCPReadRequestContext implements TCPReadRequestContext {
 
     private VirtualConnection vc = null;
 
+    private volatile Socket cachedSocket;
+
     public NettyTCPReadRequestContext(NettyTCPConnectionContext connectionContext, Channel nettyChannel) {
 
         this.connectionContext = connectionContext;
@@ -85,7 +93,12 @@ public class NettyTCPReadRequestContext implements TCPReadRequestContext {
 
     @Override
     public Socket getSocket() {
-        throw new UnsupportedOperationException("Can not get the socket from a Netty connection!");
+        if(cachedSocket == null){
+            cachedSocket = new ReadOnlySocket(nettyChannel);
+            
+        }
+        return cachedSocket;
+        //throw new UnsupportedOperationException("Can not get the socket from a Netty connection!");
     }
 
     /**
@@ -412,5 +425,4 @@ public class NettyTCPReadRequestContext implements TCPReadRequestContext {
     public void setVC(VirtualConnection vc) {
         this.vc = vc;
     }
-
 }
