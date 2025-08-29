@@ -260,7 +260,7 @@ public class Social_EncryptionTests extends SocialCommonTest {
     public String createGenericRS256JWE() throws Exception {
         // We're going to use a test JWT token builder to create a token that has "notJOSE" in the JWE header type field
         // the Liberty builder won't allow us to update that field, so, we need to peice a token together
-        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), SocialConstants.SIGALG_RS256)));
+        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), SocialConstants.SIGALG_RS256)), JwtConstants.DEFAULT_KEY_MGMT_KEY_ALG);
         builder.setIssuer(testOPServer.getHttpString() + "/TokenEndpointServlet");
         builder.setAlorithmHeaderValue(SocialConstants.SIGALG_RS256);
         builder.setRSAKey(testOPServer.getServer().getServerRoot() + "/RS256private-key.pem");
@@ -271,10 +271,29 @@ public class Social_EncryptionTests extends SocialCommonTest {
         return jwtToken;
     }
 
-    public String createTokenWithBadElement(int badPart) throws Exception {
+    public String createGenericES256JWE() throws Exception {
+        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), SocialConstants.SIGALG_ES256)), JwtConstants.KEY_MGMT_KEY_ALG_ES);
+        builder.setIssuer(testOPServer.getHttpString() + "/TokenEndpointServlet");
+        builder.setAlorithmHeaderValue(SocialConstants.SIGALG_ES256);
+        builder.setECKey(testOPServer.getServer().getServerRoot() + "/ES256private-key-pkcs#8.pem");
+        builder.setClaim("token_src", "testcase builder");
+        // calling buildJWE will override the header contents
+        String jwtToken = builder.buildJWE("JOSE", "jwt");
+
+        return jwtToken;
+    }
+
+    public String createTokenWithBadElement(int badPart, String builderAlg) throws Exception {
 
         String createTokenWithBadElement = "createTokenWithBadElement";
-        String jwtToken = createGenericRS256JWE();
+        String jwtToken;
+        if (builderAlg == SocialConstants.SIGALG_ES256){
+            jwtToken = createGenericES256JWE();
+        } else if (builderAlg == SocialConstants.SIGALG_RS256){
+            jwtToken = createGenericRS256JWE();
+        } else {
+            jwtToken = "";
+        }
         Log.info(thisClass, createTokenWithBadElement, jwtToken);
         String[] jwtTokenArray = jwtToken.split("\\.");
         Log.info(thisClass, createTokenWithBadElement, "size: " + jwtTokenArray.length);
@@ -823,10 +842,11 @@ public class Social_EncryptionTests extends SocialCommonTest {
     public void Social_EncryptionTests_JWETypeNotJose() throws Exception {
 
         String encryptAlg = testOPServer.getServer().isSemeruFIPS140_3EnabledAndSupported() ? SocialConstants.SIGALG_ES256 : SocialConstants.SIGALG_RS256;
+        String keyManagementAlg = testOPServer.getServer().isSemeruFIPS140_3EnabledAndSupported() ? JwtConstants.KEY_MGMT_KEY_ALG_ES : JwtConstants.DEFAULT_KEY_MGMT_KEY_ALG;
 
         // We're going to use a test JWT token builder to create a token that has "notJOSE" in the JWE header type field
         // the Liberty builder won't allow us to update that field, so, we need to peice a token together
-        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), encryptAlg)));
+        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), encryptAlg)), keyManagementAlg);
         builder.setIssuer(testOPServer.getHttpString() + "/TokenEndpointServlet");
         builder.setAlorithmHeaderValue(encryptAlg);
         if (testOPServer.getServer().isSemeruFIPS140_3EnabledAndSupported()){
@@ -834,7 +854,6 @@ public class Social_EncryptionTests extends SocialCommonTest {
         } else {
             builder.setRSAKey(testOPServer.getServer().getServerRoot() + "/RS256private-key.pem");
         }
-        builder.setKeyManagementKeyAlg(JwtConstants.KEY_MGMT_KEY_ALG_ES);
         builder.setClaim("token_src", "testcase builder");
         builder.setAudience("client01");
         builder.setIssuedAtToNow();
@@ -854,10 +873,11 @@ public class Social_EncryptionTests extends SocialCommonTest {
     public void Social_EncryptionTests_JWEContentTypeNotJwt() throws Exception {
 
         String encryptAlg = testOPServer.getServer().isSemeruFIPS140_3EnabledAndSupported() ? SocialConstants.SIGALG_ES256 : SocialConstants.SIGALG_RS256;
+        String keyManagementAlg = testOPServer.getServer().isSemeruFIPS140_3EnabledAndSupported() ? JwtConstants.KEY_MGMT_KEY_ALG_ES : JwtConstants.DEFAULT_KEY_MGMT_KEY_ALG;
 
         // We're going to use a test JWT token builder to create a token that has "not_jwt" in the JWE header content type field
         // the Liberty builder won't allow us to update that field, so, we need to peice a token together
-        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), encryptAlg)));
+        JWTTokenBuilder builder = tokenBuilderHelpers.populateAlternateJWEToken(JwtKeyTools.getPublicKeyFromPem(JwtKeyTools.getComplexPublicKeyForSigAlg(testOPServer.getServer(), encryptAlg)), keyManagementAlg);
         builder.setIssuer(testOPServer.getHttpString() + "/TokenEndpointServlet");
         builder.setAlorithmHeaderValue(encryptAlg);
         if (testOPServer.getServer().isSemeruFIPS140_3EnabledAndSupported()){
@@ -1010,7 +1030,7 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWETooManyParts() throws Exception {
+    public void Social_EncryptionTests_JWETooManyParts_RSA_OAEP() throws Exception {
 
         // the built token will be passed to the test app via the overrideToken parm
         List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createGenericRS256JWE() + "." + badTokenSegment);
@@ -1025,7 +1045,7 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWETooFewParts() throws Exception {
+    public void Social_EncryptionTests_JWETooFewParts_RSA_OAEP() throws Exception {
 
         String jwtToken = createGenericRS256JWE();
 
@@ -1043,10 +1063,10 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWE_Part1_isInvalid() throws Exception {
+    public void Social_EncryptionTests_JWE_Part1_isInvalid_RSA_OAEP() throws Exception {
 
         // the built token will be passed to the test app via the overrideToken parm
-        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(1));
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(1, SocialConstants.SIGALG_RS256));
 
         genericEncryptTest(SocialConstants.SIGALG_RS256, setBuilderName(SocialConstants.SIGALG_RS256), SocialConstants.SIGALG_RS256, setAppName(SocialConstants.SIGALG_RS256), getInvalidFormatExpectations(), parms);
 
@@ -1058,10 +1078,10 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWE_Part2_isInvalid() throws Exception {
+    public void Social_EncryptionTests_JWE_Part2_isInvalid_RSA_OAEP() throws Exception {
 
         // the built token will be passed to the test app via the overrideToken parm
-        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(2));
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(2, SocialConstants.SIGALG_RS256));
 
         genericEncryptTest(SocialConstants.SIGALG_RS256, setBuilderName(SocialConstants.SIGALG_RS256), SocialConstants.SIGALG_RS256, setAppName(SocialConstants.SIGALG_RS256), getInvalidFormatExpectations(), parms);
 
@@ -1073,10 +1093,10 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWE_Par3_isInvalid() throws Exception {
+    public void Social_EncryptionTests_JWE_Par3_isInvalid_RSA_OAEP() throws Exception {
 
         // the built token will be passed to the test app via the overrideToken parm
-        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(3));
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(3, SocialConstants.SIGALG_RS256));
 
         genericEncryptTest(SocialConstants.SIGALG_RS256, setBuilderName(SocialConstants.SIGALG_RS256), SocialConstants.SIGALG_RS256, setAppName(SocialConstants.SIGALG_RS256), getInvalidFormatExpectations(), parms);
 
@@ -1088,10 +1108,10 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWE_Part4_isInvalid() throws Exception {
+    public void Social_EncryptionTests_JWE_Part4_isInvalid_RSA_OAEP() throws Exception {
 
         // the built token will be passed to the test app via the overrideToken parm
-        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(4));
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(4, SocialConstants.SIGALG_RS256));
 
         genericEncryptTest(SocialConstants.SIGALG_RS256, setBuilderName(SocialConstants.SIGALG_RS256), SocialConstants.SIGALG_RS256, setAppName(SocialConstants.SIGALG_RS256), getInvalidFormatExpectations(), parms);
 
@@ -1103,12 +1123,106 @@ public class Social_EncryptionTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_EncryptionTests_JWE_Part5_isInvalid() throws Exception {
+    public void Social_EncryptionTests_JWE_Part5_isInvalid_RSA_OAEP() throws Exception {
 
         // the built token will be passed to the test app via the overrideToken parm
-        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(5));
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(5, SocialConstants.SIGALG_RS256));
 
         genericEncryptTest(SocialConstants.SIGALG_RS256, setBuilderName(SocialConstants.SIGALG_RS256), SocialConstants.SIGALG_RS256, setAppName(SocialConstants.SIGALG_RS256), getInvalidFormatExpectations(), parms);
+
+    }
+
+    /**
+     * Test that the Social Client detects that the JWE is invalid as it has too many parts (6) (one of which is completely
+     * invalid)
+     *
+     * @throws Exception
+     */
+    @Test
+    public void Social_EncryptionTests_JWETooManyParts_ECDH_ES() throws Exception {
+
+        // the built token will be passed to the test app via the overrideToken parm
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createGenericES256JWE() + "." + badTokenSegment);
+
+        genericEncryptTest(SocialConstants.SIGALG_ES256, setBuilderName(SocialConstants.SIGALG_ES256), SocialConstants.SIGALG_ES256, setAppName(SocialConstants.SIGALG_ES256), getInvalidNumberOfPartsExpectations(), parms);
+
+    }
+
+    /**
+     * Test that the Social Client detects that the JWE is invalid as it has too few parts - the token only has 4 parts.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void Social_EncryptionTests_JWETooFewParts_ECDH_ES() throws Exception {
+
+        String jwtToken = createGenericES256JWE();
+
+        String badJweToken = jwtToken.substring(0, jwtToken.lastIndexOf(".") - 1);
+        // the built token will be passed to the test app via the overrideToken parm
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", badJweToken);
+
+        genericEncryptTest(SocialConstants.SIGALG_ES256, setBuilderName(SocialConstants.SIGALG_ES256), SocialConstants.SIGALG_ES256, setAppName(SocialConstants.SIGALG_ES256), getInvalidNumberOfPartsExpectations(), parms);
+
+    }
+
+    /**
+     * Test that the Social Client detects that the JWE is invalid - Part 1 is not valid
+     *
+     * @throws Exception
+     */
+    @Test
+    public void Social_EncryptionTests_JWE_Part1_isInvalid_ECDH_ES() throws Exception {
+
+        // the built token will be passed to the test app via the overrideToken parm
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(1, SocialConstants.SIGALG_ES256));
+
+        genericEncryptTest(SocialConstants.SIGALG_ES256, setBuilderName(SocialConstants.SIGALG_ES256), SocialConstants.SIGALG_ES256, setAppName(SocialConstants.SIGALG_ES256), getInvalidFormatExpectations(), parms);
+
+    }
+
+    /**
+     * Test that the Social Client detects that the JWE is invalid - Part 3 is not valid
+     *
+     * @throws Exception
+     */
+    @Test
+    public void Social_EncryptionTests_JWE_Par3_isInvalid_ECDH_ES() throws Exception {
+
+        // the built token will be passed to the test app via the overrideToken parm
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(3, SocialConstants.SIGALG_ES256));
+
+        genericEncryptTest(SocialConstants.SIGALG_ES256, setBuilderName(SocialConstants.SIGALG_ES256), SocialConstants.SIGALG_ES256, setAppName(SocialConstants.SIGALG_ES256), getInvalidFormatExpectations(), parms);
+
+    }
+
+    /**
+     * Test that the Social Client detects that the JWE is invalid - Part 4 is not valid
+     *
+     * @throws Exception
+     */
+    @Test
+    public void Social_EncryptionTests_JWE_Part4_isInvalid_ECDH_ES() throws Exception {
+
+        // the built token will be passed to the test app via the overrideToken parm
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(4, SocialConstants.SIGALG_ES256));
+
+        genericEncryptTest(SocialConstants.SIGALG_ES256, setBuilderName(SocialConstants.SIGALG_ES256), SocialConstants.SIGALG_ES256, setAppName(SocialConstants.SIGALG_ES256), getInvalidFormatExpectations(), parms);
+
+    }
+
+    /**
+     * Test that the Social Client detects that the JWE is invalid - Part 5 is not valid
+     *
+     * @throws Exception
+     */
+    @Test
+    public void Social_EncryptionTests_JWE_Part5_isInvalid_ECDH_ES() throws Exception {
+
+        // the built token will be passed to the test app via the overrideToken parm
+        List<endpointSettings> parms = eSettings.addEndpointSettingsIfNotNull(null, "overrideToken", createTokenWithBadElement(5, SocialConstants.SIGALG_ES256));
+
+        genericEncryptTest(SocialConstants.SIGALG_ES256, setBuilderName(SocialConstants.SIGALG_ES256), SocialConstants.SIGALG_ES256, setAppName(SocialConstants.SIGALG_ES256), getInvalidFormatExpectations(), parms);
 
     }
 }

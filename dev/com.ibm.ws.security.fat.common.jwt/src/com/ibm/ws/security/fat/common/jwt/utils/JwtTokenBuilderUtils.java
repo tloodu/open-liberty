@@ -123,21 +123,22 @@ public class JwtTokenBuilderUtils {
      * @throws Exception
      */
     public String buildAlternatePayloadJWEToken(Key key) throws Exception {
-        JWTTokenBuilder builder = createAlternateJWEPayload(populateAlternateJWEToken(key));
-        String jwtToken = builder.buildAlternateJWE();
-        return jwtToken;
+        return buildAlternatePayloadJWEToken(key, (String) null, (List<NameValuePair>) null);
     }
 
     public String buildAlternatePayloadJWEToken(Key key, List<NameValuePair> extraPayload) throws Exception {
-        JWTTokenBuilder builder = createAlternateJWEPayload(populateAlternateJWEToken(key), extraPayload);
-        String jwtToken = builder.buildAlternateJWE();
-        return jwtToken;
+        return buildAlternatePayloadJWEToken(key, (String) null, extraPayload);
     }
 
     public String buildAlternatePayloadJWEToken(Key key, String keyMgmtKeyAlg) throws Exception {
-        JWTTokenBuilder builder = createAlternateJWEPayload(populateAlternateJWEToken(key, keyMgmtKeyAlg));
-        String jwtToken = builder.buildAlternateJWE();
-        return jwtToken;
+        return buildAlternatePayloadJWEToken(key, keyMgmtKeyAlg, (List<NameValuePair>) null);
+    }
+
+    public String buildAlternatePayloadJWEToken(Key key, String keyMgmtKeyAlg, List<NameValuePair> extraPayload) throws Exception {
+        JWTTokenBuilder builder;
+        builder = keyMgmtKeyAlg != null ? createAlternateJWEPayload(populateAlternateJWEToken(key, keyMgmtKeyAlg), extraPayload) : createAlternateJWEPayload(populateAlternateJWEToken(key), extraPayload);
+
+        return builder.buildAlternateJWE();
     }
 
     /**
