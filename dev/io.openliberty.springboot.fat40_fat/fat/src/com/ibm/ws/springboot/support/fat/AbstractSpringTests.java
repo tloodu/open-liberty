@@ -23,9 +23,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.After;
@@ -143,6 +145,26 @@ public abstract class AbstractSpringTests extends TestContainerSuite {
     @BeforeClass
     public static void saveServerConfiguration() throws Exception {
         originalServerConfig = server.getServerConfiguration().clone();
+    }
+
+    /**
+     * Answer the features which are to be provisioned for this test class.
+     *
+     * @return The features which are to be provisioned for this test class.
+     */
+    public abstract Set<String> getFeatures();
+
+    /**
+     * Default features for spring web applications.
+     *
+     * @return Default features for spring web applications.
+     *         Currently, "springBoot-4.0" and "servlet-6.1".
+     */
+    public Set<String> getWebFeatures() {
+        Set<String> features = new HashSet<>(2);
+        features.add("springBoot-4.0");
+        features.add("servlet-6.1");
+        return features;
     }
 
     /**
@@ -674,6 +696,10 @@ public abstract class AbstractSpringTests extends TestContainerSuite {
 
         List<WebApplication> webApplications = config.getWebApplications();
         webApplications.clear();
+
+        Set<String> features = config.getFeatureManager().getFeatures();
+        features.clear();
+        features.addAll(getFeatures());
 
         List<VirtualHost> virtualHosts = config.getVirtualHosts();
         virtualHosts.clear();

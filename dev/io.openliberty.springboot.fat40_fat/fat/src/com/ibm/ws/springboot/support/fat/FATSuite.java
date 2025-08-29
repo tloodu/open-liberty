@@ -16,16 +16,20 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
-import componenttest.rules.repeater.EERepeatActions;
-import componenttest.rules.repeater.RepeatTests;
-
 @RunWith(Suite.class)
 @SuiteClasses({
-                CommonWebServerTests40.class
+                CommonWebServerTests40.class,
+                ErrorPage40Test.class,
+                CDITests40.class,
+                ConfigDropinRootTests40.class,
+                ConfigSpringBootApplicationClassloaderTests40.class,
+                ConfigSpringBootApplicationTagTests40.class,
+                ConfigSpringBootApplicationWithArgsTests40.class,
+                EnableSpringBootTraceTests40.class,
+                ExceptionOccuredAfterAppIsAvailableTest40.class,
+                MissingServletTests40.class
+
 })
 
 public class FATSuite {
-    public static RepeatTests defaultRepeat(String serverName) {
-        return EERepeatActions.repeat(serverName, EERepeatActions.EE10, EERepeatActions.EE11);
-    }
 }

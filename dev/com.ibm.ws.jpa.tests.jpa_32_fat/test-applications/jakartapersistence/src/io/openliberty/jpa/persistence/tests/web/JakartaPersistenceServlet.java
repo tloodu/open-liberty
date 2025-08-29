@@ -477,9 +477,7 @@ public class JakartaPersistenceServlet extends FATServlet {
     @Test
     public void testRecordAsEmbeddable_NoMatchAndOrdering() throws Exception {
         // Clean up any existing data
-        tx.begin();
-        em.createQuery("DELETE FROM Participant").executeUpdate();
-        tx.commit();
+        deleteAllEntities(Participant.class);
 
         // Setup test data
         Participant p1 = Participant.of("Anna", "Brown", 4);
@@ -516,6 +514,8 @@ public class JakartaPersistenceServlet extends FATServlet {
     @Test
     @SkipIfSysProp(DB_Oracle)
     public void testRecordAsEmbeddable_NullEdgeCaseAndOrdering() throws Exception {
+        deleteAllEntities(Participant.class);
+        
         // Setup test data with null, empty, and edge case values
         Participant p1 = Participant.of("Anna", null, 13); // Null last name (should be excluded)
         Participant p2 = Participant.of("Mike", "Green", 14); // Valid
@@ -578,7 +578,9 @@ public class JakartaPersistenceServlet extends FATServlet {
     }
 
     @Test // Verifies that a JPQL query using an alias returns the correct hexadecimal value for a persisted AsciiCharacter
-    public void testAsciiCharacterQueryReturnsHexadecimalWithAlias() {
+    public void testAsciiCharacterQueryReturnsHexadecimalWithAlias() throws Exception {
+        deleteAllEntities(AsciiCharacter.class);
+        
         int id = (int) (System.currentTimeMillis() % Integer.MAX_VALUE);
         AsciiCharacter character = new AsciiCharacter();
         character.setId(id);
@@ -608,7 +610,9 @@ public class JakartaPersistenceServlet extends FATServlet {
     }
 
     @Test
-    public void testInvalidFieldInAsciiCharacterQuery() {
+    public void testInvalidFieldInAsciiCharacterQuery() throws Exception {
+        deleteAllEntities(AsciiCharacter.class);
+        
         try {
             em.createQuery("SELECT nonExistentField FROM AsciiCharacter", String.class).getResultList();
         } catch (Exception e) {
@@ -622,7 +626,9 @@ public class JakartaPersistenceServlet extends FATServlet {
     }
 
     @Test // Verifies that multiple persisted AsciiCharacter entries return correct hexadecimal values via JPQL query
-    public void testAsciiCharacterMultipleResultsQuery() {
+    public void testAsciiCharacterMultipleResultsQuery() throws Exception {
+        deleteAllEntities(AsciiCharacter.class);
+        
         try {
             tx.begin();
             em.persist(AsciiCharacter.of(65)); // 'A'
@@ -638,6 +644,8 @@ public class JakartaPersistenceServlet extends FATServlet {
 
     @Test
     public void testAsciiCharacterwithSpecialCharacter() throws Exception {
+        deleteAllEntities(AsciiCharacter.class);
+        
         AsciiCharacter character = AsciiCharacter.of(42); // *
         String result;
         tx.begin();
@@ -656,6 +664,7 @@ public class JakartaPersistenceServlet extends FATServlet {
 
     @Test(expected = AssertionError.class)
     public void testAsciiCharacterNullCharacter() throws Exception {
+        deleteAllEntities(AsciiCharacter.class);
         AsciiCharacter character = null;
         tx.begin();
         try {
@@ -673,6 +682,7 @@ public class JakartaPersistenceServlet extends FATServlet {
     @Test
     @SkipIfSysProp({ DB_DB2, DB_Oracle })
     public void testAsciiCharacterNonExistentCharacter() throws Exception {
+        deleteAllEntities(AsciiCharacter.class);
         AsciiCharacter character = new AsciiCharacter();
         character.setThisCharacter((char) 200); // Choose a code outside standard ASCII (0-127)
         character.setHexadecimal(null); // set to null

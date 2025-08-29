@@ -32,7 +32,7 @@ public class HealthFileUtils {
 
         if (healthDirFile == null) {
 
-            String serverOutputDir = System.getProperty("server.output.dir").trim();
+            String serverOutputDir = System.getProperty("server.output.dir");
 
             File serverConfigDirFile;
 
@@ -40,10 +40,10 @@ public class HealthFileUtils {
              * server.output.dir may not be set.
              * Construct the directory with WLP_OUTPUT_DIR and wlp.server.name or SERVER_NAME
              */
-            if (serverOutputDir == null || serverOutputDir.isEmpty()) {
-                String wlpOutputDirEnv = System.getenv("WLP_OUTPUT_DIR").trim();
+            if (serverOutputDir == null || serverOutputDir.trim().isEmpty()) {
+                String wlpOutputDirEnv = System.getenv("WLP_OUTPUT_DIR");
 
-                if (wlpOutputDirEnv == null || wlpOutputDirEnv.isEmpty()) {
+                if (wlpOutputDirEnv == null || wlpOutputDirEnv.trim().isEmpty()) {
                     Tr.warning(tc, "file.healthcheck.health.directory.resolution.fail.CWMMH0102W");
                     if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                         Tr.debug(tc,
@@ -52,11 +52,11 @@ public class HealthFileUtils {
                     return null;
                 }
 
-                String serverName = System.getProperty("wlp.server.name").trim();
+                String serverName = System.getProperty("wlp.server.name");
 
-                if (serverName == null || serverName.isEmpty()) {
-                    serverName = System.getenv("SERVER_NAME").trim();
-                    if (serverName == null || serverName.isEmpty()) {
+                if (serverName == null || serverName.trim().isEmpty()) {
+                    serverName = System.getenv("SERVER_NAME");
+                    if (serverName == null || serverName.trim().isEmpty()) {
                         Tr.warning(tc, "file.healthcheck.health.directory.resolution.fail.CWMMH0102W");
                         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                             Tr.debug(tc,
@@ -66,7 +66,7 @@ public class HealthFileUtils {
                     }
                 }
 
-                serverOutputDir = wlpOutputDirEnv + System.getProperty("file.separator") + serverName;
+                serverOutputDir = wlpOutputDirEnv.trim() + System.getProperty("file.separator") + serverName.trim();
             }
             serverConfigDirFile = new File(serverOutputDir);
 

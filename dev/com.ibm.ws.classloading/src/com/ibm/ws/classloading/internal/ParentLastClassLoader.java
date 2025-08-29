@@ -88,7 +88,7 @@ class ParentLastClassLoader extends AppClassLoader {
     @Trivial
     protected Class<?> findOrDelegateLoadClass(String className, DelegatePolicy delegatePolicy, boolean returnNull) throws ClassNotFoundException {
         final boolean RETURN_NULL_FOR_NO_CLASS = true;
-        Class<?> beforeAppLoad = findClassCommonLibraryClassLoaders(className, RETURN_NULL_FOR_NO_CLASS, beforeApp);
+        Class<?> beforeAppLoad = findClassCommonLibraryClassLoaders(className, RETURN_NULL_FOR_NO_CLASS, beforeApp, delegatePolicy);
         if (beforeAppLoad != null) {
             return beforeAppLoad;
         }

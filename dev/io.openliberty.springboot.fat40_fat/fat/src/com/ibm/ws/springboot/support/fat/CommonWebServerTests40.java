@@ -12,21 +12,18 @@
  *******************************************************************************/
 package com.ibm.ws.springboot.support.fat;
 
+import java.util.Set;
+
 import org.junit.After;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import componenttest.annotation.MinimumJavaLevel;
 import componenttest.custom.junit.runner.FATRunner;
-import componenttest.rules.repeater.RepeatTests;
 
 @RunWith(FATRunner.class)
 @MinimumJavaLevel(javaLevel = 17)
 public class CommonWebServerTests40 extends CommonWebServerTests {
-
-    @ClassRule
-    public static RepeatTests r = FATSuite.defaultRepeat(SERVER_NAME);
 
     @After
     public void stopTestServer() throws Exception {
@@ -36,6 +33,18 @@ public class CommonWebServerTests40 extends CommonWebServerTests {
         } else {
             super.stopServer();
         }
+    }
+
+    /**
+     * Override: Web applications use springboot and servlet.
+     *
+     * @return The features provisioned in the test server. This
+     *         implementation always answers "springBoot-4.0" and
+     *         "servlet-6.1`".
+     */
+    @Override
+    public Set<String> getFeatures() {
+        return getWebFeatures();
     }
 
     @Override
@@ -49,7 +58,7 @@ public class CommonWebServerTests40 extends CommonWebServerTests {
     }
 
     @Test
-    public void testDefaultHostWithAppPort() throws Exception {
+    public void testDefaultHostWithAppPort40() throws Exception {
         // A variation of 'testBasicSpringBootApplication40'.
         // The different behavior is triggered by the test name.
         testBasicSpringBootApplication();

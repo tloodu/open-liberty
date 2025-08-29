@@ -90,7 +90,8 @@ import test.bundle.api4.c.API_C4;
     ClassPathInvalidLoaderTests.class,
     LibraryPathTest.class,
     ParentLastLibraryFeatureTests.class,
-    LibraryParentLastInconsistentTests.class,
+    ParentLastInconsistentResourceAdaptorTests.class,
+    ParentLastInconsistentLibraryTests.class,
     OverrideLibraryTests.class,
     LibraryPrecedenceBeforeAppTests.class,
     LibraryPrecedenceAfterAppTests.class
@@ -105,6 +106,7 @@ public class FATSuite {
     static final String LIB_FILESET_TEST_SERVER = "libPathTest";
     static final String PARENT_LAST_LIBRARY_FEATURE_TEST_SERVER = "parentLastLibraryFeatureTest";
     static final String PARENT_LAST_LIBRARY_INCONSISTENT_SERVER = "parentLastLibraryInconsistentTest";
+    static final String PARENT_LAST_RESOURCE_ADAPTOR_INCONSISTENT_SERVER = "parentLastResourceAdaptorInconsistentTest";
     static final String LIB_PRECEDENCE_BEFORE_APP_SERVER = "libPrecedenceBeforeAppTest";
     static final String LIB_PRECEDENCE_AFTER_APP_SERVER = "libPrecedenceAfterAppTest";
     static final String OVERRIDE_LIB_WAR_TEST_SERVER = "overrideLibWarTest";

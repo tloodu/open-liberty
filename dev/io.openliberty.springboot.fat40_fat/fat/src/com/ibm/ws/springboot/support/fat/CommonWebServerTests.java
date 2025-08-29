@@ -12,8 +12,11 @@
  *******************************************************************************/
 package com.ibm.ws.springboot.support.fat;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.junit.Test;
 
 import componenttest.topology.utils.HttpUtils;
 
@@ -64,7 +67,7 @@ public abstract class CommonWebServerTests extends AbstractSpringTests {
      *
      * @return The name of the application used by this test
      *         class. This implementation always answers
-     *         {@link #SPRING_BOOT_30_APP_BASE}.
+     *         {@link #SPRING_BOOT_40_APP_BASE}.
      */
     @Override
     public String getApplication() {
@@ -83,5 +86,10 @@ public abstract class CommonWebServerTests extends AbstractSpringTests {
      */
     public void testBasicSpringBootApplication() throws Exception {
         HttpUtils.findStringInUrl(server, "", "HELLO SPRING BOOT!!");
+    }
+
+    @Test
+    public void testPackagePrivateBean() throws IOException {
+        HttpUtils.findStringInUrl(server, "/testPackagePrivateBean", "PASSED");
     }
 }

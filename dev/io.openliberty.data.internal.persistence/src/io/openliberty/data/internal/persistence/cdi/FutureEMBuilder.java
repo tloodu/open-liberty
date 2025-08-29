@@ -290,7 +290,7 @@ public class FutureEMBuilder extends CompletableFuture<EntityManagerBuilder> imp
      * @return PUnitEMBuilder (for persistence unit references) or
      *         DBStoreEMBuilder (data sources, databaseStore)
      */
-    @FFDCIgnore({ NamingException.class, Throwable.class })
+    @FFDCIgnore(Throwable.class)
     public EntityManagerBuilder createEMBuilder() {
         final boolean trace = TraceComponent.isAnyTracingEnabled();
 
@@ -368,22 +368,7 @@ public class FutureEMBuilder extends CompletableFuture<EntityManagerBuilder> imp
                 else
                     accessor.beginContext(metadata);
                 try {
-                    //Object resource = InitialContext.doLookup(dataStore);
-                    // TODO use the above instead of the following temporary workaround
-                    Object resource = null;
-                    NamingException failure = null;
-                    for (long start = System.nanoTime(); //
-                                    resource == null && System.nanoTime() - start //
-                                                    < TimeUnit.SECONDS.toNanos(30); //
-                                    TimeUnit.SECONDS.sleep(2))
-                        try {
-                            resource = InitialContext.doLookup(dataStore);
-                        } catch (NamingException namingX) {
-                            failure = namingX;
-                        }
-                    if (failure != null && resource == null)
-                        throw failure;
-                    // end of code to replace
+                    Object resource = InitialContext.doLookup(dataStore);
 
                     if (trace && tc.isDebugEnabled())
                         Tr.debug(this, tc, dataStore + " is the JNDI name for " + resource);

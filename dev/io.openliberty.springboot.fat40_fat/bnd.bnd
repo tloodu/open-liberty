@@ -23,12 +23,12 @@ src: \
 
 tested.features: \
   springBoot-4.0, \
-  servlet-6.0, \
-  servlet-6.1
+  servlet-6.1, \
+  cdi-4.1
   
 -buildpath: \
   com.ibm.ws.componenttest.2.0;version=latest,\
-  io.openliberty.jakarta.servlet.6.0;version=latest, \
+  io.openliberty.jakarta.servlet.6.1;version=latest, \
   com.ibm.ws.org.apache.httpcomponents;version=latest, \
   io.openliberty.springboot.fat40.app;version=latest
 

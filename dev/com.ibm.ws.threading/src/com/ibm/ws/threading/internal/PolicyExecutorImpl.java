@@ -1548,6 +1548,11 @@ public class PolicyExecutorImpl implements PolicyExecutor {
                 throw new IllegalArgumentException("virtual: true");
             } else if (!virtualThreadOps.isVirtualThreadCreationEnabled()) {
                 useVirtualThreads = false;
+                String identifierProp = props.containsKey("config.parentPID") //
+                                ? "config.displayId" //
+                                : "id";
+                Tr.info(tc, "CWWKE1208.override.virtual",
+                        props.get(identifierProp));
             }
         }
 

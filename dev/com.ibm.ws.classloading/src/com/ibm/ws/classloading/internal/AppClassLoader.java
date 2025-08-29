@@ -19,9 +19,9 @@ import static com.ibm.ws.classloading.internal.AppClassLoader.SearchLocation.BEF
 import static com.ibm.ws.classloading.internal.AppClassLoader.SearchLocation.PARENT;
 import static com.ibm.ws.classloading.internal.AppClassLoader.SearchLocation.SELF;
 import static com.ibm.ws.classloading.internal.ClassLoadingConstants.LS;
-import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.checkParent;
 import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.excludeParent;
 import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.includeParent;
+import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.searchedParent;
 import static com.ibm.ws.classloading.internal.Util.freeze;
 import static com.ibm.ws.classloading.internal.Util.list;
 
@@ -398,10 +398,12 @@ public class AppClassLoader extends ContainerClassLoader implements SpringLoader
         ByteResourceInformation byteResInfo = findClassBytes(name, resourceName);
         if (byteResInfo == null) {
             // Check the common libraries.
-            return findClassCommonLibraryClassLoaders(name, returnNull, afterApp);
+            return findClassCommonLibraryClassLoaders(name, returnNull, afterApp, delegatePolicy);
         }
 
-        if (delegatePolicy == checkParent) {
+        if (isParentFirst() && delegatePolicy != searchedParent && parent != null) {
+            // This loader is parent first but was delegated to without first checking the parent;
+            // Check now before allowing the class to be defined in this loader's class space.
             Class<?> checkParentResult = null;
             if (parent instanceof NoClassNotFoundLoader) {
                 checkParentResult = ((NoClassNotFoundLoader) parent).loadClassNoException(name);
@@ -409,7 +411,7 @@ public class AppClassLoader extends ContainerClassLoader implements SpringLoader
                 try {
                     checkParentResult = parent.loadClass(name);
                 } catch (ClassNotFoundException e) {
-                    // move on to local findClass
+                    // move on to defining the local class for this loader
                 }
             }
             if (checkParentResult != null) {
@@ -710,7 +712,7 @@ public class AppClassLoader extends ContainerClassLoader implements SpringLoader
     @FFDCIgnore(ClassNotFoundException.class)
     protected Class<?> findOrDelegateLoadClass(String name, DelegatePolicy delegatePolicy, boolean returnNull) throws ClassNotFoundException {
         final boolean RETURN_NULL_FOR_NO_CLASS = true;
-        Class<?> beforeAppLoad = findClassCommonLibraryClassLoaders(name, RETURN_NULL_FOR_NO_CLASS, beforeApp);
+        Class<?> beforeAppLoad = findClassCommonLibraryClassLoaders(name, RETURN_NULL_FOR_NO_CLASS, beforeApp, delegatePolicy);
         if (beforeAppLoad != null) {
             return beforeAppLoad;
         }
@@ -734,6 +736,7 @@ public class AppClassLoader extends ContainerClassLoader implements SpringLoader
                             // move on to local findClass
                         }
                     }
+                    delegatePolicy = searchedParent;
                 }
                 if (result == null) {
                     try {
@@ -775,8 +778,14 @@ public class AppClassLoader extends ContainerClassLoader implements SpringLoader
      * @throws ClassNotFoundException if the class isn't found.
      */
     @FFDCIgnore(ClassNotFoundException.class)
-    protected Class<?> findClassCommonLibraryClassLoaders(String name, boolean returnNull, LibraryPrecedence precedence) throws ClassNotFoundException {
-        DelegatePolicy delegatePolicy = precedence == beforeApp || isParentFirst() ? excludeParent : checkParent;
+    protected Class<?> findClassCommonLibraryClassLoaders(String name, boolean returnNull, LibraryPrecedence precedence, DelegatePolicy fromDelegation) throws ClassNotFoundException {
+        DelegatePolicy delegatePolicy;
+        if (fromDelegation == searchedParent) {
+            // parent already searched 
+            delegatePolicy = searchedParent;
+        } else {
+            delegatePolicy = excludeParent;
+        }
         for (LibertyLoader cl : getDelegates(precedence)) {
             try {
                 Class<?> rc = cl.loadClass(name, false, delegatePolicy, true);

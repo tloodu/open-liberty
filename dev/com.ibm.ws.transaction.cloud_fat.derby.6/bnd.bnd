@@ -18,6 +18,9 @@ src: \
 
 fat.project: true
 
+# The FATSuite does EE 10 repeat which requires Java 11
+fat.minimum.java.level=11
+
 # Define additional tested features that are NOT present in any XML files in this bucket.
 # In this case, servlet-4.0 is added programmatically at runtime by the RepeatTests rule.
 tested.features:\

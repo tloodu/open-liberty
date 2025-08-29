@@ -1948,7 +1948,7 @@ public class H2StreamProcessor {
                 firstReadLatch.countDown();
             } else {
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "not counting down firstReadLatch: " + firstReadLatch.hashCode() + " becuase "
+                    Tr.debug(tc, "not counting down firstReadLatch: " + firstReadLatch.hashCode() + " because "
                                  + this.streamReadSize + " bytes remain on stream " + myID);
                 }
             }

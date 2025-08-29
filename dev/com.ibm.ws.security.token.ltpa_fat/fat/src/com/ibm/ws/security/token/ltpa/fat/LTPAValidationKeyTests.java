@@ -66,9 +66,10 @@ public class LTPAValidationKeyTests {
     private static final String validUser = "user1";
     private static final String validPassword = "user1pwd";
 
-    private static final String[] serverShutdownMessages = { "CWWKS9113E", "CWWKS4102E", "CWWKG0058E", "CWWKG0083W", "CWWKS4106E", "CWWKS4109W", "CWWKS4110E", "CWWKS4111E", "CWWKS4112E",
+    private static final String[] serverShutdownMessages = { "CWWKS9113E", "CWWKS4102E", "CWWKG0058E", "CWWKG0083W", "CWWKS4106E", "CWWKS4109W", "CWWKS4110E", "CWWKS4111E",
+                                                             "CWWKS4112E",
                                                              "CWWKS4113W",
-                                                             "CWWKS4114W", "CWWKS4115W", "CWWKS1859E" };
+                                                             "CWWKS4114W", "CWWKS4115W", "CWWKS1859E", "CWWKS4116W" };
 
     // Initialize the FormLogin Clients
     private static FormLoginClient server1FlClient1;

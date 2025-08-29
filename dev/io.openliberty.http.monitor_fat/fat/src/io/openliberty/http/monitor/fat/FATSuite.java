@@ -78,6 +78,7 @@ public class FATSuite extends TestContainerSuite {
             server.addEnvVar("OTEL_LOGS_EXPORTER", "none");
             server.addEnvVar("OTEL_METRIC_EXPORT_INTERVAL", "1000");
             server.addEnvVar("OTEL_EXPORTER_OTLP_TIMEOUT", "4000");
+            server.addEnvVar("OTEL_EXPORTER_OTLP_COMPRESSION", "gzip");
             return archive;
         }
     }

@@ -12,9 +12,9 @@
  *******************************************************************************/
 package com.ibm.ws.classloading.internal;
 
-import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.checkParent;
 import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.excludeParent;
 import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.includeParent;
+import static com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy.searchedParent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +32,7 @@ import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.websphere.ras.annotation.Trivial;
 import com.ibm.ws.classloading.internal.AppClassLoader.SearchLocation;
 import com.ibm.ws.classloading.internal.ContainerClassLoader.ByteResourceInformation;
+import com.ibm.ws.classloading.internal.LibertyLoader.DelegatePolicy;
 import com.ibm.ws.classloading.internal.util.Keyed;
 import com.ibm.ws.ffdc.annotation.FFDCIgnore;
 import com.ibm.wsspi.classloading.ApiType;
@@ -121,7 +122,7 @@ class ShadowClassLoader extends LibertyLoader implements Keyed<ClassLoaderIdenti
                 try {
                     switch (what) {
                         case BEFORE_DELEGATES: 
-                            result = loadFrom(true, className, returnNull);
+                            result = loadFrom(true, className, returnNull, delegatePolicy);
                             if (result != null) {
                                 return result;
                             }
@@ -132,6 +133,7 @@ class ShadowClassLoader extends LibertyLoader implements Keyed<ClassLoaderIdenti
                                 if (result != null) {
                                     return result;
                                 }
+                                delegatePolicy = searchedParent;
                             }
                             break;
                         case SELF:
@@ -141,7 +143,7 @@ class ShadowClassLoader extends LibertyLoader implements Keyed<ClassLoaderIdenti
                             }
                             break;
                         case AFTER_DELEGATES:
-                            result = loadFrom(false, className, returnNull);
+                            result = loadFrom(false, className, returnNull, delegatePolicy);
                             if (result != null) {
                                 return result;
                             }
@@ -175,9 +177,15 @@ class ShadowClassLoader extends LibertyLoader implements Keyed<ClassLoaderIdenti
 
     @FFDCIgnore(ClassNotFoundException.class)
     @Trivial
-    private Class<?> loadFrom(boolean beforeApp, String className, boolean returnNull) throws ClassNotFoundException {
+    private Class<?> loadFrom(boolean beforeApp, String className, boolean returnNull, DelegatePolicy fromDelegation) throws ClassNotFoundException {
+        DelegatePolicy delegatePolicy;
+        if (fromDelegation == searchedParent) {
+            // parent already searched 
+            delegatePolicy = searchedParent;
+        } else {
+            delegatePolicy = excludeParent;
+        }
         ClassNotFoundException lastException = null;
-        DelegatePolicy delegatePolicy = beforeApp || shadowedLoader.isParentFirst() ? excludeParent : checkParent;
         Iterable<LibertyLoader> delegates = beforeApp ? beforeAppDelegateLoaders : afterAppDelegateLoaders;
         for (LibertyLoader delegate : delegates) {
             try {
@@ -208,7 +216,9 @@ class ShadowClassLoader extends LibertyLoader implements Keyed<ClassLoaderIdenti
             throw new ClassNotFoundException(name);
         }
 
-        if (delegatePolicy == checkParent) {
+        if (shadowedLoader.isParentFirst() && delegatePolicy != searchedParent) {
+            // This loader is parent first but was delegated to without first checking the parent;
+            // Check now before allowing the class to be defined in this loader's class space.
             try {
                 Class<?> checkParentResult = loadFromParent(name, returnNull);
                 if (checkParentResult != null) {

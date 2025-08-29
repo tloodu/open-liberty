@@ -12,9 +12,9 @@
  *******************************************************************************/
 package com.ibm.ws.http.channel.internal.values;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import com.ibm.ws.http.channel.internal.HttpRequestMessageImpl;
 import com.ibm.ws.http.dispatcher.internal.HttpDispatcher;
 import com.ibm.ws.http.internal.HttpDateFormatImpl;
 import com.ibm.wsspi.http.channel.HttpRequestMessage;
@@ -48,14 +48,11 @@ public class AccessLogStartTime extends AccessLogData {
     }
 
     public static long getStartTime(HttpResponseMessage response, HttpRequestMessage request, Object data) {
-        HttpRequestMessageImpl requestMessageImpl = null;
-        long startTime = 0;
-        if (request != null) {
-            requestMessageImpl = (HttpRequestMessageImpl) request;
-        }
 
-        if (requestMessageImpl != null) {
-            long elapsedTime = System.nanoTime() - requestMessageImpl.getStartNanoTime();
+        long startTime = 0;
+
+        if (Objects.nonNull(request)) {
+            long elapsedTime = System.nanoTime() - request.getStartTime();
             startTime = System.currentTimeMillis() - TimeUnit.NANOSECONDS.toMillis(elapsedTime);
         }
         return startTime;

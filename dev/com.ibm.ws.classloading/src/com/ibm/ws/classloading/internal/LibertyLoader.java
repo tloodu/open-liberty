@@ -39,13 +39,13 @@ public abstract class LibertyLoader extends SecureClassLoader implements NoClass
          */
         includeParent,
         /**
+         * Parent has been searched
+         */
+        searchedParent,
+        /**
          * Always exclude parent search
          */
         excludeParent,
-        /**
-         * Check with parent before defining a class
-         */
-        checkParent
     }
     final ClassLoader parent;
 
