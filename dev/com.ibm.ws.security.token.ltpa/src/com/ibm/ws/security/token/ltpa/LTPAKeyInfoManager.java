@@ -219,7 +219,7 @@ public class LTPAKeyInfoManager {
         //Check to see if the LTPA key import file exists, create the keys and file if not
         WsResource ltpaKeyFileResource = getLTPAKeyFileResource(locService, keyImportFile);
 
-        if (ltpaKeyFileResource != null) {
+        try {
             props = loadPropertiesFile(ltpaKeyFileResource);
             String version = props.getProperty(LTPAKeyFileUtility.LTPA_VERSION_PROPERTY);
             if (tc.isDebugEnabled()) {
