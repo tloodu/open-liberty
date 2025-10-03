@@ -3103,34 +3103,28 @@ public abstract class HttpServiceContextImpl implements HttpServiceContext, FFDC
                          + headers);
         }
 
-        this.nettyContext.channel().eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                ChannelFuture promise = handler.encoder().writePushPromise(nettyContext, currentStreamId, nextPromisedStreamId, headers, 0,
-                                                                   new VoidChannelPromise(nettyContext.channel(), true));
-                promise.addListener(future -> {
-                    if (future.isSuccess()){
-                        // Should we process the new request here when we ensure we wrote out a push promise?
-                        // Follow up issue https://github.com/OpenLiberty/open-liberty/issues/31439
-                    }
-                });
-            }
+        this.nettyContext.channel().eventLoop().execute(() -> {
+            ChannelFuture promise = handler.encoder().writePushPromise(nettyContext, currentStreamId, nextPromisedStreamId, headers, 0,
+                                                                       new VoidChannelPromise(nettyContext.channel(), true));
+                    promise.addListener(future -> {
+                        if (future.isSuccess()){
+                            // Should we process the new request here when we ensure we wrote out a push promise?
+                            // Follow up issue https://github.com/OpenLiberty/open-liberty/issues/31439
+                        }
+                    });
         });
 
         DefaultFullHttpRequest newRequest = new DefaultFullHttpRequest(nettyRequest.protocolVersion(), HttpMethod.GET, uri);
         newRequest.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), nextPromisedStreamId);
         newRequest.headers().set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme);
         HttpUtil.setContentLength(newRequest, 0);
-        HttpDispatcher.getExecutorService().execute(new Runnable() {
 
-            @Override
-            public void run() {
-                try {
-                    nettyContext.pipeline().get(HttpDispatcherHandler.class).channelRead(nettyContext, newRequest);
-                } catch (Exception e) {
-                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                        Tr.debug(tc, "handleNettyPreload(): Unable to dispatch push request: " + e.getMessage(), e);
-                    }
+        HttpDispatcher.getExecutorService().execute(() -> {
+            try {
+                nettyContext.pipeline().get(HttpDispatcherHandler.class).channelRead(nettyContext, newRequest);
+            } catch (Exception e) {
+                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                    Tr.debug(tc, "handleNettyPreload(): Unable to dispatch push request: " + e.getMessage(), e);
                 }
             }
         });
@@ -3786,12 +3780,7 @@ public abstract class HttpServiceContextImpl implements HttpServiceContext, FFDC
         DefaultLastHttpContent lastContent = new LastStreamSpecificHttpContent(Integer.valueOf(nettyResponse.headers().get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
                                                                                                         "-1")), trailers);
         // Sending last http content since all data was written
-        this.nettyContext.channel().eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                nettyContext.channel().writeAndFlush(lastContent);
-            }
-        });
+        this.nettyContext.channel().eventLoop().execute(() -> nettyContext.channel().writeAndFlush(lastContent));
     }
 
     /**
@@ -3799,12 +3788,7 @@ public abstract class HttpServiceContextImpl implements HttpServiceContext, FFDC
      *
      */
     private void sendNettyHeaders() {
-        this.nettyContext.channel().eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                nettyContext.channel().writeAndFlush(nettyResponse);
-            }
-        });
+        this.nettyContext.channel().eventLoop().execute(() -> nettyContext.channel().writeAndFlush(nettyResponse));
     }
 
     /**
