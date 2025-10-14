@@ -15,14 +15,14 @@
 -sub: *.bnd
 
 bVersion=1.0
-cxfVersion=3.5.5
+cxfVersion=3.5.5.1
 
 WS-TraceGroup: WSSECURITY
 
 Bundle-ActivationPolicy: lazy
 
 Export-Package: \
-  org.apache.cxf.rt.security.saml.*;version=${cxfVersion}
+  org.apache.cxf.rt.security.saml.*;version=3.5.5
 
 Import-Package:  \
   com.ibm.websphere.ras, \
@@ -31,11 +31,11 @@ Import-Package:  \
   *
 
 -includeresource: \
-  @${repo;org.apache.cxf:cxf-rt-security-saml;${cxfVersion};EXACT}!/!META-INF/maven/*|META-INF/MANIFEST.MF|META-INF/cxf/*
+  @${repo;io.openliberty.org.apache.cxf:cxf-rt-security-saml;${cxfVersion};EXACT}!/!META-INF/maven/*|META-INF/MANIFEST.MF|META-INF/cxf/*
 
 globalize: false
 instrument.ffdc: true
 
 -buildpath: \
-  org.apache.cxf:cxf-rt-security-saml;strategy=exact;version=${cxfVersion}, \
+ io.openliberty.org.apache.cxf:cxf-rt-security-saml;strategy=exact;version=${cxfVersion}, \
   com.ibm.ws.org.joda.time.2.9.9;version=latest

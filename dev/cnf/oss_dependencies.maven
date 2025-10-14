@@ -459,15 +459,12 @@ org.apache.cxf:cxf-rt-rs-extension-reactivestreams:3.5.5
 org.apache.cxf:cxf-rt-rs-extension-rx2:3.5.5
 org.apache.cxf:cxf-rt-rs-mp-client:3.5.5
 org.apache.cxf:cxf-rt-rs-service-description:3.1.18
-org.apache.cxf:cxf-rt-security-saml:3.5.5
-org.apache.cxf:cxf-rt-security:3.5.5
 org.apache.cxf:cxf-rt-transports-http-hc:3.5.5
 org.apache.cxf:cxf-rt-transports-http:3.1.18
 org.apache.cxf:cxf-rt-transports-http:3.5.5
 org.apache.cxf:cxf-rt-ws-addr:3.5.5
 org.apache.cxf:cxf-rt-ws-mex:3.5.5
 org.apache.cxf:cxf-rt-ws-policy:3.5.5
-org.apache.cxf:cxf-rt-ws-security:3.5.5
 org.apache.cxf:cxf-rt-wsdl:3.5.5
 org.apache.cxf:cxf-tools-common:3.1.18
 org.apache.cxf:cxf-tools-common:3.5.5
