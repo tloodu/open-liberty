@@ -169,7 +169,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>32.0.1-android</version>
+      <version>32.0.1-jre</version>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
@@ -467,6 +467,11 @@
       <version>4.1.5</version>
     </dependency>
     <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>4.2.25</version>
+    </dependency>
+    <dependency>
       <groupId>io.github.classgraph</groupId>
       <artifactId>classgraph</artifactId>
       <version>4.8.151</version>
@@ -625,6 +630,106 @@
       <groupId>io.openliberty.arquillian</groupId>
       <artifactId>arquillian-liberty-support</artifactId>
       <version>1.0.8</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.net.shibboleth.utilities</groupId>
+      <artifactId>java-support</artifactId>
+      <version>8.4.2</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-core</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-messaging-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-messaging-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-profile-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-profile-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-saml-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-saml-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-security-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-security-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-soap-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-soap-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-storage-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-storage-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-xacml-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-xacml-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-xacml-saml-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-xacml-saml-impl</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-xmlsec-api</artifactId>
+      <version>4.3.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.openliberty.org.opensaml</groupId>
+      <artifactId>opensaml-xmlsec-impl</artifactId>
+      <version>4.3.2.1</version>
     </dependency>
     <dependency>
       <groupId>io.opentelemetry.instrumentation</groupId>
@@ -2213,16 +2318,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.cxf</groupId>
-      <artifactId>cxf-rt-security-saml</artifactId>
-      <version>3.5.5</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.cxf</groupId>
-      <artifactId>cxf-rt-security</artifactId>
-      <version>3.5.5</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.cxf</groupId>
       <artifactId>cxf-rt-transports-http-hc</artifactId>
       <version>3.5.5</version>
     </dependency>
@@ -2249,11 +2344,6 @@
     <dependency>
       <groupId>org.apache.cxf</groupId>
       <artifactId>cxf-rt-ws-policy</artifactId>
-      <version>3.5.5</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.cxf</groupId>
-      <artifactId>cxf-rt-ws-security</artifactId>
       <version>3.5.5</version>
     </dependency>
     <dependency>
