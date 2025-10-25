@@ -19,4 +19,18 @@ WS-TraceGroup: WSS4J
 
 Export-Package: \
  org.apache.wss4j.binding.*;version=${bVersion}
+ 
+# Using version=! in order to not have a version attached to the import for packages that were removed
+# from Java after Java 8.  Doing this keeps the import like before Java 11 support. It will get the 
+# packages from Java when using Java 8 or earlier and from the new shipped bundles for Java 9 and later.
+Import-Package: \
+ javax.xml.bind;version=!,\
+ !jakarta.xml.bind,\
+ org.glassfish.jaxb.runtime.v2;resolution:=optional,\
+ org.apache.wss4j.*;version="[2.3.0,5.0.0)", \
+ !net.shibboleth.*,\
+ *
 
+DynamicImport-Package: \
+ org.glassfish.jaxb.runtime.v2, \
+ org.glassfish.jaxb.runtime.v2.*
