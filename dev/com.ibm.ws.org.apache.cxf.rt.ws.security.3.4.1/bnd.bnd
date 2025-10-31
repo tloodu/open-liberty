@@ -74,11 +74,11 @@ DynamicImport-Package: \
   com.ctc.wstx.*
 
 -includeresource: \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/!META-INF/maven/*, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/DEPENDENCIES, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/LICENSE, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/NOTICE, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/cxf/*, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/!META-INF/maven/*, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/DEPENDENCIES, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/LICENSE, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/NOTICE, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-ws-security;${cxfVersion};EXACT}!/META-INF/cxf/*, \
   META-INF/cxf/bus-extensions.txt=resources/META-INF/cxf/bus-extensions.txt, \
   cxf-ehcache.xml=resources/cxf-ehcache.xml, \
   org/apache/cxf=${bin}/org/apache/cxf

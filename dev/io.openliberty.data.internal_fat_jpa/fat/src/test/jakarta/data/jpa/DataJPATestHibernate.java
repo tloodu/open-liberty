@@ -83,6 +83,8 @@ public class DataJPATestHibernate extends FATServletClient {
 
     @BeforeClass
     public static void setUp() throws Exception {
+        FATSuite.standardizeCollation(testContainer);
+
         DatabaseContainerUtil.build(server, testContainer) //
                         .withDriverVariable() //
                         .withDatabaseProperties() //

@@ -21,7 +21,6 @@
     
     <!-- Features required by Hibernate -->
     <feature>xmlBinding-4.0</feature>
-    <feature>cdi-4.1</feature>
     
     <feature>servlet-6.1</feature>
   </featureManager>
@@ -48,21 +47,4 @@
   </library>
 
   <javaPermission codeBase="${shared.resource.dir}/jdbc/${env.DB_DRIVER}" className="java.security.AllPermission"/>
-
-  <!-- START: Hibernate permissions -->
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/angus-activation-2.0.2.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/antlr4-runtime-4.13.2.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/byte-buddy-1.17.5.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/classmate-1.7.0.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/hibernate-community-dialects-7.0.9.Final.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/hibernate-core-7.0.9.Final.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/hibernate-models-1.0.1.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/hibernate-scan-jandex-7.0.9.Final.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/istack-commons-runtime-4.1.2.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/jandex-3.3.0.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/jaxb-core-4.0.5.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/jaxb-runtime-4.0.5.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/jboss-logging-3.6.1.Final.jar"/>
-  <javaPermission className="java.security.AllPermission" codebase="${shared.resource.dir}/jpa32_hibernate_orm/txw2-4.0.5.jar"/>
-  <!-- END: Hibernate permissions -->
 </server>

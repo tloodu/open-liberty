@@ -78,7 +78,12 @@ public class DataJPATest extends FATServletClient {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        DatabaseContainerUtil.build(server, testContainer).withDriverVariable().withDatabaseProperties().modify();
+        FATSuite.standardizeCollation(testContainer);
+
+        DatabaseContainerUtil.build(server, testContainer) //
+                        .withDriverVariable() //
+                        .withDatabaseProperties() //
+                        .modify();
 
         WebArchive war = ShrinkHelper.buildDefaultApp("DataJPATestApp",
                                                       "test.jakarta.data.jpa.web",

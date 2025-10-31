@@ -49,6 +49,7 @@ public class CreditCard {
     public Issuer issuer;
 
     @Id
+    @Column(name = "ccnumber") //Avoid reserved keyword on oracle: https://github.com/OpenLiberty/open-liberty/issues/33246
     public long number;
 
     @Column

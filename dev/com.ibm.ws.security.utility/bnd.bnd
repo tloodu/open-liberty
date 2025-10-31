@@ -23,7 +23,7 @@ Private-Package: \
   com.ibm.ws.security.utility.*
   
 -includeresource: \
-    OSGI-OPT/websphere/lib/ws-securityutil.jar=${repo;com.ibm.ws.security.utility.securityutil}
+    OSGI-OPT/websphere/lib/ws-securityutil.jar=\${repo;com.ibm.ws.security.utility.securityutil}
 
 instrument.disabled: true
 

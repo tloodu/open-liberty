@@ -35,11 +35,11 @@ Export-Package: \
   org.apache.cxf.rt.security.*;version=${cxfVersion}
 
 -includeresource: \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/!META-INF/maven/*|META-INF/MANIFEST.MF, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/DEPENDENCIES, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/LICENSE, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/NOTICE, \
-  @${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/cxf/*, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/!META-INF/maven/*|META-INF/MANIFEST.MF, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/DEPENDENCIES, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/LICENSE, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/NOTICE, \
+  @\${repo;io.openliberty.org.apache.cxf:cxf-rt-security;${cxfVersion};EXACT}!/META-INF/cxf/*, \
   org/apache/cxf=${bin}/org/apache/cxf
 
 globalize: false
