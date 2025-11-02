@@ -1332,6 +1332,228 @@ public class SchemaTest {
         JSONAssert.assertEquals(expectedResponseString, response, true);
     }
 
+    public static class BoxMapTwo<K, V, T> {
+        K var1;
+        V var2;
+        T var3;
+
+        /**
+         * @param var1
+         * @param var2
+         * @param var3
+         */
+        public BoxMapTwo() {
+
+        }
+
+        /**
+         * @param var1
+         * @param var2
+         * @param var3
+         */
+        public BoxMapTwo(K var1, V var2, T var3) {
+            super();
+            this.var1 = var1;
+            this.var2 = var2;
+            this.var3 = var3;
+        }
+
+        /**
+         * @return the var1
+         */
+        public K getVar1() {
+            return var1;
+        }
+
+        /**
+         * @param var1 the var1 to set
+         */
+        public void setVar1(K var1) {
+            this.var1 = var1;
+        }
+
+        /**
+         * @return the var2
+         */
+        public V getVar2() {
+            return var2;
+        }
+
+        /**
+         * @param var2 the var2 to set
+         */
+        public void setVar2(V var2) {
+            this.var2 = var2;
+        }
+
+        /**
+         * @return the var3
+         */
+        public T getVar3() {
+            return var3;
+        }
+
+        /**
+         * @param var3 the var3 to set
+         */
+        public void setVar3(T var3) {
+            this.var3 = var3;
+        }
+
+    }
+
+    public static class ContainerMap<X> {
+        BoxMapTwo<X, String, Integer> bm;
+
+        public ContainerMap() {}
+
+        /**
+         * @param bm
+         */
+        public ContainerMap(BoxMapTwo<X, String, Integer> bm) {
+            this.bm = bm;
+        }
+
+        /**
+         * @return the bm
+         */
+        public BoxMapTwo<X, String, Integer> getBm() {
+            return bm;
+        }
+
+        /**
+         * @param bm the bm to set
+         */
+        public void setBm(BoxMapTwo<X, String, Integer> bm) {
+            this.bm = bm;
+        }
+
+    }
+
+    public static class ContainerConcrete {
+        public ContainerMap<String> cm;
+
+        /**
+         */
+        public ContainerConcrete() {}
+
+        /**
+         * @param cm
+         */
+        public ContainerConcrete(ContainerMap<String> cm) {
+            this.cm = cm;
+        }
+
+        /**
+         * @return the cm
+         */
+        public ContainerMap<String> getCm() {
+            return cm;
+        }
+
+        /**
+         * @param cm the cm to set
+         */
+        public void setCm(ContainerMap<String> cm) {
+            this.cm = cm;
+        }
+
+    }
+
+    @Test
+    public void testConcreteNestedParamterizedGenericClass() {
+        String response = registry.getSchema(ContainerConcrete.class, SchemaDirection.INPUT).toString();
+        String expectedResponseString = """
+                        {
+                            "type": "object",
+                            "properties": {
+                                "cm": {
+                                    "type": "object",
+                                    "properties": {
+                                        "bm": {
+                                            "type": "object",
+                                            "properties": {
+                                                "var3": {
+                                                    "type": "integer"
+                                                },
+                                                "var2": {
+                                                    "type": "string"
+                                                },
+                                                "var1": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "var3",
+                                                "var2",
+                                                "var1"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "bm"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "cm"
+                            ]
+                        }
+                        """;
+        JSONAssert.assertEquals(expectedResponseString, response, true);
+    }
+
+    public static class MyClass<U> {
+        public List<U> foo;
+    }
+
+    public static class MyClass2<T> extends MyClass<T> {
+        public List<T> bar;
+    }
+
+    public static class ChildClass extends MyClass2<Integer> {};
+
+    public static class FinalConcreteClass {
+        public ChildClass cc;
+    }
+
+    @Test
+    public void testConcreteInheritanceParamterizedGenericClass() {
+        String response = registry.getSchema(FinalConcreteClass.class, SchemaDirection.INPUT).toString();
+        String expectedResponseString = """
+                            {
+                            "type": "object",
+                            "properties": {
+                                "cc": {
+                                    "type": "object",
+                                    "properties": {
+                                        "bar": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "foo": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "bar",
+                                        "foo"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "cc"
+                            ]
+                        }
+                            """;
+        JSONAssert.assertEquals(expectedResponseString, response, true);
+    }
+
     @Tool(name = "addGenericToList", title = "adds generic to generic list", description = "adds person to employee list, returns nothing")
     public @Schema(description = "Returns list of person object") <T> List<T> addGenericToList(@ToolArg(name = "generic list",
                                                                                                         description = "List of generics") List<T> list,

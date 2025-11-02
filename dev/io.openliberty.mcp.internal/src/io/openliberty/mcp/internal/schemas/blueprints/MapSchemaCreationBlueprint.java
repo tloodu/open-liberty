@@ -39,7 +39,7 @@ public record MapSchemaCreationBlueprint(Type baseType, Type keyType, Type value
     public JsonObjectBuilder toJsonSchemaObject(SchemaGenerationContext ctx, String description) {
 
         JsonObjectBuilder valueSchemaBuilder = SchemaGenerator.generateSubSchema(valueType, ctx, SchemaAnnotation.EMPTY);
-        SchemaCreationBlueprint keyScb = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(keyType);
+        SchemaCreationBlueprint keyScb = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(keyType, ctx);
 
         JsonObjectBuilder schemaBuilder = Json.createObjectBuilder()
                                               .add(TYPE, TYPE_OBJECT)

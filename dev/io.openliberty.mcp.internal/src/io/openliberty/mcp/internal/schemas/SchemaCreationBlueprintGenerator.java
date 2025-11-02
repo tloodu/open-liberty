@@ -16,14 +16,15 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import io.openliberty.mcp.internal.schemas.SchemaGenerator.SchemaGenerationContext;
 import io.openliberty.mcp.internal.schemas.TypeUtility.MapTypes;
 import io.openliberty.mcp.internal.schemas.blueprints.ClassSchemaCreationBlueprint;
 import io.openliberty.mcp.internal.schemas.blueprints.EnumSchemaCreationBlueprint;
@@ -47,13 +48,13 @@ public class SchemaCreationBlueprintGenerator {
      * @param type the type to generate the blueprint for
      * @return the blueprint
      */
-    public static SchemaCreationBlueprint generateSchemaCreationBlueprint(Type type) {
+    public static SchemaCreationBlueprint generateSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
         if (type instanceof Class<?> cls) {
             if (cls.isEnum()) {
                 return generateEnumSchemaCreationBlueprint(type);
 
             } else if (cls.isArray()) {
-                return generateArraySchemaCreationBlueprint(cls);
+                return generateArraySchemaCreationBlueprint(cls, ctx);
 
             } else if (Optional.class.isAssignableFrom(cls)) {
                 return generateRawOptionalSchemaCreationBlueprint(type);
@@ -65,21 +66,22 @@ public class SchemaCreationBlueprintGenerator {
                 return generateRawCollectionSchemaCreationBlueprint(type);
 
             } else {
-                ClassSchemaCreationBlueprint schemaCreationContext = generateClassSchemaCreationBlueprint(type);
+                ClassSchemaCreationBlueprint schemaCreationContext = generateClassSchemaCreationBlueprint(type, ctx);
                 return schemaCreationContext;
             }
 
         } else if (type instanceof ParameterizedType pt) {
             if (Optional.class.isAssignableFrom((Class<?>) pt.getRawType())) {
-                return generateParameterizedOptionalSchemaCreationBlueprint(type);
+                return generateParameterizedOptionalSchemaCreationBlueprint(type, ctx);
 
             } else if (Map.class.isAssignableFrom((Class<?>) pt.getRawType())) {
-                return generateParameterizedMapSchemaCreationBlueprint(type);
+                return generateParameterizedMapSchemaCreationBlueprint(type, ctx);
 
             } else if (Collection.class.isAssignableFrom((Class<?>) pt.getRawType())) {
-                return generateParameterizedCollectionSchemaCreationBlueprint(type);
+                return generateParameterizedCollectionSchemaCreationBlueprint(type, ctx);
             } else {
-                ClassSchemaCreationBlueprint schemaCreationContext = generateParameterizedClassSchemaCreationBlueprint(pt);
+                // Parameterised class generic
+                ClassSchemaCreationBlueprint schemaCreationContext = generateClassSchemaCreationBlueprint(type, ctx);
                 return schemaCreationContext;
             }
 
@@ -98,33 +100,61 @@ public class SchemaCreationBlueprintGenerator {
         }
     }
 
-    public static ClassSchemaCreationBlueprint generateClassSchemaCreationBlueprint(Type type) {
-        Class<?> cls = (Class<?>) type;
+    public static ClassSchemaCreationBlueprint generateClassSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
+        // Interfaces don't inherit from Object so it checks before resolving generic
+        boolean checkInterface = (type instanceof Class<?> && ((Class<?>) type).isInterface());
+        boolean checkParameterizedInterface = ((type instanceof ParameterizedType) && ((((ParameterizedType) type).getRawType() instanceof Class<?>
+                                                                                        && ((Class<?>) ((ParameterizedType) type).getRawType()).isInterface())));
+        boolean routePossible = true;
+        if (((checkInterface || checkParameterizedInterface))) {
+            routePossible = TypeUtility.buildRouteToType(type, Object.class, new ArrayDeque<>());
+        }
+        if (routePossible)
+            TypeUtility.updateGenericsMap(type, ctx);
+
+        Class<?> cls;
+        if (type instanceof ParameterizedType pt) {
+            cls = (Class<?>) pt.getRawType();
+        } else {
+            cls = (Class<?>) type;
+        }
+
         List<JsonProperty> properties = JsonProperty.extract(cls);
         return new ClassSchemaCreationBlueprint(cls,
-                                                getInputFields(properties),
-                                                getOutputFields(properties));
+                                                getInputFields(properties, ctx.getGenericMap()),
+                                                getOutputFields(properties, ctx.getGenericMap()));
     }
 
-    public static ClassSchemaCreationBlueprint generateParameterizedClassSchemaCreationBlueprint(Type type) {
+    public static ClassSchemaCreationBlueprint generateParameterizedClassSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
         if (type instanceof ParameterizedType pt) {
             Class<?> cls = (Class<?>) pt.getRawType();
-            Map<TypeVariable<?>, Type> genericMap = new HashMap<>();
-            TypeVariable<?>[] typeVariables = cls.getTypeParameters();
-            Type[] actualTypes = pt.getActualTypeArguments();
-
-            for (int i = 0; i < typeVariables.length; i++) {
-                genericMap.put(typeVariables[i], actualTypes[i]);
-            }
+            TypeUtility.updateGenericsMap(type, ctx);
             List<JsonProperty> properties = JsonProperty.extract(cls);
 
             return new ClassSchemaCreationBlueprint((Class<?>) pt.getRawType(),
-                                                    getInputFields(properties, genericMap),
-                                                    getOutputFields(properties, genericMap));
+                                                    getInputFields(properties, ctx.getGenericMap()),
+                                                    getOutputFields(properties, ctx.getGenericMap()));
         }
         return null;
 
     }
+
+//    public static void updateGenericMap(Type type, SchemaGenerationContext ctx) {
+//        Class<?> cls = (Class<?>) type;
+//        TypeVariable<?>[] typeVariables = cls.getTypeParameters();
+//        Type[] resolvedTypes;
+//        if (type instanceof ParameterizedType pt) {
+//            resolvedTypes = TypeUtility.getConcreteTypes(pt);
+//        } else {
+//            resolvedTypes = TypeUtility.getConcreteTypes(type);
+//        }
+//        if (resolvedTypes != null) {
+//            for (int i = 0; i < typeVariables.length; i++) {
+//                ctx.getGenericMap().put(typeVariables[i], resolvedTypes[i]);
+//            }
+//        }
+//
+//    }
 
     public static TypeVariableSchemaCreationBlueprint generateTypeVariableSchemaCreationBlueprint(Type type) {
         if (type instanceof TypeVariable<?> tv) {
@@ -150,8 +180,8 @@ public class SchemaCreationBlueprintGenerator {
         return new ListSchemaCreationBlueprint(type, null);
     }
 
-    public static ListSchemaCreationBlueprint generateArraySchemaCreationBlueprint(Type type) {
-        Type elementType = ((Class<?>) type).getComponentType();
+    public static ListSchemaCreationBlueprint generateArraySchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
+        Type elementType = reduceTypeVaribale(((Class<?>) type).getComponentType(), ctx.getGenericMap());
         return new ListSchemaCreationBlueprint(type, elementType);
     }
 
@@ -172,14 +202,14 @@ public class SchemaCreationBlueprintGenerator {
         return new OptionalSchemaCreationBlueprint(type, null);
     }
 
-    public static ListSchemaCreationBlueprint generateParameterizedCollectionSchemaCreationBlueprint(Type type) {
-        Type elementType = TypeUtility.getCollectionType(type);
+    public static ListSchemaCreationBlueprint generateParameterizedCollectionSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
+        Type elementType = reduceTypeVaribale(TypeUtility.getCollectionType(type), ctx.getGenericMap());
         return new ListSchemaCreationBlueprint(type, elementType);
     }
 
-    public static MapSchemaCreationBlueprint generateParameterizedMapSchemaCreationBlueprint(Type type) {
+    public static MapSchemaCreationBlueprint generateParameterizedMapSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
         MapTypes mapTypes = TypeUtility.getMapTypes(type);
-        Type keyType = mapTypes.key();
+        Type keyType = reduceTypeVaribale(mapTypes.key(), ctx.getGenericMap());
         Type valueType = mapTypes.value();
         if (keyType.equals(String.class) || isEnum(keyType)) {
             return new MapSchemaCreationBlueprint(type, keyType, valueType);
@@ -196,8 +226,8 @@ public class SchemaCreationBlueprintGenerator {
         }
     }
 
-    public static OptionalSchemaCreationBlueprint generateParameterizedOptionalSchemaCreationBlueprint(Type type) {
-        Type elementType = TypeUtility.getOptionalType(type);
+    public static OptionalSchemaCreationBlueprint generateParameterizedOptionalSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
+        Type elementType = reduceTypeVaribale(TypeUtility.getOptionalType(type), ctx.getGenericMap());
         return new OptionalSchemaCreationBlueprint(type, elementType);
     }
 
@@ -223,7 +253,7 @@ public class SchemaCreationBlueprintGenerator {
     private static List<FieldInfo> getInputFields(List<JsonProperty> properties, Map<TypeVariable<?>, Type> genericMap) {
         return properties.stream()
                          .filter(p -> p.isInput())
-                         .map(p -> new FieldInfo(p.getInputName(), genericMap.get(p.getInputType()), p.getInputAnnotations(), SchemaDirection.INPUT))
+                         .map(p -> new FieldInfo(p.getInputName(), reduceTypeVaribale(p.getInputType(), genericMap), p.getInputAnnotations(), SchemaDirection.INPUT))
                          .collect(Collectors.toList());
     }
 
@@ -237,8 +267,27 @@ public class SchemaCreationBlueprintGenerator {
     private static List<FieldInfo> getOutputFields(List<JsonProperty> properties, Map<TypeVariable<?>, Type> genericMap) {
         return properties.stream()
                          .filter(p -> p.isOutput())
-                         .map(p -> new FieldInfo(p.getOutputName(), genericMap.get(p.getOutputType()), p.getOutputAnnotations(), SchemaDirection.OUTPUT))
+                         .map(p -> new FieldInfo(p.getOutputName(), reduceTypeVaribale(p.getOutputType(), genericMap), p.getOutputAnnotations(), SchemaDirection.OUTPUT))
                          .collect(Collectors.toList());
+    }
+
+    private static Type reduceTypeVaribale(Type baseType, Map<TypeVariable<?>, Type> genericMap) {
+        if (!(baseType instanceof TypeVariable)) {
+            return baseType;
+        }
+        Type result = genericMap.get(baseType);
+        if (result == null) {
+            return baseType;
+        }
+
+        while ((result instanceof TypeVariable<?>)) {
+            if (genericMap.containsKey(result)) {
+                result = genericMap.get(result);
+            } else {
+                return result;
+            }
+        }
+        return result;
     }
 
     public record FieldInfo(String name, Type type, Annotation[] annotations, SchemaDirection direction) {}

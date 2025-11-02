@@ -11,6 +11,7 @@ package io.openliberty.mcp.internal.schemas;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
@@ -18,6 +19,8 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import io.openliberty.mcp.internal.schemas.SchemaGenerator.SchemaGenerationContext;
 
 /**
  * Utility methods for inspecting types
@@ -74,6 +77,11 @@ public class TypeUtility {
         return resolvedParameters[0];
     }
 
+    public static void updateGenericsMap(Type rootType, SchemaGenerationContext ctx) {
+        List<Type> route = getRouteToType(rootType, Object.class);
+        resolveGenericsMap(route, ctx);
+    }
+
     /**
      * Get the actual values for the type variables of the first type in {@code typeList}, after translating them through every type in {@code typeList}
      * <p>
@@ -112,6 +120,41 @@ public class TypeUtility {
         return currentTypes;
     }
 
+    public static void resolveGenericsMap(List<Type> typeList, SchemaGenerationContext ctx) {
+        int counter = 0;
+        Type typeToResolve = typeList.get(0);
+
+        while (!(typeToResolve instanceof ParameterizedType) && counter + 1 < typeList.size()) {
+            counter += 1;
+            typeToResolve = typeList.get(counter);
+        }
+        if (typeToResolve instanceof ParameterizedType && counter < typeList.size()) {
+            ParameterizedType pTypeToResolve = (ParameterizedType) typeToResolve;
+            Class<?> rawTypeToResolve = (Class<?>) pTypeToResolve.getRawType();
+            TypeVariable<?>[] startingTypeParameters = rawTypeToResolve.getTypeParameters();
+            TypeVariable<?>[] currentTypes = Arrays.copyOf(startingTypeParameters, startingTypeParameters.length);
+
+            for (Type t : typeList) {
+                if (!(t instanceof ParameterizedType)) {
+                    continue;
+                }
+                ParameterizedType pt = (ParameterizedType) t;
+                Type[] actualTypeArguments = pt.getActualTypeArguments();
+                Type[] typeParameters = ((Class<?>) pt.getRawType()).getTypeParameters();
+                for (int i = 0; i < currentTypes.length; i++) {
+                    for (int j = 0; j < typeParameters.length; j++) {
+                        if (currentTypes[i] == typeParameters[j]) {
+                            ctx.getGenericMap().put(currentTypes[i], actualTypeArguments[j]);
+                            if (actualTypeArguments[j] instanceof TypeVariable<?>) {
+                                currentTypes[i] = (TypeVariable<?>) actualTypeArguments[j];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Finds a list of types from {@code target} to {@code start} where each element is a direct subtype of the element before it.
      * <p>
@@ -133,7 +176,7 @@ public class TypeUtility {
         return List.copyOf(route);
     }
 
-    private static boolean buildRouteToType(Type current, Class<?> target, Deque<Type> routeSoFar) {
+    public static boolean buildRouteToType(Type current, Class<?> target, Deque<Type> routeSoFar) {
         Class<?> c;
         if (current instanceof ParameterizedType p) {
             c = (Class<?>) p.getRawType();

@@ -22,6 +22,7 @@ import static io.openliberty.mcp.internal.schemas.SchemaDirection.OUTPUT;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -156,6 +157,8 @@ public class SchemaGenerator {
         private Set<String> namesInUse = new HashSet<>();
         /** Map of types and their corresponding JSON schemas which should be added to defs */
         private HashMap<Type, JsonObject> defsBuilder = new HashMap<>();
+        // Maps generic type variables to concrete Types
+        private HashMap<TypeVariable<?>, Type> genericMap = new HashMap<>();
         /** The blueprint registry to be used when generating schemas */
         private SchemaCreationBlueprintRegistry blueprintRegistry;
         /** Whether we're generating input or output schemas */
@@ -233,10 +236,15 @@ public class SchemaGenerator {
         public SchemaCreationBlueprintRegistry getBlueprintRegistry() {
             return blueprintRegistry;
         }
+
+        public HashMap<TypeVariable<?>, Type> getGenericMap() {
+            return genericMap;
+        }
+
     }
 
     public static void calculateClassFrequency(Type type, SchemaDirection direction, SchemaGenerationContext ctx) {
-        SchemaCreationBlueprint scc = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(type);
+        SchemaCreationBlueprint scc = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(type, ctx);
         boolean previouslySeen = false;
         if (scc.getDefsName().isPresent()) {
             // We might add this type to defs, so we need to add it to the typeFrequency map
@@ -286,7 +294,7 @@ public class SchemaGenerator {
             return schemaFromAnnotation.get();
         }
 
-        SchemaCreationBlueprint blueprint = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(type);
+        SchemaCreationBlueprint blueprint = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(type, ctx);
         String description = annotation.description().orElse(null);
         JsonObject defsSchema = ctx.getDefsBuilder().get(type);
         if (defsSchema != null) {

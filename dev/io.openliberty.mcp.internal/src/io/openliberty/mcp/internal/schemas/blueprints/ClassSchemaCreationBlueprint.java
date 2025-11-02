@@ -62,7 +62,7 @@ public record ClassSchemaCreationBlueprint(Class<?> baseType, List<FieldInfo> in
             JsonObjectBuilder subSchemaObjectBuilder = SchemaGenerator.generateSubSchema(fi.type(), ctx, childSchemaAnn);
             properties.add(fi.name(), subSchemaObjectBuilder.build());
 
-            SchemaCreationBlueprint scb = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(fi.type());
+            SchemaCreationBlueprint scb = ctx.getBlueprintRegistry().getSchemaCreationBlueprint(fi.type(), ctx);
             if (scb.isRequired()) {
                 required.add(fi.name());
             }

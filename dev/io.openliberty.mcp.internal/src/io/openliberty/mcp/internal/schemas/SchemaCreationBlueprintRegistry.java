@@ -22,6 +22,7 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.openliberty.mcp.internal.schemas.SchemaGenerator.SchemaGenerationContext;
 import io.openliberty.mcp.internal.schemas.blueprints.PrimitiveSchemaCreationBlueprint;
 import io.openliberty.mcp.internal.schemas.blueprints.SchemaCreationBlueprint;
 
@@ -44,10 +45,10 @@ public class SchemaCreationBlueprintRegistry {
      * @param type the type to get the creation blueprint for
      * @return the blueprint
      */
-    public SchemaCreationBlueprint getSchemaCreationBlueprint(Type type) {
+    public SchemaCreationBlueprint getSchemaCreationBlueprint(Type type, SchemaGenerationContext ctx) {
         SchemaCreationBlueprint result = cache.get(type);
         if (result == null) {
-            result = SchemaCreationBlueprintGenerator.generateSchemaCreationBlueprint(type);
+            result = SchemaCreationBlueprintGenerator.generateSchemaCreationBlueprint(type, ctx);
             cache.put(type, result);
         }
         return result;
