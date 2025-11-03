@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -22,13 +22,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 import javax.net.ssl.HandshakeCompletedEvent;
 import javax.net.ssl.HandshakeCompletedListener;
@@ -39,12 +37,12 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.yoko.orb.OCI.IIOP.Util;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.TRANSIENT;
 import org.omg.CSIIOP.EstablishTrustInClient;
 import org.omg.CSIIOP.NoProtection;
 import org.omg.CSIIOP.TAG_CSI_SEC_MECH_LIST;
 import org.omg.CSIIOP.TransportAddress;
-import org.omg.CORBA.Policy;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.IOP.TaggedComponent;
 
 import com.ibm.websphere.ras.Tr;
@@ -520,6 +518,7 @@ public class SocketFactory extends SocketFactoryHelper {
 
     @Override
     public TransportAddress[] getEndpoints(TaggedComponent tagComponent, Policy[] policies) {
+        final boolean DEBUG = TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled();
 
         final CSSConfig cssConfig = getCssConfig(policies);
         List<TransportAddress> addresses = new ArrayList<TransportAddress>();
@@ -539,8 +538,7 @@ public class SocketFactory extends SocketFactoryHelper {
                 String sslConfigName = compatibleMechanisms.getCSSCompoundSecMechConfig().getTransport_mech().getSslConfigName();
 
                 for (TransportAddress addr : transportConfig.getTransportAddresses()) {
-                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
-                        Tr.debug(tc, "IOR to target " + addr.host_name + ":" + (int) (char) addr.port + " using client sslConfig " + sslConfigName);
+                    if (DEBUG) Tr.debug(tc, "IOR to target " + addr.host_name + ":" + (int) (char) addr.port + " using client sslConfig " + sslConfigName);
                     addresses.add(useProtection ? createSslTransportAddress(addr.host_name, addr.port, sslConfigName) : createPlainTransportAddress(addr.host_name, addr.port));
                 }
             } else {
@@ -551,26 +549,25 @@ public class SocketFactory extends SocketFactoryHelper {
 
                     String sslConfigName = mech_cfg.getSslConfigName();
 
-                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
-                        Tr.debug(tc, "IOR to target " + addr.getHost() + ":" + (int) (char) addr.getPort() + " using client sslConfig " + sslConfigName);
+                    if (DEBUG) Tr.debug(tc, "IOR to target " + addr.getHost() + ":" + (int) (char) addr.getPort() + " using client sslConfig " + sslConfigName);
                     addresses.add(useProtection ? createSslTransportAddress(addr.getHost(), addr.getPort(), sslConfigName) : createPlainTransportAddress(addr.getHost(),
                                                                                                                                                          addr.getPort()));
                 }
             }
         }
 
-        // Use linked hash set to remove duplicate TransportAddresses and preserve order
-        Set<ServerTransportAddress> set = addresses.stream()
+        // return a de-duplicated array of Transport addresses
+        return addresses.stream().sequential()
+                // wrap in a ServerTransportAddress to get hashCode(), equals() and toString()
                 .map(ServerTransportAddress::new)
-                .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
-        TransportAddress[] result = set
-                .stream()
+                // trace the transport address
+                .peek(DEBUG ? sta -> Tr.debug(tc, "Considering received endpoint: " + sta) : sta -> {})
+                // Set::add to filter out duplicates
+                .filter(new HashSet<>()::add)
+                // trace if it was NOT a duplicate
+                .peek(DEBUG ? sta -> Tr.debug(tc, "Accepting unique endpoint: " + sta) : sta -> {})
+                // recover the original object
                 .map(ServerTransportAddress::getTransportAddress)
                 .toArray(TransportAddress[]::new);
-
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
-            Tr.debug(tc, "Eliminated " + (addresses.size() - result.length) + " duplicate transport addresses");
-
-        return result;
     }
 }
