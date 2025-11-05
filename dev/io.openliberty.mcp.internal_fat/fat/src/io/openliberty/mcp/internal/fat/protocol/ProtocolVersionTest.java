@@ -10,6 +10,11 @@
 package io.openliberty.mcp.internal.fat.protocol;
 
 import static com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions.SERVER_ONLY;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.ACCEPT;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.MCP_PROTOCOL_VERSION;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.MCP_SESSION_ID;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.VALUE_ACCEPT_DEFAULT;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.VALUE_APPLICATION_JSON;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -76,8 +81,8 @@ public class ProtocolVersionTest {
                         """;
 
         HttpRequest httpRequest = new HttpRequest(server, "/protocolVersionTest/mcp")
-                                                                                     .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
-                                                                                     .requestProp(McpConstants.MCP_SESSION_ID, client.getSessionId())
+                                                                                     .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                                                     .requestProp(MCP_SESSION_ID, client.getSessionId())
                                                                                      .jsonBody(request)
                                                                                      .method("POST")
                                                                                      .expectCode(200);
@@ -101,7 +106,7 @@ public class ProtocolVersionTest {
         JSONAssert.assertEquals(expectedResponse, response, true);
 
         String contentType = httpRequest.getResponseHeader("Content-Type");
-        assertThat(contentType, containsString(McpConstants.VALUE_APPLICATION_JSON));
+        assertThat(contentType, containsString(VALUE_APPLICATION_JSON));
     }
 
     @Test
@@ -123,7 +128,7 @@ public class ProtocolVersionTest {
                         """;
 
         HttpRequest httpRequest = new HttpRequest(server, "/protocolVersionTest/mcp")
-                                                                                     .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
+                                                                                     .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
                                                                                      .jsonBody(request)
                                                                                      .method("POST")
                                                                                      .expectCode(200);
@@ -154,9 +159,9 @@ public class ProtocolVersionTest {
                         """;
 
         String response = new HttpRequest(server, "/protocolVersionTest/mcp")
-                                                                             .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
-                                                                             .requestProp(McpConstants.MCP_PROTOCOL_VERSION, "2022-02-02")
-                                                                             .requestProp(McpConstants.MCP_SESSION_ID, client.getSessionId())
+                                                                             .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                                             .requestProp(MCP_PROTOCOL_VERSION, "2022-02-02")
+                                                                             .requestProp(MCP_SESSION_ID, client.getSessionId())
                                                                              .jsonBody(request)
                                                                              .method("POST")
                                                                              .expectCode(400)

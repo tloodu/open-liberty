@@ -9,6 +9,12 @@
  *******************************************************************************/
 package io.openliberty.mcp.internal.fat.utils;
 
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.ACCEPT;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.MCP_PROTOCOL_VERSION;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.MCP_SESSION_ID;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.VALUE_ACCEPT_DEFAULT;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.VALUE_APPLICATION_JSON;
+import static io.openliberty.mcp.internal.fat.utils.McpConstants.VALUE_MCP_PROTOCOL_VERSION;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -84,8 +90,8 @@ public class McpClient extends ExternalResource {
                         """;
 
         HttpRequest httpRequest = new HttpRequest(server, path + "/mcp")
-                                                                        .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
-                                                                        .requestProp(McpConstants.MCP_PROTOCOL_VERSION, McpConstants.VALUE_MCP_PROTOCOL_VERSION)
+                                                                        .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                                        .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
                                                                         .jsonBody(request)
                                                                         .method("POST");
         String response = httpRequest.run(String.class);
@@ -101,11 +107,11 @@ public class McpClient extends ExternalResource {
                         """;
         JSONAssert.assertEquals(expectedResponse, response, JSONCompareMode.LENIENT);
 
-        sessionId = httpRequest.getResponseHeader(McpConstants.MCP_SESSION_ID);
+        sessionId = httpRequest.getResponseHeader(MCP_SESSION_ID);
         assertNotNull(sessionId);
 
         String contentType = httpRequest.getResponseHeader("Content-Type");
-        assertThat(contentType, containsString(McpConstants.VALUE_APPLICATION_JSON));
+        assertThat(contentType, containsString(VALUE_APPLICATION_JSON));
 
         // Notify the server that initialization was successful
         String notification = """
@@ -125,7 +131,7 @@ public class McpClient extends ExternalResource {
             return;
         }
         try {
-            new HttpRequest(server, path + "/mcp").requestProp(McpConstants.MCP_SESSION_ID, sessionId)
+            new HttpRequest(server, path + "/mcp").requestProp(MCP_SESSION_ID, sessionId)
                                                   .method("DELETE")
                                                   .run(String.class);
         } catch (Exception e) {
@@ -140,7 +146,7 @@ public class McpClient extends ExternalResource {
     public void deleteSession() {
         try {
             new HttpRequest(server, path + "/mcp")
-                                                  .requestProp(McpConstants.MCP_SESSION_ID, sessionId)
+                                                  .requestProp(MCP_SESSION_ID, sessionId)
                                                   .method("DELETE")
                                                   .run(String.class);
 
@@ -157,9 +163,9 @@ public class McpClient extends ExternalResource {
      */
     public String callMCP(String jsonRequestBody) throws Exception {
         return new HttpRequest(server, path + "/mcp")
-                                                     .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
-                                                     .requestProp(McpConstants.MCP_PROTOCOL_VERSION, McpConstants.VALUE_MCP_PROTOCOL_VERSION)
-                                                     .requestProp(McpConstants.MCP_SESSION_ID, sessionId)
+                                                     .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                     .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
+                                                     .requestProp(MCP_SESSION_ID, sessionId)
                                                      .jsonBody(jsonRequestBody)
                                                      .method("POST")
                                                      .run(String.class);
@@ -170,9 +176,9 @@ public class McpClient extends ExternalResource {
      */
     public String callMCPCustomized(String jsonRequestBody, String appendPath, int expectedCode) throws Exception {
         return new HttpRequest(server, path + appendPath)
-                                                         .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
-                                                         .requestProp(McpConstants.MCP_PROTOCOL_VERSION, McpConstants.VALUE_MCP_PROTOCOL_VERSION)
-                                                         .requestProp(McpConstants.MCP_SESSION_ID, sessionId)
+                                                         .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                         .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
+                                                         .requestProp(MCP_SESSION_ID, sessionId)
                                                          .jsonBody(jsonRequestBody)
                                                          .method("POST")
                                                          .expectCode(expectedCode)
@@ -189,9 +195,9 @@ public class McpClient extends ExternalResource {
                     throws Exception {
 
         String response = new HttpRequest(server, path + "/mcp")
-                                                                .requestProp(McpConstants.ACCEPT, McpConstants.VALUE_ACCEPT_DEFAULT)
-                                                                .requestProp(McpConstants.MCP_PROTOCOL_VERSION, McpConstants.VALUE_MCP_PROTOCOL_VERSION)
-                                                                .requestProp(McpConstants.MCP_SESSION_ID, sessionId)
+                                                                .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                                .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
+                                                                .requestProp(MCP_SESSION_ID, sessionId)
                                                                 .jsonBody(jsonRequestBody)
                                                                 .method("POST")
                                                                 .expectCode(202)
