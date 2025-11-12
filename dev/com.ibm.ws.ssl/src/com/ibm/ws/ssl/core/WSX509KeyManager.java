@@ -319,6 +319,13 @@ public final class WSX509KeyManager extends X509ExtendedKeyManager implements X5
                 return prefixedClientAlias;
 
             } else {
+
+                if (list == null || list.length == 0) {
+                    if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
+                        Tr.exit(tc, "chooseClientAlias (no aliases available)", null);
+                    return null;
+                }
+                
                 if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
                 Tr.exit(tc, "chooseClientAlias (default)", new Object[] { clientAlias });
                 // error case, alias not found in the list.
