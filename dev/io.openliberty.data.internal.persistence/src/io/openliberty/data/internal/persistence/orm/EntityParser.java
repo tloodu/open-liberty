@@ -70,8 +70,7 @@ public class EntityParser {
         }
 
         String tableName = tablePrefix + entity.getSimpleName();
-
-        entities.add(new EntityRecord(entity, tableName, finalizeAttributes(findAttributes(entity))));
+        entities.add(new EntityRecord(entity, tableName, finalizeAttributes(entity, findAttributes(entity))));
 
     }
 
@@ -99,12 +98,10 @@ public class EntityParser {
                 throw new MappingException(x);
             }
         }
-
-        System.out.println("KJA1017 incompleteSize: " + attributes.size());
         return attributes;
     }
 
-    private Set<Attribute> finalizeAttributes(Set<IncompleteAttribute> incompletes) {
+    private Set<Attribute> finalizeAttributes(Class<?> c, Set<IncompleteAttribute> incompletes) {
         SortedSet<Attribute> attributes = new TreeSet<>();
 
         IncompleteAttribute id = null;
@@ -187,19 +184,17 @@ public class EntityParser {
                     kind = AttributeKind.EMBEDDED;
             }
 
-            System.out.println("KJA1017   attribute: " + attr);
-            System.out.println("KJA1017   kind: " + kind);
+            if (kind == AttributeKind.EMBEDDED || kind == AttributeKind.EMBEDDED_ID) {
+                Set<Attribute> embedAttributes = finalizeAttributes(c, findAttributes(type));
 
-            if (kind == AttributeKind.EMBEDDED) {
-                // TODO
-            } else if (kind == AttributeKind.EMBEDDED_ID) {
-                // TODO
+                attributes.add(new Attribute(attr, kind, embedAttributes));
+                embeddables.add(new Embeddable(type, embedAttributes));
+
+                relate.entityHasEmbed(c, type);
             } else {
                 attributes.add(new Attribute(attr, kind, Set.of()));
             }
         }
-
-        System.out.println("KJA1017 finalizedSize: " + attributes.size());
 
         return attributes;
     }

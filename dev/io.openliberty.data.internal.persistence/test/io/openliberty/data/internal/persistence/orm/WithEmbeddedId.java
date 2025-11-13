@@ -9,9 +9,36 @@
  *******************************************************************************/
 package io.openliberty.data.internal.persistence.orm;
 
+import java.time.LocalDateTime;
+
 /**
  * A simple entity with an embedded id
+ * with access type property
  */
 public class WithEmbeddedId {
+    public Name name_id;
 
+    public LocalDateTime version;
+
+    public static class Name {
+        private String firstName;
+        private String lastName;
+
+        public String getFirstName() {
+            return firstName;
+        }
+
+        public void setFirstName(String firstName) {
+            this.firstName = firstName;
+        }
+
+        public String getLastName() {
+            return lastName;
+        }
+
+        public void setLastName(String lastName) {
+            this.lastName = lastName;
+        }
+
+    }
 }

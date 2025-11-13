@@ -79,6 +79,11 @@ class Relationships {
         recordToEntity.put(rec, entity);
     }
 
-    // Predicates - TODO
-
+    // Predicates
+    public Set<Class<?>> embedsForEntity(Class<?> entity) {
+        if (embedToEntity.containsKey(entity)) {
+            return embedToEntity.get(entity);
+        }
+        return Set.of();
+    }
 }

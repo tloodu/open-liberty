@@ -146,12 +146,12 @@ public class EntityParserTests {
                               <id name="id" access="FIELD">
                                 <column nullable="false"/>
                               </id>
-                              <embedded name="name">
+                              <embedded name="name" access="FIELD">
                                 <attribute-override name="firstName">
                                   <column name="NAME_FIRSTNAME"/>
                                 </attribute-override>
                                 <attribute-override name="lastName">
-                                  <column name="NAME_lastName"/>
+                                  <column name="NAME_LASTNAME"/>
                                 </attribute-override>
                               </embedded>
                             </attributes>
@@ -165,6 +165,46 @@ public class EntityParserTests {
                               <basic name="firstName" access="FIELD">
                               </basic>
                               <basic name="lastName" access="FIELD">
+                              </basic>
+                            </attributes>
+                          </embeddable>
+                        """;
+        assertEquals(expected, xmls.get(1));
+    }
+
+    @Test
+    public void embeddedIdEntityTest() {
+        EntityParser p = new EntityParser("");
+        p.parse(WithEmbeddedId.class);
+        List<String> xmls = p.generateView();
+
+        assertEquals(2, xmls.size());
+
+        String expected = """
+                          <entity class="io.openliberty.data.internal.persistence.orm.WithEmbeddedId">
+                            <table name="WithEmbeddedId"/>
+                            <attributes>
+                              <embedded-id name="name_id" access="FIELD">
+                                <attribute-override name="firstName">
+                                  <column name="NAME_ID_FIRSTNAME"/>
+                                </attribute-override>
+                                <attribute-override name="lastName">
+                                  <column name="NAME_ID_LASTNAME"/>
+                                </attribute-override>
+                              </embedded-id>
+                              <version name="version" access="FIELD">
+                              </version>
+                            </attributes>
+                          </entity>
+                        """;
+        assertEquals(expected, xmls.get(0));
+
+        expected = """
+                          <embeddable class="io.openliberty.data.internal.persistence.orm.WithEmbeddedId$Name">
+                            <attributes>
+                              <basic name="firstName" access="PROPERTY">
+                              </basic>
+                              <basic name="lastName" access="PROPERTY">
                               </basic>
                             </attributes>
                           </embeddable>
