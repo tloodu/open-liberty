@@ -1,0 +1,84 @@
+/*******************************************************************************
+ * Copyright (c) 2025 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+package io.openliberty.data.internal.persistence.orm;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+/**
+ *
+ */
+class Relationships {
+    // one-to-many relationship between mapped-superclass and entity
+    private final ConcurrentMap<Class<?>, Set<Class<?>>> mappedSuperclassToEntity;
+
+    // many-to-many relationship between entity and embedded/embeddable
+    private final ConcurrentMap<Class<?>, Set<Class<?>>> entityToEmbed;
+    private final ConcurrentMap<Class<?>, Set<Class<?>>> embedToEntity;
+
+    // one-to-one relationship between record and entity class;
+    private final Map<Class<?>, Class<?>> recordToEntity;
+
+    public Relationships() {
+        this.mappedSuperclassToEntity = new ConcurrentHashMap<>();
+        this.entityToEmbed = new ConcurrentHashMap<>();
+        this.embedToEntity = new ConcurrentHashMap<>();
+        this.recordToEntity = new HashMap<>();
+    }
+
+    // ASSOCIATIONS
+    public void entityHasMappedSuperclass(Class<?> mappedSuperclass, Class<?> entity) {
+        mappedSuperclassToEntity.computeIfAbsent(mappedSuperclass, set -> {
+            Set<Class<?>> newSet = new HashSet<>();
+            newSet.add(entity);
+            return newSet;
+        });
+
+        mappedSuperclassToEntity.computeIfPresent(mappedSuperclass, (key, set) -> {
+            set.add(entity);
+            return set;
+        });
+    }
+
+    public void entityHasEmbed(Class<?> entity, Class<?> embed) {
+        entityToEmbed.computeIfAbsent(entity, set -> {
+            Set<Class<?>> newSet = new HashSet<>();
+            newSet.add(embed);
+            return newSet;
+        });
+
+        entityToEmbed.computeIfPresent(entity, (key, set) -> {
+            set.add(embed);
+            return set;
+        });
+
+        embedToEntity.computeIfAbsent(embed, set -> {
+            Set<Class<?>> newSet = new HashSet<>();
+            newSet.add(entity);
+            return newSet;
+        });
+
+        embedToEntity.computeIfPresent(embed, (key, set) -> {
+            set.add(entity);
+            return set;
+        });
+    }
+
+    public void recordHasEntity(Class<?> rec, Class<?> entity) {
+        recordToEntity.put(rec, entity);
+    }
+
+    // Predicates - TODO
+
+}
