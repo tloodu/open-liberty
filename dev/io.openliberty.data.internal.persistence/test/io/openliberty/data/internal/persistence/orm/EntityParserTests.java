@@ -17,6 +17,7 @@ import org.junit.Test;
 
 /**
  * TODO test an element collection of embeddables
+ * TODO test an annotated entity
  */
 public class EntityParserTests {
 
@@ -379,6 +380,119 @@ public class EntityParserTests {
                           </embeddable>
                         """;
 
+        assertEquals(expected, xmls.get(5));
+    }
+
+    @Test
+    public void converterEntityTest() {
+        EntityParser p = new EntityParser("");
+        p.parse(WithConverter.class);
+        List<String> xmls = p.generateView();
+
+        assertEquals(4, xmls.size());
+
+        String expected = """
+                          <entity class="io.openliberty.data.internal.persistence.orm.WithConverter">
+                            <table name="WithConverter"/>
+                            <attributes>
+                              <id name="id" access="FIELD">
+                                <column nullable="false"/>
+                              </id>
+                              <basic name="firstName" access="FIELD">
+                              </basic>
+                              <basic name="lastName" access="PROPERTY">
+                              </basic>
+                              <version name="version" access="FIELD">
+                              </version>
+                              <element-collection name="aliases" access="FIELD" fetch="EAGER">
+                              </element-collection>
+                            </attributes>
+                          </entity>
+                        """;
+        assertEquals(expected, xmls.get(0));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$ClassConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(1));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$FieldConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(2));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$MethodConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(3));
+    }
+
+    @Test
+    public void converterComplexEntityTest() {
+        EntityParser p = new EntityParser("");
+        p.parse(WithConverterComplex.class);
+        List<String> xmls = p.generateView();
+
+        assertEquals(6, xmls.size());
+
+        String expected = """
+                          <mapped-superclass class="io.openliberty.data.internal.persistence.orm.ConverterSuper">
+                            <attributes>
+                              <basic name="firstName" access="FIELD">
+                              </basic>
+                              <embedded name="emb" access="FIELD">
+                                <attribute-override name="lastName">
+                                  <column name="EMB_LASTNAME"/>
+                                </attribute-override>
+                              </embedded>
+                            </attributes>
+                          </mapped-superclass>
+                        """;
+
+        assertEquals(expected, xmls.get(0));
+
+        expected = """
+                          <entity class="io.openliberty.data.internal.persistence.orm.WithConverterComplex">
+                            <table name="WithConverterComplex"/>
+                            <attributes>
+                              <id name="id" access="FIELD">
+                                <column nullable="false"/>
+                              </id>
+                            </attributes>
+                          </entity>
+                        """;
+        assertEquals(expected, xmls.get(1));
+
+        expected = """
+                          <embeddable class="io.openliberty.data.internal.persistence.orm.ConverterEmbedded">
+                            <attributes>
+                              <basic name="lastName" access="PROPERTY">
+                              </basic>
+                            </attributes>
+                          </embeddable>
+                        """;
+
+        assertEquals(expected, xmls.get(2));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$ClassConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(3));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$FieldConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(4));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$MethodConverter">
+                          </converter>
+                        """;
         assertEquals(expected, xmls.get(5));
     }
 

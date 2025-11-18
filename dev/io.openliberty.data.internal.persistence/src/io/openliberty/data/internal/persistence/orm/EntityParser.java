@@ -28,21 +28,26 @@ import io.openliberty.data.internal.persistence.orm.Models.AccessType;
 import io.openliberty.data.internal.persistence.orm.Models.Attribute;
 import io.openliberty.data.internal.persistence.orm.Models.AttributeKind;
 import io.openliberty.data.internal.persistence.orm.Models.Converter;
-import io.openliberty.data.internal.persistence.orm.Models.Embeddable;
+import io.openliberty.data.internal.persistence.orm.Models.EmbeddableRecord;
 import io.openliberty.data.internal.persistence.orm.Models.EntityRecord;
 import io.openliberty.data.internal.persistence.orm.Models.IncompleteAttribute;
 import io.openliberty.data.internal.persistence.orm.Models.MappedSuperclass;
 import jakarta.data.exceptions.MappingException;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
 
 /**
- *
+ * TODO find converters in annotated entities but do not record the entity itself
+ * TODO handle records
+ * TODO verify that every entity has an id attribute in itself or a mapped superclass
  */
 public class EntityParser {
 
     // ORM sets
     private final SortedSet<MappedSuperclass> mappedSuperclasses;
     private final SortedSet<EntityRecord> entities;
-    private final SortedSet<Embeddable> embeddables;
+    private final SortedSet<EmbeddableRecord> embeddables;
     private final SortedSet<Converter> converters;
 
     // Relationships
@@ -52,7 +57,7 @@ public class EntityParser {
     private final String tablePrefix;
 
     // State
-    private boolean parsed = false;
+    private boolean finished = false;
 
     public EntityParser(String tablePrefix) {
         this.mappedSuperclasses = new TreeSet<>();
@@ -66,15 +71,29 @@ public class EntityParser {
     }
 
     public void parse(Class<?> entity) {
-        if (parsed) {
+        if (finished) {
             return; // fail?
         }
 
+        // If the entity was annotated with @Entity
+        // only search for converters.
+        if (entity.isAnnotationPresent(Entity.class)) {
+            AnnotatedUtilities.findConvertersInEntity(entity, converters);
+            return;
+        }
+
+        // If entity was unannotated then we must
+        // construct an object relational mapping
         String tableName = tablePrefix + entity.getSimpleName();
 
         for (Class<?> superclass = entity; //
                         superclass != null && superclass != Object.class; //
                         superclass = superclass.getSuperclass()) {
+
+            for (Convert convert : superclass.getAnnotationsByType(Convert.class)) {
+                recordConverter(convert);
+            }
+
             if (superclass == entity) {
                 // Record entity and any embeddables found along the way
                 entities.add(new EntityRecord(superclass, tableName, finalizeAttributes(superclass, findAttributes(superclass))));
@@ -93,20 +112,31 @@ public class EntityParser {
             for (RecordComponent r : c.getRecordComponents())
                 attributes.add(new IncompleteAttribute(r.getType(), r.getName(), AccessType.FIELD));
         } else {
-            for (Field f : c.getDeclaredFields())
-                if (Modifier.isPublic(f.getModifiers()))
+            for (Field f : c.getDeclaredFields()) {
+                if (Modifier.isPublic(f.getModifiers())) {
                     attributes.add(new IncompleteAttribute(f.getType(), f.getName(), AccessType.FIELD));
+
+                    for (Convert convert : f.getAnnotationsByType(Convert.class))
+                        recordConverter(convert);
+                }
+            }
 
             try {
                 PropertyDescriptor[] propertyDescriptors = Introspector //
                                 .getBeanInfo(c).getPropertyDescriptors();
                 if (propertyDescriptors != null)
-                    for (PropertyDescriptor p : propertyDescriptors)
+                    for (PropertyDescriptor p : propertyDescriptors) {
                         if (p.getWriteMethod() != null) {
                             //Note: p.getName() utilizes Introspector.decapitalize method
                             //      which honors acryonyms like getURL/setURL -> URL (instead of uRL)
                             attributes.add(new IncompleteAttribute(p.getPropertyType(), p.getName(), AccessType.PROPERTY));
                         }
+
+                        if (p.getReadMethod() != null)
+                            for (Convert convert : p.getReadMethod().getAnnotationsByType(Convert.class))
+                                recordConverter(convert);
+                    }
+
             } catch (IntrospectionException x) {
                 throw new MappingException(x);
             }
@@ -201,7 +231,7 @@ public class EntityParser {
                 Set<Attribute> embedAttributes = finalizeAttributes(c, findAttributes(type));
 
                 attributes.add(new Attribute(attr, kind, embedAttributes));
-                embeddables.add(new Embeddable(type, embedAttributes));
+                embeddables.add(new EmbeddableRecord(type, embedAttributes));
 
                 relate.entityHasEmbed(c, type);
             } else {
@@ -210,6 +240,11 @@ public class EntityParser {
         }
 
         return attributes;
+    }
+
+    private void recordConverter(Convert convert) {
+        if (convert.converter() != null && convert.converter() != AttributeConverter.class)
+            converters.add(new Converter(convert.converter()));
     }
 
     // Termination point
@@ -224,7 +259,7 @@ public class EntityParser {
             view.entity(er);
         }
 
-        for (Embeddable emb : embeddables) {
+        for (EmbeddableRecord emb : embeddables) {
             view.embedable(emb);
         }
 
@@ -232,7 +267,7 @@ public class EntityParser {
             view.converter(con);
         }
 
-        parsed = true;
+        finished = true;
         return view.get();
     }
 }

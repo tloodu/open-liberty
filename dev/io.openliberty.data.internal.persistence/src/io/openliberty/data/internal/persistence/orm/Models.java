@@ -87,11 +87,11 @@ public class Models {
         }
     }
 
-    static record Embeddable(Class<?> type, Set<Attribute> attributes)
-                    implements Comparable<Embeddable> {
+    static record EmbeddableRecord(Class<?> type, Set<Attribute> attributes)
+                    implements Comparable<EmbeddableRecord> {
 
         @Override
-        public int compareTo(Embeddable o) {
+        public int compareTo(EmbeddableRecord o) {
             return this.type.getName().compareTo(o.type.getName());
         }
     }

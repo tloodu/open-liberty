@@ -17,7 +17,7 @@ import java.util.Set;
 
 import io.openliberty.data.internal.persistence.orm.Models.Attribute;
 import io.openliberty.data.internal.persistence.orm.Models.Converter;
-import io.openliberty.data.internal.persistence.orm.Models.Embeddable;
+import io.openliberty.data.internal.persistence.orm.Models.EmbeddableRecord;
 import io.openliberty.data.internal.persistence.orm.Models.EntityRecord;
 import io.openliberty.data.internal.persistence.orm.Models.MappedSuperclass;
 
@@ -69,7 +69,7 @@ public class View {
         info.add(xml.toString());
     }
 
-    public void embedable(Embeddable model) {
+    public void embedable(EmbeddableRecord model) {
         StringBuilder xml = new StringBuilder(500);
 
         xml.append(indent(1))//
