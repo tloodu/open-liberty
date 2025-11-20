@@ -43,7 +43,7 @@ public class View {
                         .append("<mapped-superclass class=\"").append(model.type().getName()).append("\">")//
                         .append(EOLN);
 
-        attributes(xml, model.attributes());
+        attributes(xml, model.type(), model.attributes());
 
         xml.append(indent(1))//
                         .append("</mapped-superclass>").append(EOLN);
@@ -61,7 +61,7 @@ public class View {
         xml.append(indent(2))//
                         .append("<table name=\"").append(model.tableName()).append("\"/>").append(EOLN);
 
-        attributes(xml, model.attributes());
+        attributes(xml, model.type(), model.attributes());
 
         xml.append(indent(1))//
                         .append("</entity>").append(EOLN);
@@ -76,7 +76,7 @@ public class View {
                         .append("<embeddable class=\"").append(model.type().getName()).append("\">")//
                         .append(EOLN);
 
-        attributes(xml, model.attributes());
+        attributes(xml, model.type(), model.attributes());
 
         xml.append(indent(1))//
                         .append("</embeddable>").append(EOLN);
@@ -97,18 +97,18 @@ public class View {
         info.add(xml.toString());
     }
 
-    private void attributes(StringBuilder xml, Set<Attribute> attrs) {
+    private void attributes(StringBuilder xml, Class<?> entity, Set<Attribute> attrs) {
         xml.append(indent(2)).append("<attributes>").append(EOLN);
 
         for (Attribute attr : attrs) {
-            attribute(xml, attr);
+            attribute(xml, entity, attr);
         }
 
         xml.append(indent(2)).append("</attributes>").append(EOLN);
 
     }
 
-    private void attribute(StringBuilder xml, Attribute attr) {
+    private void attribute(StringBuilder xml, Class<?> entity, Attribute attr) {
         xml.append(indent(3))//
                         .append('<').append(attr.kind().toElementName())//
                         .append(" name=\"").append(attr.name()).append('"')//
@@ -124,6 +124,10 @@ public class View {
             xml.append(indent(4))//
                             .append("<column nullable=\"false\"/>")//
                             .append(EOLN);
+        }
+
+        if (attr.isEmbeddedCollection() && attr.collectionId() != null) {
+            collectionTable(xml, entity, attr, attr.collectionId());
         }
 
         for (Attribute override : attr.overrides()) {
@@ -148,6 +152,21 @@ public class View {
 
         xml.append(indent(4))//
                         .append("</attribute-override>").append(EOLN);
+    }
+
+    private void collectionTable(StringBuilder xml, Class<?> entity, Attribute attr, Attribute collectionId) {
+        String collectionTable = entity.getSimpleName().toUpperCase() + "_" + attr.name().toUpperCase();
+
+        xml.append(indent(4))//
+                        .append("<collection-table name=\"").append(collectionTable)//
+                        .append("\">").append(EOLN);
+
+        xml.append(indent(5)) //
+                        .append("<join-column name=\"").append(collectionId.name())//
+                        .append("\"/>").append(EOLN);
+
+        xml.append(indent(4))//
+                        .append("</collection-table>").append(EOLN);
     }
 
 }

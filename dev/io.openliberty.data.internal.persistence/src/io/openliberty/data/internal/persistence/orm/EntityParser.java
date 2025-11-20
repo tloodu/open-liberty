@@ -37,7 +37,6 @@ import io.openliberty.data.internal.persistence.orm.Models.AttributeKind;
 import io.openliberty.data.internal.persistence.orm.Models.Converter;
 import io.openliberty.data.internal.persistence.orm.Models.EmbeddableRecord;
 import io.openliberty.data.internal.persistence.orm.Models.EntityRecord;
-import io.openliberty.data.internal.persistence.orm.Models.IncompleteAttribute;
 import io.openliberty.data.internal.persistence.orm.Models.MappedSuperclass;
 import jakarta.data.exceptions.MappingException;
 import jakarta.persistence.AttributeConverter;
@@ -86,6 +85,7 @@ public class EntityParser {
         this.state = new AtomicReference<>(STATE.INIT);
     }
 
+    // ENTRY POINTS
     public void parseAnnotatedEntity(Class<?> annotatedEntity) {
         state.compareAndSet(STATE.INIT, STATE.PARSING);
         if (state.get() != STATE.PARSING) {
@@ -119,13 +119,9 @@ public class EntityParser {
 
     }
 
-    private void parse(Class<?> entity, String tableName) {
-        state.compareAndSet(STATE.INIT, STATE.PARSING);
-        if (state.get() != STATE.PARSING) {
-            // Internal exception
-            throw new IllegalStateException("Attempted to parse an entity while EntityParser was in state: " + state.get());
-        }
+    // PARSER
 
+    private void parse(Class<?> entity, String tableName) {
         // If entity was unannotated then we must
         // construct an object relational mapping
         this.currentEntity = entity;
@@ -153,17 +149,19 @@ public class EntityParser {
         verify();
     }
 
-    private Set<IncompleteAttribute> findAttributes(Class<?> c) {
-        SortedSet<IncompleteAttribute> attributes = new TreeSet<>();
+    // HELPER METHODS
+
+    private Set<Attribute> findAttributes(Class<?> c) {
+        Set<Attribute> attributes = new HashSet<>();
 
         if (relate.entityHasRecord(c)) {
             Class<?> r = relate.recordForEntity(c);
             for (RecordComponent rc : r.getRecordComponents())
-                attributes.add(new IncompleteAttribute(rc.getType(), rc.getName(), AccessType.FIELD));
+                attributes.add(new Attribute(rc.getType(), rc.getGenericType(), rc.getName(), AccessType.FIELD));
         } else {
             for (Field f : c.getDeclaredFields()) {
                 if (Modifier.isPublic(f.getModifiers())) {
-                    attributes.add(new IncompleteAttribute(f.getType(), f.getName(), AccessType.FIELD));
+                    attributes.add(new Attribute(f.getType(), f.getGenericType(), f.getName(), AccessType.FIELD));
 
                     for (Convert convert : f.getAnnotationsByType(Convert.class))
                         recordConverter(convert);
@@ -178,7 +176,8 @@ public class EntityParser {
                         if (p.getWriteMethod() != null) {
                             //Note: p.getName() utilizes Introspector.decapitalize method
                             //      which honors acryonyms like getURL/setURL -> URL (instead of uRL)
-                            attributes.add(new IncompleteAttribute(p.getPropertyType(), p.getName(), AccessType.PROPERTY));
+                            Type genericType = p.getWriteMethod().getGenericReturnType();
+                            attributes.add(new Attribute(p.getPropertyType(), genericType, p.getName(), AccessType.PROPERTY));
                         }
 
                         if (p.getReadMethod() != null)
@@ -193,11 +192,9 @@ public class EntityParser {
         return attributes;
     }
 
-    private Set<Attribute> finalizeAttributes(Class<?> c, Set<IncompleteAttribute> incompletes) {
-        SortedSet<Attribute> attributes = new TreeSet<>();
-
-        IncompleteAttribute id = null;
-        IncompleteAttribute version = null;
+    private Set<Attribute> finalizeAttributes(Class<?> c, Set<Attribute> incompletes) {
+        Attribute id = null;
+        Attribute version = null;
 
         // Determine which attribute is the id and version (optional).
         // Id precedence:
@@ -210,7 +207,7 @@ public class EntityParser {
         // (2) name is _version, ignoring case.
         int idPrecedence = 10;
         int vPrecedence = 10;
-        for (IncompleteAttribute attr : incompletes) {
+        for (Attribute attr : incompletes) {
             String name = attr.name();
             Class<?> type = attr.type();
             int len = name.length();
@@ -250,21 +247,32 @@ public class EntityParser {
             }
         }
 
-        for (IncompleteAttribute attr : incompletes) {
+        for (Attribute attr : incompletes) {
             Class<?> type = attr.type();
 
             boolean isId = attr == id;
             boolean isVersion = attr == version;
-            boolean isPrimitive = type.isPrimitive();
-            boolean isCollection = Collection.class.isAssignableFrom(type);
+            boolean isBasic = type.isPrimitive() || //
+                              type.isInterface() || //
+                              Serializable.class.isAssignableFrom(type);
 
-            AttributeKind kind;
-            if (isPrimitive || type.isInterface() || //
-                Serializable.class.isAssignableFrom(type)) {
+            boolean isCollection = Collection.class.isAssignableFrom(type);
+            Class<?> collectionType = isCollection ? //
+                            (Class<?>) ((ParameterizedType) attr.genericType()).getActualTypeArguments()[0] : //
+                            null;
+            boolean isCollectionBasic = isCollection ? collectionType.isPrimitive() || //
+                                                       collectionType.isInterface() || //
+                                                       Serializable.class.isAssignableFrom(collectionType) : false;
+
+            final AttributeKind kind;
+            if (isCollection) {
+                if (isCollectionBasic)
+                    kind = AttributeKind.BASIC$ELEMENT_COLLECTION;
+                else
+                    kind = AttributeKind.EMBEDDED$ELEMENT_COLLECTION;
+            } else if (isBasic) {
                 if (isId)
                     kind = AttributeKind.ID;
-                else if (isCollection)
-                    kind = AttributeKind.ELEMENT_COLLECTION;
                 else if (isVersion)
                     kind = AttributeKind.VERSION;
                 else
@@ -275,30 +283,32 @@ public class EntityParser {
                 else
                     kind = AttributeKind.EMBEDDED;
             }
+            attr.setKind(kind);
 
-            Attribute finalized;
+            //TODO avoid finding attributes for embeddables if we already found them.
+            if (attr.isEmbedded()) {
+                Set<Attribute> overrides = finalizeAttributes(c, findAttributes(type));
+                attr.setOverrides(overrides);
 
-            if (kind == AttributeKind.EMBEDDED || kind == AttributeKind.EMBEDDED_ID) {
-                Set<Attribute> embedAttributes = finalizeAttributes(c, findAttributes(type));
-
-                finalized = new Attribute(attr, kind, embedAttributes);
-                attributes.add(finalized);
-
-                embeddables.add(new EmbeddableRecord(type, embedAttributes));
-
+                embeddables.add(new EmbeddableRecord(type, overrides));
                 relate.entityToEmbed(c, type);
-            } else {
-                finalized = new Attribute(attr, kind, Set.of());
-                attributes.add(finalized);
             }
 
-            // Found id attribute, record it for verification and witness any overwritten ids
-            if (finalized.isId()) {
-                idAttributes.add(finalized);
+            if (attr.isEmbeddedCollection()) {
+                Set<Attribute> overrides = finalizeAttributes(c, findAttributes(collectionType));
+                attr.setOverrides(overrides);
+                attr.setCollectionId(id);
+
+                embeddables.add(new EmbeddableRecord(collectionType, overrides));
+                relate.entityToEmbed(c, collectionType);
+            }
+
+            if (attr.isId()) {
+                idAttributes.add(attr);
             }
         }
 
-        return attributes;
+        return new TreeSet<Attribute>(incompletes);
     }
 
     private void recordConverter(Convert convert) {
@@ -360,6 +370,8 @@ public class EntityParser {
                                        + "The id attributes are: " + idAttributes);
         }
     }
+
+    // GENERATORS
 
     public List<String> generateView() {
         state.compareAndSet(STATE.PARSING, STATE.GENERATING);

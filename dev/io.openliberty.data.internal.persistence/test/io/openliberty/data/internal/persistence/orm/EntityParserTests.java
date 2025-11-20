@@ -202,6 +202,52 @@ public class EntityParserTests {
     }
 
     @Test
+    public void collectionEmbeddedEntityTest() {
+        EntityParser p = new EntityParser("");
+        p.parseUnannotatedEntity(CollectionEmbedded.class);
+        List<String> xmls = p.generateView();
+
+        assertEquals(2, xmls.size());
+
+        String expected = """
+                          <entity class="io.openliberty.data.internal.persistence.orm.CollectionEmbedded">
+                            <table name="CollectionEmbedded"/>
+                            <attributes>
+                              <id name="collectionId" access="FIELD">
+                                <column nullable="false"/>
+                              </id>
+                              <element-collection name="friends" access="FIELD" fetch="EAGER">
+                                <collection-table name="COLLECTIONEMBEDDED_FRIENDS">
+                                  <join-column name="collectionId"/>
+                                </collection-table>
+                                <attribute-override name="firstName">
+                                  <column name="FRIENDS_FIRSTNAME"/>
+                                </attribute-override>
+                                <attribute-override name="lastName">
+                                  <column name="FRIENDS_LASTNAME"/>
+                                </attribute-override>
+                              </element-collection>
+                            </attributes>
+                          </entity>
+                        """;
+
+        assertEquals(expected, xmls.get(0));
+
+        expected = """
+                          <embeddable class="io.openliberty.data.internal.persistence.orm.CollectionEmbedded$Name">
+                            <attributes>
+                              <basic name="firstName" access="FIELD">
+                              </basic>
+                              <basic name="lastName" access="FIELD">
+                              </basic>
+                            </attributes>
+                          </embeddable>
+                        """;
+
+        assertEquals(expected, xmls.get(1));
+    }
+
+    @Test
     public void propertyEntityTest() {
         EntityParser p = new EntityParser("");
         p.parseUnannotatedEntity(Property.class);

@@ -9,6 +9,7 @@
  *******************************************************************************/
 package io.openliberty.data.internal.persistence.orm;
 
+import java.lang.reflect.Type;
 import java.util.Set;
 
 import com.ibm.websphere.ras.annotation.Trivial;
@@ -20,56 +21,120 @@ public class Models {
     }
 
     enum AttributeKind {
-        ID, EMBEDDED_ID, BASIC, VERSION, ELEMENT_COLLECTION, EMBEDDED;
+        ID, EMBEDDED_ID, BASIC, VERSION, BASIC$ELEMENT_COLLECTION, EMBEDDED$ELEMENT_COLLECTION, EMBEDDED;
 
         public String toElementName() {
-            return this.name().toLowerCase().replace('_', '-');
+            if (this.name().contains("$"))
+                return this.name().substring(this.name().indexOf('$') + 1).toLowerCase().replace('_', '-');
+            else
+                return this.name().toLowerCase().replace('_', '-');
         }
     }
 
-    static record IncompleteAttribute(Class<?> type, String name, AccessType access)
-                    implements Comparable<IncompleteAttribute> {
+    static class Attribute implements Comparable<Attribute> {
+        private final Class<?> type;
+        private final Type genericType;
+        private final String name;
+        private final AccessType access;
 
-        @Override
-        public int compareTo(IncompleteAttribute o) {
-            return this.name.compareTo(o.name);
+        private AttributeKind kind;
+        private Attribute collectionId = null;
+        private Set<Attribute> overrides = Set.of();
+
+        public Attribute(Class<?> type, Type genericType, String name, AccessType access) {
+            this.type = type;
+            this.genericType = genericType;
+            this.name = name;
+            this.access = access;
         }
-    }
 
-    static record Attribute(IncompleteAttribute incomplete, AttributeKind kind, Set<Attribute> overrides)
-                    implements Comparable<Attribute> {
+        public AttributeKind kind() {
+            return kind;
+        }
+
+        public void setKind(AttributeKind kind) {
+            this.kind = kind;
+        }
+
+        public Attribute collectionId() {
+            return collectionId;
+        }
+
+        public void setCollectionId(Attribute collectionId) {
+            this.collectionId = collectionId;
+        }
+
+        public Set<Attribute> overrides() {
+            return overrides;
+        }
+
+        public void setOverrides(Set<Attribute> overrides) {
+            this.overrides = overrides;
+        }
 
         public Class<?> type() {
-            return incomplete.type();
+            return type;
+        }
+
+        public Type genericType() {
+            return genericType;
         }
 
         public String name() {
-            return incomplete.name();
+            return name;
         }
 
         public AccessType access() {
-            return incomplete.access();
+            return access;
         }
 
         public boolean isCollection() {
-            return this.kind() == AttributeKind.ELEMENT_COLLECTION;
+            return this.kind == AttributeKind.BASIC$ELEMENT_COLLECTION || //
+                   this.kind == AttributeKind.EMBEDDED$ELEMENT_COLLECTION;
+        }
+
+        public boolean isEmbedded() {
+            return this.kind == AttributeKind.EMBEDDED || //
+                   this.kind == AttributeKind.EMBEDDED_ID;
         }
 
         public boolean isId() {
-            return this.kind == AttributeKind.EMBEDDED_ID || this.kind == AttributeKind.ID;
+            return this.kind == AttributeKind.EMBEDDED_ID || //
+                   this.kind == AttributeKind.ID;
+        }
+
+        public boolean isEmbeddedCollection() {
+            return this.kind == AttributeKind.EMBEDDED$ELEMENT_COLLECTION;
         }
 
         public boolean rejectsNull() {
-            return this.type().isPrimitive() && this.kind != AttributeKind.EMBEDDED;
+            return this.type().isPrimitive() && //
+                   this.kind != AttributeKind.EMBEDDED;
         }
 
         @Override
         public int compareTo(Attribute o) {
-            if (this.kind == o.kind) {
-                return this.incomplete.compareTo(o.incomplete);
-            }
+            if (this.kind == o.kind)
+                return this.name.compareTo(o.name);
+
+            if (this.kind == null)
+                return -1;
+
+            if (o.kind == null)
+                return 1;
 
             return Integer.compare(this.kind.ordinal(), o.kind.ordinal());
+        }
+
+        @Override
+        public String toString() {
+            return "Attribute [type=" + type + //
+                   ", genericType=" + genericType + //
+                   ", name=" + name + //
+                   ", access=" + access + //
+                   ", kind=" + kind + //
+                   ", collectionId=" + collectionId + //
+                   ", overrides=" + overrides + "]";
         }
     }
 
