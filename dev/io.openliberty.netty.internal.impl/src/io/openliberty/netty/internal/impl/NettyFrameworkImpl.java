@@ -30,6 +30,7 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
@@ -45,22 +46,24 @@ import com.ibm.ws.kernel.productinfo.ProductInfo;
 import com.ibm.wsspi.kernel.service.utils.ServerQuiesceListener;
 
 import io.netty.channel.Channel;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.kqueue.KQueueSocketChannel;
-import io.netty.channel.kqueue.KQueueDatagramChannel;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -132,22 +135,26 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
                 }
             });
         }
-        IoHandler handler;
+        IoHandlerFactory parentFactory;
+        IoHandlerFactory childFactory;
         if (Epoll.isAvailable()) {
-            handler = new EpollIoHandler();
+            parentFactory = EpollIoHandler.newFactory();
+            childFactory = EpollIoHandler.newFactory();
         } else if (KQueue.isAvailable()) {
-            handler = new KQueueIoHandler();
+            parentFactory = KQueueIoHandler.newFactory();
+            childFactory = KQueueIoHandler.newFactory();
         } else {
-            handler = new NioIoHandler();
+            parentFactory = NioIoHandler.newFactory();
+            childFactory = NioIoHandler.newFactory();
         }
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(tc, "Created IoHandler -> " + handler);
+            Tr.debug(tc, "Created IoHandlerFactories -> parent: " + parentFactory + ", child: " + childFactory);
         }
 
         // Compared to channelfw, quiesce is hit every time because
         // connections are lazy cleaned on deactivate
-        parentGroup = new MultiThreadIoEventLoopGroup(1, handler.newFactory());
+        parentGroup = new MultiThreadIoEventLoopGroup(1, parentFactory);
         // Attempt to get the properties from the passed configuration but give priority to
         // the system properties if set
         int maxThreads;
@@ -171,8 +178,8 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
             });
         }
         AutoScalingEventExecutorChooserFactory scaler = createThreadScaler();
+        childGroup = new MultiThreadIoEventLoopGroup(maxThreads, null, scaler, childFactory);
         outboundConnections = new DefaultChannelGroup(childGroup.next());
-        childGroup = new MultiThreadIoEventLoopGroup(maxThreads, null, scaler, handler.newFactory());
         
         if (metricsWindow > 0) {
             scheduledExecutorService.scheduleAtFixedRate(() -> {
@@ -352,14 +359,6 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
         } else {
             return NioDatagramChannel.class;
         }
-    }
-
-    @Modified
-    protected void modified(ComponentContext context, Map<String, Object> config) {
-        if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-            Tr.event(this, tc, "Config updates are not currently implemented! Config will be ignored: ", config);
-        }
-        // update any framework-specific config
     }
 
     @Deactivate
