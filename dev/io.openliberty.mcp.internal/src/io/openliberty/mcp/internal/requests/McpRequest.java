@@ -19,6 +19,7 @@ import com.ibm.websphere.ras.TraceComponent;
 import io.openliberty.mcp.internal.RequestMethod;
 import io.openliberty.mcp.internal.exceptions.jsonrpc.JSONRPCException;
 import io.openliberty.mcp.internal.exceptions.jsonrpc.MCPRequestValidationException;
+import io.openliberty.mcp.request.RequestId;
 import jakarta.json.Json;
 import jakarta.json.JsonException;
 import jakarta.json.JsonNumber;
@@ -26,6 +27,7 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.annotation.JsonbTransient;
 
 /**
  * A JSON-RPC 2.0 request or notification.
@@ -38,7 +40,7 @@ import jakarta.json.bind.Jsonb;
  * @param params the method parameters parsed as JSON
  */
 public record McpRequest(String jsonrpc,
-                         McpRequestId id,
+                         RequestId id,
                          String method,
                          JsonObject params) {
 
@@ -50,6 +52,7 @@ public record McpRequest(String jsonrpc,
      * @return the matching {@link RequestMethod} enum value
      * @throws JSONRPCException if the method does not map to a {@code RequestMethod} value
      */
+    @JsonbTransient
     public RequestMethod getRequestMethod() {
         return RequestMethod.getForMethodName(this.method);
     }
@@ -99,7 +102,7 @@ public record McpRequest(String jsonrpc,
             return createMCPNotificationRequest(jsonRpc, method, params);
         }
 
-        McpRequestId idObj = parseAndValidateId(id, errors);
+        RequestId idObj = parseAndValidateId(id, errors);
 
         if (!errors.isEmpty()) {
             throw new MCPRequestValidationException(errors);
@@ -125,16 +128,16 @@ public record McpRequest(String jsonrpc,
         }
     }
 
-    private static McpRequestId parseAndValidateId(JsonValue id, List<String> errors) {
+    private static RequestId parseAndValidateId(JsonValue id, List<String> errors) {
         return switch (id.getValueType()) {
-            case NUMBER -> new McpRequestId(((JsonNumber) id).bigDecimalValue());
+            case NUMBER -> new RequestId(((JsonNumber) id).bigDecimalValue());
             case STRING -> {
                 String idString = ((JsonString) id).getString();
                 if (idString.isBlank()) {
                     errors.add(Tr.formatMessage(tc, "jsonrpc.exception.validation.empty.string.id", idString));
                     yield null;
                 }
-                yield new McpRequestId(idString);
+                yield new RequestId(idString);
             }
             default -> {
                 errors.add(Tr.formatMessage(tc, "jsonrpc.exception.validation.invalid.id.type"));

@@ -7,9 +7,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package io.openliberty.mcp.internal.requests;
-
-import io.openliberty.mcp.internal.sessions.McpSessionId;
-import io.openliberty.mcp.request.RequestId;
-
-public record ExecutionRequestId(RequestId id, McpSessionId sessionId) {}
+/**
+ *
+ */
+@com.ibm.websphere.ras.annotation.TraceOptions(traceGroup = "MCP")
+@org.osgi.annotation.versioning.Version("1.0")
+package io.openliberty.mcp.request;
