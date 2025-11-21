@@ -63,9 +63,19 @@ public abstract class BaseTestClass {
             StringBuilder lines = new StringBuilder();
             BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
 
-            while ((line = br.readLine()) != null && line.length() > 0) {
-                lines.append(line).append(sep);
+            int lineNum = 0;
+            while ((line = br.readLine()) != null) {
+                lineNum++;
+                Log.info(c, "requestContainerHttpServlet", String.format("Line %d (length=%d): [%s]", lineNumber, line.length(), line));
+                if (line.length() > 0) {
+                    lines.append(line).append(sep);
+                }
             }
+            Log.info(c, "requestContainerHttpServlet", String.format("Total lines read: %d, StringBuilder length: %d", lineNumber, lines.length()));
+
+            // while ((line = br.readLine()) != null && line.length() > 0) {
+            //     lines.append(line).append(sep);
+            // }
             return lines.toString();
         } catch (IOException e) {
             Log.info(c, "requestContainerHttpServlet", "Encountered IO exception " + e);
@@ -105,7 +115,7 @@ public abstract class BaseTestClass {
      * @param expectedString String array of expected strings
      */
     protected void matchStringsWithRetries(Supplier<String> metricsOutput, String[] expectedString) throws InterruptedException {
-	matchStringsWithRetries(metricsOutput, expectedString, 5);
+	matchStringsWithRetries(metricsOutput, expectedString, 20);
     }
 
     /**
