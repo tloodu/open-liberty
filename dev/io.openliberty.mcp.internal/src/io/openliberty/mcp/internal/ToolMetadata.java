@@ -28,6 +28,7 @@ import io.openliberty.mcp.content.Content;
 import io.openliberty.mcp.internal.exceptions.GenericArgumentException;
 import io.openliberty.mcp.internal.schemas.SchemaRegistry;
 import io.openliberty.mcp.internal.schemas.TypeUtility;
+import io.openliberty.mcp.internal.security.SecurityRequirement;
 import io.openliberty.mcp.internal.tools.AsyncBeanMethodHandler;
 import io.openliberty.mcp.internal.tools.BeanMethodHandler.MethodMetadata;
 import io.openliberty.mcp.internal.tools.SyncBeanMethodHandler;
@@ -55,6 +56,7 @@ import jakarta.json.bind.Jsonb;
  * @param handler the handler, {@code null} if this is an async tool
  * @param asyncHandler the async handler, {@code null} if this is not an async tool
  * @param methodMetadata data about the method if this tool was discovered by annotating a method with {@link Tool}. Should not be used in most circumstances.
+ * @param securityRequirement stores authorization requirements needed to authorize access to a MCP tool
  */
 public record ToolMetadata(String name,
                            String title,
@@ -66,7 +68,8 @@ public record ToolMetadata(String name,
                            JsonObject outputSchema,
                            Function<ToolArguments, ToolResponse> handler,
                            Function<ToolArguments, CompletionStage<ToolResponse>> asyncHandler,
-                           Optional<MethodMetadata> methodMetadata) {
+                           Optional<MethodMetadata> methodMetadata,
+                           SecurityRequirement securityRequirement) {
 
     public static final String MISSING_TOOL_ARG_NAME = "<<<MISSING TOOL_ARG NAME>>>";
 
@@ -155,7 +158,8 @@ public record ToolMetadata(String name,
                                 outputSchema,
                                 handler,
                                 asyncHandler,
-                                Optional.of(methodMetadata));
+                                Optional.of(methodMetadata),
+                                SecurityRequirement.createFrom(method));
 
     }
 

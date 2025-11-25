@@ -24,6 +24,10 @@ import io.openliberty.mcp.internal.fat.lifecycle.tests.BeanLifecycleTest;
 import io.openliberty.mcp.internal.fat.lifecycle.tests.LifecycleTest;
 import io.openliberty.mcp.internal.fat.protocol.HttpTest;
 import io.openliberty.mcp.internal.fat.protocol.ProtocolVersionTest;
+import io.openliberty.mcp.internal.fat.security.AdminsRoleAllowedTests;
+import io.openliberty.mcp.internal.fat.security.DenyAllTests;
+import io.openliberty.mcp.internal.fat.security.NoClassAnnotationTests;
+import io.openliberty.mcp.internal.fat.security.PermitAllTests;
 import io.openliberty.mcp.internal.fat.statelessMode.StatefulModeTest;
 import io.openliberty.mcp.internal.fat.statelessMode.StatelessModeTest;
 import io.openliberty.mcp.internal.fat.tool.AsyncToolCancellationTest;
@@ -58,8 +62,12 @@ import io.openliberty.mcp.internal.fat.tool.ToolTest;
                 StatefulModeTest.class,
                 StatelessModeTest.class,
                 ToolErrorHandlingTest.class,
-                ToolTest.class
-
+                ToolTest.class,
+                //Authorisation Tests
+                AdminsRoleAllowedTests.class,
+                DenyAllTests.class,
+                NoClassAnnotationTests.class,
+                PermitAllTests.class
 })
 public class FATSuite {
 

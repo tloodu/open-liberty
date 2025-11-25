@@ -302,4 +302,23 @@ public class McpTransport {
             return null;
         });
     }
+
+    /**
+     * Check if user is in role
+     */
+    public boolean isUserInRole(String role) {
+        return req.isUserInRole(role);
+    }
+
+    /**
+     * Check if user has any of the roles in the List
+     */
+    public boolean isUserInRole(List<String> roleList) {
+        for (String role : roleList) {
+            if (isUserInRole(role)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -36,6 +36,7 @@ import io.openliberty.mcp.internal.requests.McpNotificationParams;
 import io.openliberty.mcp.internal.requests.McpToolCallParams;
 import io.openliberty.mcp.internal.responses.McpInitializeResult;
 import io.openliberty.mcp.internal.responses.McpInitializeResult.ServerInfo;
+import io.openliberty.mcp.internal.security.Authorizer;
 import io.openliberty.mcp.internal.sessions.McpSession;
 import io.openliberty.mcp.internal.sessions.McpSessionId;
 import io.openliberty.mcp.internal.sessions.McpSessionStore;
@@ -178,6 +179,7 @@ public class McpServlet extends HttpServlet {
             throw new JSONRPCException(JSONRPCErrorCode.INVALID_PARAMS,
                                        Tr.formatMessage(tc, "CWMCM0008E.invalid.request.params", requestId.id()));
         }
+
         try {
             if (params.getMetadata() == null) {
                 if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
@@ -185,6 +187,8 @@ public class McpServlet extends HttpServlet {
                 }
                 throw new JSONRPCException(JSONRPCErrorCode.INVALID_PARAMS, List.of("Method " + params.getName() + " not found"));
             }
+
+            Authorizer.requireAuthorized(transport, params.getMetadata());
 
             if (params.getMetadata().returnsCompletionStage()) {
                 callToolMethodAndSendResponseAsync(transport, requestId, params);
@@ -264,7 +268,9 @@ public class McpServlet extends HttpServlet {
 
         if (toolRegistry.hasTools()) {
             for (ToolMetadata tmd : toolRegistry.getAllTools()) {
-                response.add(new ToolDescription(tmd));
+                if (Authorizer.isAuthorized(transport, tmd)) {
+                    response.add(new ToolDescription(tmd));
+                }
             }
             ToolResult toolResult = new ToolResult(response);
             transport.sendResponse(toolResult);

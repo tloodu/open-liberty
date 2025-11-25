@@ -171,6 +171,40 @@ public class McpClient extends ExternalResource {
                                                      .run(String.class);
     }
 
+    public String callMCPwithBasicAuth(String jsonRequestBody, String user, String password) throws Exception {
+        return new HttpRequest(server, path + "/mcp")
+                                                     .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                     .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
+                                                     .requestProp("Mcp-Session-Id", sessionId)
+                                                     .jsonBody(jsonRequestBody)
+                                                     .method("POST")
+                                                     .basicAuth(user, password)
+                                                     .run(String.class);
+    }
+
+    public String callMCPAuthorisationErrorExpected(String jsonRequestBody) throws Exception {
+        return new HttpRequest(server, path + "/mcp")
+                                                     .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                     .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
+                                                     .requestProp("Mcp-Session-Id", sessionId)
+                                                     .jsonBody(jsonRequestBody)
+                                                     .method("POST")
+                                                     .expectCode(403)
+                                                     .run(String.class);
+    }
+
+    public String callMCPwithBasicAuth_AuthorisationErrorExpected(String jsonRequestBody, String user, String password) throws Exception {
+        return new HttpRequest(server, path + "/mcp")
+                                                     .requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
+                                                     .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
+                                                     .requestProp("Mcp-Session-Id", sessionId)
+                                                     .jsonBody(jsonRequestBody)
+                                                     .method("POST")
+                                                     .expectCode(403)
+                                                     .basicAuth(user, password)
+                                                     .run(String.class);
+    }
+
     /**
      * Call MCP server with a custom endpoint, and an expected response code
      */
