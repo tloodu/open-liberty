@@ -128,6 +128,8 @@ public class ConnectionPoolMetricsTest extends BaseTestClass {
                         "io_openliberty_connection_pool_connection_use_time_seconds_bucket\\{instance=\"[a-zA-Z0-9-]*\",io_openliberty_datasource_name=\"jdbc/exampleDS2\",job=\"unknown_service\",le=\"\\+Inf\"\\}.*",
                         "io_openliberty_connection_pool_connection_use_time_seconds_sum\\{instance=\"[a-zA-Z0-9-]*\",io_openliberty_datasource_name=\"jdbc/exampleDS2\",job=\"unknown_service\"\\}.*",
                         "io_openliberty_connection_pool_connection_use_time_seconds_count\\{instance=\"[a-zA-Z0-9-]*\",io_openliberty_datasource_name=\"jdbc/exampleDS2\",job=\"unknown_service\"\\}.*"});
+		
+		Assert.fail("Failing on purpose.");
 	}
 
 }

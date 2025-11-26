@@ -110,7 +110,8 @@ public class SessionMetricsTest extends BaseTestClass {
                         "io_openliberty_session_active\\{instance=\"[a-zA-Z0-9-]*\",io_openliberty_app_name=\"default_host/testSessionApp\",job=\"unknown_service\"\\}.*",
                         "io_openliberty_session_invalidated_total\\{instance=\"[a-zA-Z0-9-]*\",io_openliberty_app_name=\"default_host/testSessionApp\",job=\"unknown_service\"\\}.*",
                         "io_openliberty_session_invalidated_by_timeout_total\\{instance=\"[a-zA-Z0-9-]*\",io_openliberty_app_name=\"default_host/testSessionApp\",job=\"unknown_service\"\\}.*" });
-
+		
+		Assert.fail("Failing on purpose.");
 	}
 	
 
