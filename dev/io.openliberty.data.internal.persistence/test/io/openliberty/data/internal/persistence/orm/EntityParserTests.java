@@ -641,4 +641,31 @@ public class EntityParserTests {
         assertEquals(expected, xmls.get(5));
     }
 
+    @Test
+    public void annotatedWithConverterEntityTest() {
+        EntityParser p = new EntityParser("");
+        p.parseAnnotatedEntity(WithEntityAnnotation.class);
+        List<String> xmls = p.generateView();
+
+        assertEquals(3, xmls.size());
+
+        String expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$ClassConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(0));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$FieldConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(1));
+
+        expected = """
+                          <converter class="io.openliberty.data.internal.persistence.orm.TestConverters$MethodConverter">
+                          </converter>
+                        """;
+        assertEquals(expected, xmls.get(2));
+    }
+
 }

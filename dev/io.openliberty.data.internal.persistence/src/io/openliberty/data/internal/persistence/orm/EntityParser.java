@@ -22,6 +22,7 @@ import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -93,7 +94,9 @@ public class EntityParser {
             throw new IllegalStateException("Attempted to parse an entity while EntityParser was in state: " + state.get());
         }
 
-        AnnotatedUtilities.findConvertersInEntity(annotatedEntity, converters);
+        for (Convert convert : AnnoUtils.findConvertersInEntity(annotatedEntity)) {
+            recordConverter(convert);
+        }
     }
 
     public void parseRecord(Class<?> record, Class<?> generatedEntity) {
@@ -314,25 +317,28 @@ public class EntityParser {
     private void recordConverter(Convert convert) {
         if (convert.converter() != null && convert.converter() != AttributeConverter.class) {
             Class<?> converterType = convert.converter();
+            Converter converter = new Converter(convert.converter());
 
-            for (Class<?> c = converterType; c != null; c = c.getSuperclass())
-                for (Type ifc : c.getGenericInterfaces())
-                    if (ifc instanceof ParameterizedType type &&
-                        ifc.getTypeName().startsWith(Util.ATTR_CONVERTER_CLASS_NAME)) {
-                        Type[] typeParams = type.getActualTypeArguments();
-                        if (Util.UNSUPPORTED_ATTR_TYPES.contains(typeParams[1]))
-                            throw exc(MappingException.class,
-                                      "CWWKD1111.unsupported.convert",
-                                      converterType.getName(),
-                                      typeParams[0].getTypeName(),
-                                      typeParams[1].getTypeName(),
-                                      Util.SUPPORTED_TEMPORAL_TYPES,
-                                      Util.SUPPORTED_BASIC_TYPES);
+            if (!converters.contains(converter)) {
+                for (Class<?> c = converterType; c != null; c = c.getSuperclass())
+                    for (Type ifc : c.getGenericInterfaces())
+                        if (ifc instanceof ParameterizedType type &&
+                            ifc.getTypeName().startsWith(Util.ATTR_CONVERTER_CLASS_NAME)) {
+                            Type[] typeParams = type.getActualTypeArguments();
+                            if (Util.UNSUPPORTED_ATTR_TYPES.contains(typeParams[1]))
+                                throw exc(MappingException.class,
+                                          "CWWKD1111.unsupported.convert",
+                                          converterType.getName(),
+                                          typeParams[0].getTypeName(),
+                                          typeParams[1].getTypeName(),
+                                          Util.SUPPORTED_TEMPORAL_TYPES,
+                                          Util.SUPPORTED_BASIC_TYPES);
 
-                        if (typeParams[0] instanceof Class)
-                            convertibles.add((Class<?>) typeParams[0]);
-                    }
-            converters.add(new Converter(convert.converter()));
+                            if (typeParams[0] instanceof Class)
+                                convertibles.add((Class<?>) typeParams[0]);
+                        }
+                converters.add(converter);
+            }
         }
     }
 
@@ -399,6 +405,16 @@ public class EntityParser {
         }
 
         return view.get();
+    }
+
+    public LinkedHashSet<String> getClassNames() {
+        //TODO
+        return new LinkedHashSet<>();
+    }
+
+    public LinkedHashSet<String> getTableNames() {
+        //TODO
+        return new LinkedHashSet<>();
     }
 
     public Set<Class<?>> getConvertibiles() {

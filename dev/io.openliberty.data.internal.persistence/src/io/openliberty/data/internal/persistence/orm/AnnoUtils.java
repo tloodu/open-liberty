@@ -11,10 +11,10 @@ package io.openliberty.data.internal.persistence.orm;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Optional;
-import java.util.SortedSet;
+import java.util.Set;
 
-import io.openliberty.data.internal.persistence.orm.Models.Converter;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Embeddable;
@@ -24,35 +24,37 @@ import jakarta.persistence.EmbeddedId;
 /**
  *
  */
-public class AnnotatedUtilities {
+public class AnnoUtils {
 
     //TODO find unannotated entities indirectly referenced via relationships
 
-    public static void findConvertersInEntity(Class<?> entity, SortedSet<Converter> converters) {
+    public static Set<Convert> findConvertersInEntity(Class<?> entity) {
+        Set<Convert> converters = new HashSet<>();
         for (Class<?> superclass = entity; //
                         superclass != null && superclass != Object.class; //
                         superclass = superclass.getSuperclass()) {
             findConverters(superclass, converters);
         }
+        return converters;
     }
 
-    private static void findConverters(Class<?> c, SortedSet<Converter> converters) {
+    private static void findConverters(Class<?> c, Set<Convert> converters) {
         for (Convert convert : c.getAnnotationsByType(Convert.class))
             if (convert.converter() != null && convert.converter() != AttributeConverter.class)
-                converters.add(new Converter(convert.converter()));
+                converters.add(convert);
 
         for (Field f : c.getDeclaredFields()) {
             forEmbeddable(f).ifPresent(emb -> findConverters(emb, converters));
             for (Convert convert : f.getAnnotationsByType(Convert.class))
                 if (convert.converter() != null && convert.converter() != AttributeConverter.class)
-                    converters.add(new Converter(convert.converter()));
+                    converters.add(convert);
         }
 
         for (Method m : c.getDeclaredMethods()) {
             forEmbeddable(m).ifPresent(emb -> findConverters(emb, converters));
             for (Convert convert : m.getAnnotationsByType(Convert.class))
                 if (convert.converter() != null && convert.converter() != AttributeConverter.class)
-                    converters.add(new Converter(convert.converter()));
+                    converters.add(convert);
         }
 
     }
