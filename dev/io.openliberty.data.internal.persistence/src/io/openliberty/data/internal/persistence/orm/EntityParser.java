@@ -32,6 +32,10 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.ibm.websphere.ras.Tr;
+import com.ibm.websphere.ras.TraceComponent;
+import com.ibm.websphere.ras.annotation.Trivial;
+
 import io.openliberty.data.internal.persistence.Util;
 import io.openliberty.data.internal.persistence.orm.Models.AccessType;
 import io.openliberty.data.internal.persistence.orm.Models.Attribute;
@@ -54,9 +58,18 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 /**
- * TODO javadoc and trace
+ * Parses entity(ies) and creates an Object-Relational Model in memory
+ * that includes managed objects that do not have the Jakarta Persistence
+ * annotations required to be automatically modeled by the underlying Jakarta
+ * Persistence provider.
+ *
+ * This is an add-on feature of the Liberty Jakarta Data provider to support
+ * record entities which cannot be annotated, and for users who write Repository
+ * classes for java objects that comes from third party libraries which cannot
+ * be annotated.
  */
 public class EntityParser {
+    private static final TraceComponent tc = Tr.register(EntityParser.class);
 
     // ORM sets
     private final SortedSet<MappedSuperclass> mappedSuperclasses;
@@ -78,10 +91,11 @@ public class EntityParser {
     // State controls flow from initialization to generation
     private boolean doneParsing;
 
-    // Current entity being parsed
+    // Current entity being parsed and found idAttributes
     private Class<?> currentEntity;
     private Set<Attribute> idAttributes;
 
+    @Trivial
     public EntityParser(String tablePrefix) {
         this.mappedSuperclasses = new TreeSet<>();
         this.entities = new TreeSet<>();
@@ -100,6 +114,15 @@ public class EntityParser {
     }
 
     // ENTRY POINTS
+
+    /**
+     * Parses an annotated entity and records
+     * - converters/convertables
+     * - table name
+     * - class name
+     *
+     * @param annotatedEntity the entity class
+     */
     public void parseAnnotatedEntity(Class<?> annotatedEntity) {
         if (doneParsing) {
             // Internal exception
@@ -113,6 +136,13 @@ public class EntityParser {
         }
     }
 
+    /**
+     * Parses an unannotated generated entity from a record and constructs an
+     * orm model for that entity.
+     *
+     * @param record          the record class
+     * @param generatedEntity the generated entity class
+     */
     public void parseRecord(Class<?> record, Class<?> generatedEntity) {
         if (doneParsing) {
             // Internal exception
@@ -123,6 +153,12 @@ public class EntityParser {
         parse(generatedEntity, tablePrefix + record.getSimpleName());
     }
 
+    /**
+     * Parses an unannotated entities found on a Repository interface and
+     * constructs an orm model for that entity.
+     *
+     * @param entity the entity class
+     */
     public void parseUnannotatedEntity(Class<?> entity) {
         if (doneParsing) {
             // Internal exception
@@ -131,14 +167,17 @@ public class EntityParser {
 
         this.tableNames.add(tablePrefix + entity.getSimpleName());
         parse(entity, tablePrefix + entity.getSimpleName());
-
     }
 
     // PARSER
 
+    /**
+     * Parses the entity and creates the orm of this entity.
+     *
+     * @param entity    the entity class
+     * @param tableName the table name, including prefix
+     */
     private void parse(Class<?> entity, String tableName) {
-        // If entity was unannotated then we must
-        // construct an object relational mapping
         this.currentEntity = entity;
         this.idAttributes = new HashSet<>();
 
@@ -147,7 +186,7 @@ public class EntityParser {
                         superclass = superclass.getSuperclass()) {
 
             for (Convert convert : superclass.getAnnotationsByType(Convert.class)) {
-                recordConverter(convert);
+                foundConverter(convert);
             }
 
             if (superclass == currentEntity) {
@@ -166,6 +205,15 @@ public class EntityParser {
 
     // HELPER METHODS
 
+    /**
+     * Finds attributes on a class
+     *
+     * Attributes returned are incomplete which means they lack
+     * any metadata, such as; the kind of attribute.
+     *
+     * @param c a class one of [ MappedSuperclass, Entity, Embeddable ]
+     * @return set of incomplete attributes
+     */
     private Set<Attribute> findAttributes(Class<?> c) {
         Set<Attribute> attributes = new HashSet<>();
 
@@ -179,7 +227,7 @@ public class EntityParser {
                     attributes.add(new Attribute(f.getType(), f.getGenericType(), f.getName(), AccessType.FIELD));
 
                     for (Convert convert : f.getAnnotationsByType(Convert.class))
-                        recordConverter(convert);
+                        foundConverter(convert);
                 }
             }
 
@@ -197,7 +245,7 @@ public class EntityParser {
 
                         if (p.getReadMethod() != null)
                             for (Convert convert : p.getReadMethod().getAnnotationsByType(Convert.class))
-                                recordConverter(convert);
+                                foundConverter(convert);
                     }
 
             } catch (IntrospectionException x) {
@@ -207,6 +255,21 @@ public class EntityParser {
         return attributes;
     }
 
+    /**
+     * Takes a set of incomplete attributes and:
+     * - finds the most likely to be an ID
+     * - finds the most likely to be a Version
+     * - finds element collection attributes
+     * - finds embedded attributes
+     * - processes overrides
+     * - finds embedded collection attributes
+     * - processes overrides and collection ids
+     * - finds basic attributes
+     *
+     * @param c           a class one of [ MappedSuperclass, Entity, Embeddable ]
+     * @param incompletes the incomplete attributes of c
+     * @return set of complete attributes
+     */
     private Set<Attribute> finalizeAttributes(Class<?> c, Set<Attribute> incompletes) {
         Attribute id = null;
         Attribute version = null;
@@ -333,9 +396,22 @@ public class EntityParser {
         return new TreeSet<Attribute>(incompletes);
     }
 
-    private void recordConverter(Convert convert) {
+    /**
+     * Records a converter for the orm.
+     * Records the converter entity attribute type as a convertable type
+     * Also analyzes the database column type of the AttributeConverter interface
+     * to determine if the type is supported by the underlying Jakarta Persistence provider.
+     *
+     * @param convert the convert annotation
+     * @throws MappingException if the conversion is unsupported
+     */
+    @Trivial
+    private void foundConverter(Convert convert) {
         if (convert.converter() != null && convert.converter() != AttributeConverter.class) {
             Class<?> converterType = convert.converter();
+            if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
+                Tr.entry(tc, "foundConverter", converterType);
+
             Converter converter = new Converter(convert.converter());
 
             if (!converters.contains(converter)) {
@@ -358,9 +434,12 @@ public class EntityParser {
                         }
                 converters.add(converter);
             }
+            if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
+                Tr.exit(tc, "foundConverter");
         }
     }
 
+    @Trivial
     private void verify() {
         if (idAttributes.isEmpty()) {
             // Costly operations, only do for error state
@@ -396,29 +475,38 @@ public class EntityParser {
         }
     }
 
+    @Trivial
     private void parseAnnotatedObject(Class<?> c) {
         if (classNames.contains(c.getName())) {
             return;
         }
 
+        if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
+            Tr.entry(tc, "parseAnnotatedObject", c);
+
         if (c.isAnnotationPresent(Entity.class)) {
-            classNames.add(c.getName());
+            String cn, tn;
+
+            classNames.add(cn = c.getName());
             if (c.isAnnotationPresent(Table.class))
-                tableNames.add(c.getAnnotation(Table.class).name());
+                tableNames.add(tn = c.getAnnotation(Table.class).name());
             else
-                tableNames.add(c.getSimpleName());
+                tableNames.add(tn = c.getSimpleName());
+
+            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
+                Tr.debug(this, tc, "entity class " + cn + " will use table " + tn);
         }
 
         for (Convert convert : c.getAnnotationsByType(Convert.class))
             if (convert.converter() != null && convert.converter() != AttributeConverter.class)
-                recordConverter(convert);
+                foundConverter(convert);
 
         for (Field f : c.getDeclaredFields()) {
             forEmbeddable(f).ifPresent(emb -> parseAnnotatedObject(emb));
             forMapping(f).ifPresent(entity -> parseAnnotatedObject(entity));
             for (Convert convert : f.getAnnotationsByType(Convert.class))
                 if (convert.converter() != null && convert.converter() != AttributeConverter.class)
-                    recordConverter(convert);
+                    foundConverter(convert);
         }
 
         for (Method m : c.getDeclaredMethods()) {
@@ -426,11 +514,14 @@ public class EntityParser {
             forMapping(m).ifPresent(entity -> parseAnnotatedObject(entity));
             for (Convert convert : m.getAnnotationsByType(Convert.class))
                 if (convert.converter() != null && convert.converter() != AttributeConverter.class)
-                    recordConverter(convert);
+                    foundConverter(convert);
         }
 
+        if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
+            Tr.exit(tc, "parseAnnotatedObject");
     }
 
+    @Trivial
     private Optional<Class<?>> forEmbeddable(Field f) {
         if (f.isAnnotationPresent(Embedded.class) ||
             f.isAnnotationPresent(EmbeddedId.class)) {
@@ -442,6 +533,7 @@ public class EntityParser {
         return Optional.empty();
     }
 
+    @Trivial
     private Optional<Class<?>> forMapping(Field f) {
         if (f.isAnnotationPresent(ManyToOne.class) ||
             f.isAnnotationPresent(OneToOne.class)) {
@@ -458,6 +550,7 @@ public class EntityParser {
         return Optional.empty();
     }
 
+    @Trivial
     private Optional<Class<?>> forEmbeddable(Method m) {
         if (m.isAnnotationPresent(Embedded.class) ||
             m.isAnnotationPresent(EmbeddedId.class)) {
@@ -469,6 +562,7 @@ public class EntityParser {
         return Optional.empty();
     }
 
+    @Trivial
     private Optional<Class<?>> forMapping(Method m) {
         if (m.isAnnotationPresent(ManyToOne.class) ||
             m.isAnnotationPresent(OneToOne.class)) {
@@ -485,6 +579,7 @@ public class EntityParser {
         return Optional.empty();
     }
 
+    @Trivial
     private Class<?> getEmbeddableClass(java.lang.reflect.Type type) {
         if (type instanceof ParameterizedType) {
             java.lang.reflect.Type[] typeParams = //
@@ -497,6 +592,7 @@ public class EntityParser {
         return null;
     }
 
+    @Trivial
     private Class<?> getEntityClass(java.lang.reflect.Type type) {
         if (type instanceof ParameterizedType) {
             java.lang.reflect.Type[] typeParams = //
@@ -525,14 +621,14 @@ public class EntityParser {
         }
 
         for (EmbeddableRecord emb : embeddables) {
-            view.embedable(emb);
+            view.embeddable(emb);
         }
 
         for (Converter con : converters) {
             view.converter(con);
         }
 
-        return view.get();
+        return view.getAll();
     }
 
     public LinkedHashSet<String> getClassNames() {

@@ -15,27 +15,46 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import com.ibm.websphere.ras.annotation.Trivial;
+
 import io.openliberty.data.internal.persistence.orm.Models.Attribute;
 import io.openliberty.data.internal.persistence.orm.Models.Converter;
 import io.openliberty.data.internal.persistence.orm.Models.EmbeddableRecord;
 import io.openliberty.data.internal.persistence.orm.Models.EntityRecord;
 import io.openliberty.data.internal.persistence.orm.Models.MappedSuperclass;
 
+/**
+ * Generates orm.xml structured elements for the modeled managed objects
+ * - MappedSuperclass
+ * - Entity
+ * - Embeddable
+ * - Converter
+ */
+@Trivial
 public class View {
+
+    // Utility for indentation
     private static final String indent(int level) {
         return "  ".repeat(level);
     }
 
-    private final List<String> info;
+    // The elements of the view
+    private final List<String> elements;
 
     public View(int size) {
-        info = new ArrayList<>(size);
+        elements = new ArrayList<>(size);
     }
 
-    public List<String> get() {
-        return info;
+    // Return all elements
+    public List<String> getAll() {
+        return elements;
     }
 
+    /**
+     * Converts a MappedSuperclass into an `mapped-superclass` orm element
+     *
+     * @param model a MappedSuperclass model
+     */
     public void mappedSuperclass(MappedSuperclass model) {
         StringBuilder xml = new StringBuilder(500);
 
@@ -48,9 +67,14 @@ public class View {
         xml.append(indent(1))//
                         .append("</mapped-superclass>").append(EOLN);
 
-        info.add(xml.toString());
+        elements.add(xml.toString());
     }
 
+    /**
+     * Converts an Entity into an `entity` orm element
+     *
+     * @param model an Entity model
+     */
     public void entity(EntityRecord model) {
         StringBuilder xml = new StringBuilder(500);
 
@@ -66,10 +90,15 @@ public class View {
         xml.append(indent(1))//
                         .append("</entity>").append(EOLN);
 
-        info.add(xml.toString());
+        elements.add(xml.toString());
     }
 
-    public void embedable(EmbeddableRecord model) {
+    /**
+     * Converts an Embeddable into an `embeddable` orm element
+     *
+     * @param model an Embeddable model
+     */
+    public void embeddable(EmbeddableRecord model) {
         StringBuilder xml = new StringBuilder(500);
 
         xml.append(indent(1))//
@@ -81,9 +110,14 @@ public class View {
         xml.append(indent(1))//
                         .append("</embeddable>").append(EOLN);
 
-        info.add(xml.toString());
+        elements.add(xml.toString());
     }
 
+    /**
+     * Converts a Converter into an `converter` orm element
+     *
+     * @param model a Converter model
+     */
     public void converter(Converter model) {
         StringBuilder xml = new StringBuilder(500);
 
@@ -94,9 +128,16 @@ public class View {
         xml.append(indent(1))//
                         .append("</converter>").append(EOLN);
 
-        info.add(xml.toString());
+        elements.add(xml.toString());
     }
 
+    /**
+     * Appends `attributes` element to an existing element
+     *
+     * @param xml    the current xml builder
+     * @param entity the entity class
+     * @param attrs  the attributes
+     */
     private void attributes(StringBuilder xml, Class<?> entity, Set<Attribute> attrs) {
         xml.append(indent(2)).append("<attributes>").append(EOLN);
 
@@ -108,6 +149,13 @@ public class View {
 
     }
 
+    /**
+     * Appends `attribute` element to an existing element
+     *
+     * @param xml    the current xml builder
+     * @param entity the entity class
+     * @param attr   the attribute
+     */
     private void attribute(StringBuilder xml, Class<?> entity, Attribute attr) {
         xml.append(indent(3))//
                         .append('<').append(attr.kind().toElementName())//
@@ -140,6 +188,13 @@ public class View {
 
     }
 
+    /**
+     * Appends `attribute-override` element to an existing element
+     *
+     * @param xml      the current xml builder
+     * @param attr     the attribute
+     * @param override the attribute override
+     */
     private void attributeOverride(StringBuilder xml, Attribute attr, Attribute override) {
         xml.append(indent(4))//
                         .append("<attribute-override name=\"").append(override.name())//
@@ -154,6 +209,13 @@ public class View {
                         .append("</attribute-override>").append(EOLN);
     }
 
+    /**
+     * Appends `collection-table` element to an existing element
+     *
+     * @param xml          the current xml builder
+     * @param attr         the attribute
+     * @param collectionId the collection id
+     */
     private void collectionTable(StringBuilder xml, Class<?> entity, Attribute attr, Attribute collectionId) {
         String collectionTable = entity.getSimpleName().toUpperCase() + "_" + attr.name().toUpperCase();
 

@@ -17,9 +17,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import com.ibm.websphere.ras.annotation.Trivial;
+
 /**
- *
+ * Maintains class to class relationships between an entity and it's
+ * - MappedSuperclass
+ * - Embedded entity(ies)
+ * - Record
  */
+@Trivial
 class Relationships {
     // one-to-many relationship between mapped-superclass and entity
     private final ConcurrentMap<Class<?>, Set<Class<?>>> mappedSuperclassToEntity;
@@ -80,7 +86,8 @@ class Relationships {
         entityToRecord.put(entity, rec);
     }
 
-    // Predicates
+    // PREDICATES
+
     public Set<Class<?>> embedsForEntity(Class<?> entity) {
         if (embedToEntity.containsKey(entity)) {
             return embedToEntity.get(entity);

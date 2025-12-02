@@ -14,12 +14,23 @@ import java.util.Set;
 
 import com.ibm.websphere.ras.annotation.Trivial;
 
-@Trivial
+/**
+ * Maintains the model types for the managed objects for the orm
+ * - MappedSuperclass
+ * - Entity
+ * - Embeddable
+ * - Converter
+ *
+ * As well as sub-model types of these managed objects for the orm
+ * - Attribute
+ */
 public class Models {
+    @Trivial
     enum AccessType {
         FIELD, PROPERTY;
     }
 
+    @Trivial
     enum AttributeKind {
         ID, EMBEDDED_ID, BASIC, VERSION, BASIC$ELEMENT_COLLECTION, EMBEDDED$ELEMENT_COLLECTION, EMBEDDED;
 
@@ -31,6 +42,7 @@ public class Models {
         }
     }
 
+    @Trivial
     static class Attribute implements Comparable<Attribute> {
         private final Class<?> type;
         private final Type genericType;
@@ -138,6 +150,7 @@ public class Models {
         }
     }
 
+    @Trivial
     static record MappedSuperclass(Class<?> type, Set<Attribute> attributes)
                     implements Comparable<MappedSuperclass> {
 
@@ -147,6 +160,7 @@ public class Models {
         }
     }
 
+    @Trivial
     static record EntityRecord(Class<?> type, String tableName, Set<Attribute> attributes)
                     implements Comparable<EntityRecord> {
 
@@ -156,6 +170,7 @@ public class Models {
         }
     }
 
+    @Trivial
     static record EmbeddableRecord(Class<?> type, Set<Attribute> attributes)
                     implements Comparable<EmbeddableRecord> {
 
@@ -165,6 +180,7 @@ public class Models {
         }
     }
 
+    @Trivial
     static record Converter(Class<?> type) implements Comparable<Converter> {
 
         @Override
