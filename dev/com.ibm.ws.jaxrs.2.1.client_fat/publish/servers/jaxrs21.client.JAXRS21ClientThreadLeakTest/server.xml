@@ -2,6 +2,7 @@
 <server description="JAX-RS 2.1 Client Thread Leak Test Server">
 
     <featureManager>
+        <feature>componenttest-1.0</feature>
         <feature>jaxrs-2.1</feature>
         <feature>servlet-4.0</feature>
         <feature>mpMetrics-3.0</feature>
@@ -21,6 +22,10 @@
 
     <mpMetrics authentication="false" />
    
-    <logging traceSpecification="*=info:org.apache.cxf.io.DelayedCachedOutputStreamCleaner=all:com.ibm.ws.jaxrs21.client.fat.test.*=all" />
+    <include location="../fatTestPorts.xml"/>
+    <javaPermission className="java.util.PropertyPermission" name="bvt.prop.HTTP_default" actions="read"/>
+    <javaPermission className="java.util.PropertyPermission" name="bvt.prop.HTTP_default.secure" actions="read"/>
+    <javaPermission className="java.util.PropertyPermission" name="bvt.prop.HTTP_secondary" actions="read"/>
+    <javaPermission className="java.util.PropertyPermission" name="bvt.prop.HTTP_secondary.secure" actions="read"/>
 
 </server>
