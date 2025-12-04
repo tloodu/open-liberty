@@ -118,7 +118,10 @@ public class CreateCommandTest {
     public void testServerNameWithSpaceRejected() throws Exception {
         String invalidServerName = "my server";
         
-        ProgramOutput po = LibertyServerUtils.executeLibertyCmd(bootstrap, "server", "create", invalidServerName);
+        // Need to quote the server name to pass it as a single argument with spaces
+        String quotedServerName = "\"" + invalidServerName + "\"";
+        
+        ProgramOutput po = LibertyServerUtils.executeLibertyCmd(bootstrap, "server", "create", quotedServerName);
         
         // Verify that the command failed (non-zero return code)
         assertTrue("Expected non-zero return code when creating server with space in name. STDOUT: " + po.getStdout() + " STDERR: " + po.getStderr(),
