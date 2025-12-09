@@ -94,6 +94,12 @@ public class ManagedThreadFactoryBean implements Bean<ManagedThreadFactory>, Pas
                 return found;
             }
 
+            // If no WEB classloader, then check if EJB Classloader exists
+            found = service.getClassLoader("EJBModule:" + cmd.getJ2EEName().getApplication() + "#" + cmd.getJ2EEName().getModule());
+            if (Objects.nonNull(found)) {
+                return found;
+            }
+
             return null; // Should be unreachable
             //TODO add NLS message
         }).orElseThrow(() -> new IllegalStateException("Could not find the classloader for the application " + cmd.getJ2EEName()
