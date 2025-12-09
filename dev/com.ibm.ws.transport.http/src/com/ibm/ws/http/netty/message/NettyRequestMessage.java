@@ -359,18 +359,15 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
     public String getMethod() {
         if (Objects.isNull(method)) {
             method = MethodValues.find(request.method().name());
-
         }
         return method.getName();
     }
 
     @Override
     public MethodValues getMethodValue() {
-
         if (Objects.isNull(method)) {
             method = MethodValues.find(request.method().name());
         }
-
         return method;
     }
 
@@ -440,9 +437,7 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
 
     @Override
     public String getQueryString() {
-
         return Objects.isNull(parameters) || parameters.isEmpty() ? null : query.rawQuery();
-
     }
 
     @Override
@@ -452,9 +447,7 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
 
     @Override
     public String getParameter(String name) {
-
         return parameters.containsKey(name) ? parameters.get(name)[0] : null;
-
     }
 
     @Override
@@ -626,7 +619,6 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
                 Tr.debug(tc, "getVirtualHost: No host header: [" + host + "]");
             }
             return null;
-//            host = host.substring(0, host.indexOf(":"));
         }
         int index = -1;
         if (LEFT_BRACKET == host.charAt(0)) {
@@ -750,7 +742,6 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
 
     @Override
     public String getScheme() {
-
         return Objects.isNull(scheme) ? null : scheme.getName();
     }
 
@@ -770,7 +761,6 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
             throw new UnsupportedSchemeException("Illegal scheme " + scheme);
         }
         setScheme(value);
-
     }
 
     @Override
@@ -781,13 +771,10 @@ public class NettyRequestMessage extends NettyBaseMessage implements HttpRequest
             throw new UnsupportedSchemeException("Illegal scheme " + GenericUtils.getEnglishString(scheme));
         }
         setScheme(value);
-
     }
 
     @Override
     public HttpTrailers getTrailers() {
-//        if (request.trailingHeaders().isEmpty())
-//            return null;
         return new NettyTrailers(this.request.trailingHeaders());
     }
 

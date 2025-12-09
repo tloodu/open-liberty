@@ -205,36 +205,14 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void setTransferEncoding(TransferEncodingValues value) {
-    }
-
-    @Override
-    public void setTransferEncoding(TransferEncodingValues[] values) {
-    }
-
-    @Override
-    public TransferEncodingValues[] getTransferEncoding() {
-        return null;
-    }
-
-    @Override
     public boolean isChunkedEncodingSet() {
         return HttpUtil.isTransferEncodingChunked(nettyResponse);
     }
 
     @Override
     public void setCurrentDate() {
-        setHeader(HttpHeaderKeys.HDR_DATE, HttpDispatcher.getDateFormatter().getRFC1123TimeAsBytes(this.config.getDateHeaderRange()));
-    }
-
-    @Override
-    public void setExpect(ExpectValues value) {
-
-    }
-
-    @Override
-    public byte[] getExpect() {
-        return null;
+        String date = new String(HttpDispatcher.getDateFormatter().getRFC1123TimeAsBytes(this.config.getDateHeaderRange()), StandardCharsets.UTF_8)
+        setHeader(HttpHeaderKeys.HDR_DATE, date);
     }
 
     @Override
@@ -248,52 +226,12 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void setMIMEType(String type) {
-
-    }
-
-    @Override
-    public Charset getCharset() {
-        return null;
-    }
-
-    @Override
-    public void setCharset(Charset set) {
-
-    }
-
-    @Override
     public HttpTrailers getTrailers() {
         return nettyTrailerWrapper;
     }
 
     public HttpHeaders getNettyTrailers() {
         return trailers;
-    }
-
-    @Override
-    public void setVersion(VersionValues version) {
-
-    }
-
-    @Override
-    public void setVersion(String version) throws UnsupportedProtocolVersionException {
-
-    }
-
-    @Override
-    public void setVersion(byte[] version) throws UnsupportedProtocolVersionException {
-
-    }
-
-    @Override
-    public HttpTrailersImpl createTrailers() {
-        return null;
-    }
-
-    @Override
-    public void setDebugContext(Object o) {
-
     }
 
     @Override
@@ -318,7 +256,6 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
         for (String value : values) {
             result.add(new NettyHeader(name, value));
         }
-
         return result;
     }
 
@@ -359,14 +296,8 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void appendHeader(byte[] header, byte[] value, int offset, int length) {
-
-    }
-
-    @Override
     public void appendHeader(byte[] header, String value) {
         appendHeader(new String(header, StandardCharsets.UTF_8), value);
-
     }
 
     @Override
@@ -376,14 +307,8 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void appendHeader(HeaderKeys header, byte[] value, int offset, int length) {
-
-    }
-
-    @Override
     public void appendHeader(HeaderKeys header, String value) {
         appendHeader(header.getName(), value);
-
     }
 
     @Override
@@ -393,15 +318,9 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void appendHeader(String header, byte[] value, int offset, int length) {
-
-    }
-
-    @Override
     public void appendHeader(String header, String value) {
         String normalizedName = HeaderValidator.process(header, FieldType.NAME, config);
         String normalizedValue = HeaderValidator.process(value, FieldType.VALUE, config);
-
         headers.add(normalizedName, normalizedValue);
     }
 
@@ -441,18 +360,8 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void removeHeader(byte[] header, int instance) {
-
-    }
-
-    @Override
     public void removeHeader(HeaderKeys header) {
         removeHeader(header.getName());
-    }
-
-    @Override
-    public void removeHeader(HeaderKeys header, int instance) {
-
     }
 
     @Override
@@ -461,38 +370,8 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void removeHeader(String header, int instance) {
-
-    }
-
-    @Override
     public void removeAllHeaders() {
         headers.clear();
-    }
-
-    @Override
-    public void setHeader(byte[] header, byte[] value) {
-
-    }
-
-    @Override
-    public void setHeader(byte[] header, byte[] value, int offset, int length) {
-
-    }
-
-    @Override
-    public void setHeader(byte[] header, String value) {
-
-    }
-
-    @Override
-    public void setHeader(HeaderKeys header, byte[] value) {
-
-    }
-
-    @Override
-    public void setHeader(HeaderKeys header, byte[] value, int offset, int length) {
-
     }
 
     @Override
@@ -513,38 +392,8 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public void setHeader(String header, byte[] value) {
-
-    }
-
-    @Override
-    public void setHeader(String header, byte[] value, int offset, int length) {
-
-    }
-
-    @Override
     public void setHeader(String header, String value) {
         headers.set(header.trim(), value.trim());
-    }
-
-    @Override
-    public void setLimitOnNumberOfHeaders(int number) {
-
-    }
-
-    @Override
-    public int getLimitOnNumberOfHeaders() {
-        return 0;
-    }
-
-    @Override
-    public void setLimitOfTokenSize(int size) {
-
-    }
-
-    @Override
-    public int getLimitOfTokenSize() {
-        return 0;
     }
 
     @Override
@@ -568,28 +417,8 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public String getReasonPhrase() {
-        return null;
-    }
-
-    @Override
     public byte[] getReasonPhraseBytes() {
         return this.nettyResponse.status().reasonPhrase().getBytes();
-    }
-
-    @Override
-    public void setReasonPhrase(String reason) {
-
-    }
-
-    @Override
-    public void setReasonPhrase(byte[] reason) {
-
-    }
-
-    @Override
-    public HttpResponseMessage duplicate() {
-        return null;
     }
 
     /**

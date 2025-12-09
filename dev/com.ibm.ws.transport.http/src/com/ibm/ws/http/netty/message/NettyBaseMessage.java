@@ -249,7 +249,6 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
         for (String value : values) {
             result.add(new NettyHeader(name, value));
         }
-
         return result;
     }
 
@@ -365,7 +364,7 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void removeHeader(byte[] header, int instance) {
-
+        throw new UnsupportedOperationException("removeHeader(byte[] header, int instance) not supported in Netty context");
     }
 
     @Override
@@ -375,7 +374,7 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void removeHeader(HeaderKeys header, int instance) {
-
+        throw new UnsupportedOperationException("removeHeader(HeaderKeys header, int instance) not supported in Netty context");
     }
 
     @Override
@@ -385,7 +384,7 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void removeHeader(String header, int instance) {
-
+        throw new UnsupportedOperationException("removeHeader(HeaderKeys header, int instance) not supported in Netty context");
     }
 
     @Override
@@ -395,27 +394,27 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void setHeader(byte[] header, byte[] value) {
-
+        throw new UnsupportedOperationException("setHeader(byte[] header, byte[] value) not supported in Netty context");
     }
 
     @Override
     public void setHeader(byte[] header, byte[] value, int offset, int length) {
-
+        throw new UnsupportedOperationException("setHeader(byte[] header, byte[] value, int offset, int length) not supported in Netty context");
     }
 
     @Override
     public void setHeader(byte[] header, String value) {
-
+        throw new UnsupportedOperationException("setHeader(byte[] header, String value) not supported in Netty context");
     }
 
     @Override
     public void setHeader(HeaderKeys header, byte[] value) {
-
+        throw new UnsupportedOperationException("setHeader(HeaderKeys header, byte[] value) not supported in Netty context");
     }
 
     @Override
     public void setHeader(HeaderKeys header, byte[] value, int offset, int length) {
-
+        throw new UnsupportedOperationException("setHeader(HeaderKeys header, byte[] value, int offset, int length) not supported in Netty context");
     }
 
     @Override
@@ -427,22 +426,20 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
     public HeaderField setHeaderIfAbsent(HeaderKeys header, String value) {
         Objects.requireNonNull(header);
         Objects.requireNonNull(value);
-
         if (!headers.contains(header.getName())) {
             headers.set(header.getName(), value);
         }
-
         return null;
     }
 
     @Override
     public void setHeader(String header, byte[] value) {
-
+        throw new UnsupportedOperationException("setHeader(String header, byte[] value) not supported in Netty context");
     }
 
     @Override
     public void setHeader(String header, byte[] value, int offset, int length) {
-
+        throw new UnsupportedOperationException("setHeader(String header, byte[] value, int offset, int length) not supported in Netty context");
     }
 
     @Override
@@ -505,7 +502,6 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
         if(cache.isDirty()){
             parseAllCookies(cache, header);
         }
-        
         cache.getAllCookieValues(name, list);
     }
 
@@ -534,7 +530,6 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
 
     protected HttpCookie getCookie(String name, HttpHeaderKeys header) {
-        
         if(name == null) { return null;}
 
         if(!isValidCookieHeader(header) && !containsHeader(header)){
@@ -682,7 +677,7 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public List<String> getAllCookieValues(String name) {
-        return null;
+        throw new UnsupportedOperationException("getAllCookieValues(String name) not supported in Netty context");
     }
 
     @Override
@@ -762,17 +757,17 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void setConnection(ConnectionValues value) {
-
+        throw new UnsupportedOperationException("setConnection(ConnectionValues value) not supported in Netty context");
     }
 
     @Override
     public void setConnection(ConnectionValues[] values) {
-
+        throw new UnsupportedOperationException("setConnection(ConnectionValues[] values) not supported in Netty context");
     }
 
     @Override
     public ConnectionValues[] getConnection() {
-        return null;
+        throw new UnsupportedOperationException("getConnection() not supported in Netty context");
     }
 
     @Override
@@ -787,32 +782,32 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void setContentEncoding(ContentEncodingValues value) {
-
+        throw new UnsupportedOperationException("setContentEncoding(ContentEncodingValues value) not supported in Netty context");
     }
 
     @Override
     public void setContentEncoding(ContentEncodingValues[] values) {
-
+        throw new UnsupportedOperationException("setContentEncoding(ContentEncodingValues[] values) not supported in Netty context");
     }
 
     @Override
     public ContentEncodingValues[] getContentEncoding() {
-        return null;
+        throw new UnsupportedOperationException("getContentEncoding() not supported in Netty context");
     }
 
     @Override
     public void setTransferEncoding(TransferEncodingValues value) {
-        throw new UnsupportedOperationException("Tried setting transfer encoding in Netty!");
+        throw new UnsupportedOperationException("setTransferEncoding(TransferEncodingValues value) not supported in Netty context");
     }
 
     @Override
     public void setTransferEncoding(TransferEncodingValues[] values) {
-        throw new UnsupportedOperationException("Tried setting transfer encoding in Netty!");
+        throw new UnsupportedOperationException("setTransferEncoding(TransferEncodingValues[] values) not supported in Netty context");
     }
 
     @Override
     public TransferEncodingValues[] getTransferEncoding() {
-        return null;
+        throw new UnsupportedOperationException("getTransferEncoding() not supported in Netty context");
     }
 
     @Override
@@ -822,17 +817,17 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void setCurrentDate() {
-
+        throw new UnsupportedOperationException("setCurrentDate() not supported in Netty context");
     }
 
     @Override
     public void setExpect(ExpectValues value) {
-
+        throw new UnsupportedOperationException("setExpect(ExpectValues value) not supported in Netty context");
     }
 
     @Override
     public byte[] getExpect() {
-        return null;
+        throw new UnsupportedOperationException("getExpect() not supported in Netty context");
     }
 
     @Override
@@ -847,22 +842,22 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void setMIMEType(String type) {
-
+        throw new UnsupportedOperationException("setMIMEType(String type) not supported in Netty context");
     }
 
     @Override
     public Charset getCharset() {
-        return null;
+        throw new UnsupportedOperationException("getCharset() not supported in Netty context");
     }
 
     @Override
     public void setCharset(Charset set) {
-
+        throw new UnsupportedOperationException("setCharset(Charset set) not supported in Netty context");
     }
 
     @Override
     public HttpTrailers getTrailers() {
-        return null;
+        throw new UnsupportedOperationException("getTrailers() not supported in Netty context");
     }
 
     @Override
@@ -883,22 +878,22 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public void setVersion(VersionValues version) {
-
+        throw new UnsupportedOperationException("setVersion(VersionValues version) not supported in Netty context");
     }
 
     @Override
     public void setVersion(String version) throws UnsupportedProtocolVersionException {
-
+        throw new UnsupportedOperationException("setVersion(String version) not supported in Netty context");
     }
 
     @Override
     public void setVersion(byte[] version) throws UnsupportedProtocolVersionException {
-
+        throw new UnsupportedOperationException("setVersion(byte[] version) not supported in Netty context");
     }
 
     @Override
     public HttpTrailersImpl createTrailers() {
-        return null;
+        throw new UnsupportedOperationException("createTrailers() not supported in Netty context");
     }
 
     public void processCookies() {
