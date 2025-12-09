@@ -12,13 +12,32 @@ package io.openliberty.data.internal.persistence.orm;
 import static org.junit.Assert.assertEquals;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
+
+import io.openliberty.data.internal.persistence.DataProvider;
 
 /**
  * TODO test an annotated entity
  */
 public class EntityParserTests {
+    private final DataProvider provider;
+
+    public EntityParserTests() {
+        provider = new DataProvider(//
+                        Map.of(), // properties
+                        null, // CDIService
+                        null, // ClassLoaderIdentifierService
+                        new MockVersionCompatibility(), //
+                        null, // ConfigurationAdmin
+                        null, // ExecutorService
+                        null, // LocalTransactionCurrent
+                        null, // MetaDataIdentifierService
+                        null, // ResourceConfigFactory
+                        null // EmbeddableWebSphereTransactionManager
+        );
+    }
 
     @Test
     public void simpleEntityTest() {
