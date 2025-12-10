@@ -198,6 +198,7 @@ public class FIPS1403ServerTest {
 
     @Test
     public void fips140_3MinifiedPackageTest() throws Exception{
+        assumeThat(Files.exists(Paths.get(server.getInstallRoot() + "/lib/extract")), is(true));
         Machine machine = server.getMachine();
         String[] parameters = new String[]{"package", server.getServerName(), "--include=minify"};
         ProgramOutput po = machine.execute(server.getInstallRoot()+"/bin/server", parameters);
