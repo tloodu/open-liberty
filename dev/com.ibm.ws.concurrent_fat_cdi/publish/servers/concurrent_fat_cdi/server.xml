@@ -27,8 +27,8 @@
         <classloader commonLibraryRef="location-context,concurrentCDIShared"/>
     </application>
     
-    <ejbApplication id="concurrentCDIEJBStandalone" location="concurrentCDIEJBStandalone.jar">
-        <classloader commonLibraryRef="location-context,concurrentCDIShared"/>
+    <ejbApplication location="concurrentCDIEJBStandalone.jar">
+        <classloader commonLibraryRef="concurrentCDIShared"/>
     </ejbApplication>
 
     <!-- fake third-party context provider -->

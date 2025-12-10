@@ -133,7 +133,7 @@ public class ConcurrentCDIServlet extends FATServlet {
     @EJB
     Invoker ejb;
 
-    @EJB
+    @EJB(lookup = "java:global/concurrentCDIEJBStandalone/StandaloneBean")
     SharedInvoker standaloneBean;
 
     @Inject
