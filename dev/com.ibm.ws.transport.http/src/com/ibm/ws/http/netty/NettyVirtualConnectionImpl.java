@@ -24,7 +24,7 @@ public class NettyVirtualConnectionImpl implements VirtualConnection {
     }
 
     private Map<Object, Object> stateStore = null;
-    private boolean inetAddressingValid = true;
+    private boolean inetAddressingValid = false;
     private ConnectionDescriptor connDesc = null;
 
     protected NettyVirtualConnectionImpl() {
