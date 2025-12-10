@@ -336,6 +336,9 @@ public class MergeProcessorTest {
 
         assertEquals("Alices", result.getPaths().getPathItem("/test2/testA").getGET().getExtensions().get(TESTED_EXTENSION).toString());
         assertEquals("Eves", result.getPaths().getPathItem("/test2/testB").getGET().getExtensions().get(TESTED_EXTENSION).toString());
+
+        //Finally assert that there is no mention of the zcon extension on the top level
+        assertFalse(result.getExtensions().containsKey(TESTED_EXTENSION));
     }
 
     /**
@@ -363,6 +366,9 @@ public class MergeProcessorTest {
         assertFalse(result.getPaths().getPathItem("/test3/testB") == null); //and we are explicitly testing if it merged in.
         assertTrue(result.getPaths().getPathItem("/test3/testA").getGET().getExtensions() == null);
         assertFalse(result.getPaths().getPathItem("/test3/testB").getGET().getExtensions().containsKey(TESTED_EXTENSION));
+
+        //Finally assert that there is no mention of the zcon extension on the top level
+        assertFalse(result.getExtensions().containsKey(TESTED_EXTENSION));
     }
 
     /**
@@ -386,6 +392,9 @@ public class MergeProcessorTest {
         assertFalse(result.getPaths().getPathItem("/test3/testB") == null); //and we are explicitly testing if it merged in.
         assertTrue(result.getPaths().getPathItem("/test3/testA").getGET().getExtensions() == null);
         assertFalse(result.getPaths().getPathItem("/test3/testB").getGET().getExtensions().containsKey(TESTED_EXTENSION));
+
+        //Finally assert that there is no mention of the zcon extension on the top level
+        assertFalse(result.getExtensions().containsKey(TESTED_EXTENSION));
     }
 
     private OpenAPI loadModel(String modelResource) {
