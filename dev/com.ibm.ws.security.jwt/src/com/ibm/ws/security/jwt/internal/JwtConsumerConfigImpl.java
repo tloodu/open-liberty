@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -55,7 +55,7 @@ public class JwtConsumerConfigImpl implements JwtConsumerConfig {
     @Sensitive
     private String sharedKey;
     private List<String> audiences;
-    private String sigAlg;
+    private String[] sigAlg;
     private String trustStoreRef;
     private String trustedAlias;
     private long clockSkewMilliSeconds;
@@ -117,7 +117,7 @@ public class JwtConsumerConfigImpl implements JwtConsumerConfig {
         issuer = JwtUtils.trimIt((String) props.get(JwtUtils.CFG_KEY_ISSUER));
         sharedKey = JwtConfigUtil.processProtectedString(props, JwtUtils.CFG_KEY_SHARED_KEY);
         audiences = JwtUtils.trimIt((String[]) props.get(JwtUtils.CFG_KEY_AUDIENCES));
-        sigAlg = JwtConfigUtil.getSignatureAlgorithm(getId(), props, JwtUtils.CFG_KEY_SIGNATURE_ALGORITHM);
+        sigAlg = JwtConfigUtil.getSignatureAlgorithmArray(getId(), props, JwtUtils.CFG_KEY_SIGNATURE_ALGORITHM);
         trustStoreRef = JwtUtils.trimIt((String) props.get(JwtUtils.CFG_KEY_TRUSTSTORE_REF));
         trustedAlias = JwtUtils.trimIt((String) props.get(JwtUtils.CFG_KEY_TRUSTED_ALIAS));
         clockSkewMilliSeconds = (Long) props.get(JwtUtils.CFG_KEY_CLOCK_SKEW);
@@ -162,7 +162,7 @@ public class JwtConsumerConfigImpl implements JwtConsumerConfig {
     }
 
     @Override
-    public String getSignatureAlgorithm() {
+    public String[] getSignatureAlgorithm() {
         return sigAlg;
     }
 

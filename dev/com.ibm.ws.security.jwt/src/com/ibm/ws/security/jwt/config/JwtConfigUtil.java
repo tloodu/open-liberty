@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.security.jwt.config;
 
+import java.util.List;
 import java.util.Map;
 
 import org.osgi.service.component.annotations.Component;
@@ -62,6 +63,16 @@ public class JwtConfigUtil {
             signatureAlgorithm = defaultSignatureAlgorithm;
         }
         return signatureAlgorithm;
+    }
+
+    public static String[] getSignatureAlgorithmArray(String configId, Map<String, Object> props, String sigAlgAttrName) {
+        String defaultSignatureAlgorithm = "RS256";
+        List<String> signatureAlgorithm = JwtUtils.trimIt((String[]) props.get(sigAlgAttrName));
+        if (signatureAlgorithm == null) {
+            return new String[] { defaultSignatureAlgorithm };
+        }
+        String[] signatureAlgorithmArray = signatureAlgorithm.toArray(new String[0]);
+        return signatureAlgorithmArray;
     }
 
 }
