@@ -56,7 +56,7 @@
         <AD id="cookieName" name="%cookieName" description="%cookieName.desc" required="false" type="String" />
         <AD id="keyManagementKeyAlias" name="%keyManagementKeyAlias" description="%keyManagementKeyAlias.desc" required="false" type="String" />
 
-        <AD id="signatureAlgorithm" required="false" type="String" name="%signatureAlgorithm" description="%signatureAlgorithm.desc" >
+        <AD id="signatureAlgorithm" required="false" type="String" name="%signatureAlgorithm" description="%signatureAlgorithm.desc" cardinality="10">
             <Option label="%tokenSignAlgorithm.RS256" value="RS256" />
             <Option label="%tokenSignAlgorithm.RS384" value="RS384" />
             <Option label="%tokenSignAlgorithm.RS512" value="RS512" />

@@ -37,7 +37,7 @@
          <AD id="SSLSupport.cardinality.minimum" name="internal" description="internal use only" type="String" default="${count(sslRef)}"/>
          <AD id="SSLSupport.target" name="internal" description="internal use only"  type="String" default="(repertoirePIDs=${sslRef})"/>
 
-         <AD id="signatureAlgorithm" required="false" type="String" name="%signatureAlgorithm" description="%signatureAlgorithm.desc" default="HS256">
+         <AD id="signatureAlgorithm" required="false" type="String" name="%signatureAlgorithm" description="%signatureAlgorithm.desc" default="HS256" cardinality="10">
              <Option label="%tokenSignAlgorithm.NONE" value="none" />
              <Option label="%tokenSignAlgorithm.RS256" value="RS256" />
              <Option label="%tokenSignAlgorithm.RS384" value="RS384" />
