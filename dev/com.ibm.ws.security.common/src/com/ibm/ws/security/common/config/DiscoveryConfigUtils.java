@@ -287,6 +287,16 @@ public class DiscoveryConfigUtils {
         return rpconfig.equals(rpdefault);
     }
 
+    public boolean matches(String rpdefault, String[] rpconfig) {
+        if (rpconfig == null) {
+            return rpdefault == null;
+        }
+        if (rpconfig.length == 1 && rpdefault != null) {
+            return rpdefault.equals(rpconfig[0]);
+        }
+        return false;
+    }
+
     private boolean matchesMultipleValues(String rpdefault, String rpconfig) {
         String[] configuredScope = rpconfig.split(" ");
         if (configuredScope.length != 3) {

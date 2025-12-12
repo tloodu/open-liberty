@@ -34,7 +34,6 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -232,7 +231,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
     private boolean nonceEnabled;
     private String sslRef;
     private String sslConfigurationName;
-    private String signatureAlgorithm;
+    private String[] signatureAlgorithm;
     private long clockSkew;
     private long clockSkewInSeconds;
     private long authenticationTimeLimitInSeconds;
@@ -460,8 +459,8 @@ public class OidcClientConfigImpl implements OidcClientConfig {
         sslRef = trimIt((String) props.get(CFG_KEY_SSL_REF));
         // sslConfigurationName = getSSLConfigurationName(sslRef);
         sslConfigurationName = sslRef;
-        signatureAlgorithm = trimIt((String) props.get(CFG_KEY_SIGNATURE_ALGORITHM));
-        if (ClientConstants.ALGORITHM_NONE.equals(signatureAlgorithm)) {
+        signatureAlgorithm = trimIt((String[]) props.get(CFG_KEY_SIGNATURE_ALGORITHM));
+        if (Arrays.asList(signatureAlgorithm).contains(ClientConstants.ALGORITHM_NONE)) {
             // 220146
             Tr.warning(tc, "OIDC_CLIENT_NONE_ALG", new Object[] { id, signatureAlgorithm });
         }
@@ -567,7 +566,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
         // checkValidationEndpointUrl();
 
         // validateAuthzTokenEndpoints(); //TODO: update tests to expect the error if the validation here fails
-        String tokens = configUtils.getConfigAttributeWithDefaultValue(props, CFG_KEY_TOKEN_ORDER_TOFETCH_CALLER_CLAIMS, "IDToken");     
+        String tokens = configUtils.getConfigAttributeWithDefaultValue(props, CFG_KEY_TOKEN_ORDER_TOFETCH_CALLER_CLAIMS, "IDToken");
         tokenOrderToFetchCallerClaims = split(tokens);
         if (discovery) {
             logDiscoveryMessage("OIDC_CLIENT_DISCOVERY_COMPLETE");
@@ -604,7 +603,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
             Tr.debug(tc, "isClientSideRedirectSupported: " + clientSideRedirect);
             Tr.debug(tc, "nonceEnabled: " + nonceEnabled);
             Tr.debug(tc, "sslRef: " + sslRef);
-            Tr.debug(tc, "signatureAlgorithm: " + signatureAlgorithm);
+            Tr.debug(tc, "signatureAlgorithm: " + Arrays.toString(signatureAlgorithm));
             Tr.debug(tc, "clockSkew: " + clockSkewInSeconds);
             Tr.debug(tc, "discoveryEndpointUrl: " + discoveryEndpointUrl);
             Tr.debug(tc, "discoveryPollingRate: " + discoveryPollingRate);
@@ -804,9 +803,10 @@ public class OidcClientConfigImpl implements OidcClientConfig {
             String supported = rpSupportsOPConfig("alg", discoverySigAlgorithm);
             if (supported != null) {
                 Tr.info(tc, "OIDC_CLIENT_DISCOVERY_OVERRIDE_DEFAULT", this.signatureAlgorithm, CFG_KEY_SIGNATURE_ALGORITHM, supported, getId());
-                this.signatureAlgorithm = supported;
+
+                this.signatureAlgorithm = new String[] { supported };
                 if (tc.isDebugEnabled()) {
-                    Tr.debug(tc, "The adjusted value is : " + signatureAlgorithm);
+                    Tr.debug(tc, "The adjusted value is : " + Arrays.toString(signatureAlgorithm));
                 }
             }
         }
@@ -818,8 +818,8 @@ public class OidcClientConfigImpl implements OidcClientConfig {
      */
     private String rpSupportsOPConfig(String key, ArrayList<String> values) {
 
-        String rpSupportedSignatureAlgorithms = "HS256 RS256";
-        String rpSupportedTokenEndpointAuthMethods = "post basic";
+        String rpSupportedSignatureAlgorithms = "none HS256 HS384 HS512 RS256 RS384 RS512 ES256 ES384 ES512";
+        String rpSupportedTokenEndpointAuthMethods = "post basic private_key_jwt";
         String rpSupportedScopes = "openid profile";
 
         if ("alg".equals(key) && values != null) {
@@ -1335,7 +1335,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
 
     /** {@inheritDoc} */
     @Override
-    public String getSignatureAlgorithm() {
+    public String[] getSignatureAlgorithm() {
         return signatureAlgorithm;
     }
 
@@ -1955,16 +1955,16 @@ public class OidcClientConfigImpl implements OidcClientConfig {
         return tokenOrderToFetchCallerClaims;
     }
 
-    List<String> split(String str) {    
+    List<String> split(String str) {
         List<String> rvalue = new ArrayList<String>();
-            if (str.contains(" ")) {
-                StringTokenizer st = new StringTokenizer(str, " ");
-                while (st.hasMoreElements()) {
-                    rvalue.add(st.nextToken());
-                }
-            } else {
-                rvalue.add(str);
+        if (str.contains(" ")) {
+            StringTokenizer st = new StringTokenizer(str, " ");
+            while (st.hasMoreElements()) {
+                rvalue.add(st.nextToken());
             }
+        } else {
+            rvalue.add(str);
+        }
         return rvalue;
     }
 }
