@@ -388,10 +388,10 @@ public class DataJPAHibernateServlet extends FATServlet {
         entity.id = 100;
         entity.value = "new";
 
-        EntityManager em = emf.createEntityManager();
+//        EntityManager em = emf.createEntityManager();
 
         tx.begin();
-        try {
+        try (EntityManager em = emf.createEntityManager()) {
             em.persist(entity);
             tx.commit();
         } catch (Exception e) {
@@ -411,7 +411,7 @@ public class DataJPAHibernateServlet extends FATServlet {
         SimpleEntity merged = null;
 
         tx.begin();
-        try {
+        try (EntityManager em = emf.createEntityManager()) {
             merged = em.merge(entity);
             tx.commit();
         } catch (Exception e) {
@@ -429,7 +429,7 @@ public class DataJPAHibernateServlet extends FATServlet {
         SimpleEntity found = null;
 
         tx.begin();
-        try {
+        try (EntityManager em = emf.createEntityManager()) {
             found = em.find(SimpleEntity.class, 100);
             tx.commit();
         } catch (Exception e) {
@@ -439,6 +439,6 @@ public class DataJPAHibernateServlet extends FATServlet {
 
         // Check make sure the found entity shows the update to the database.
         assertNotNull(found);
-        assertEquals("modified", found.value);
+        assertEquals("modified", found.value); //Fail: expected:<[modified]> but was:<[new]>
     }
 }
