@@ -34,7 +34,7 @@ public class GoogleLoginConfigImpl extends OidcLoginConfigImpl {
     public static final TraceComponent tc = Tr.register(GoogleLoginConfigImpl.class, TraceConstants.TRACE_GROUP, TraceConstants.MESSAGE_BUNDLE);
 
     @Override
-    public String getSignatureAlgorithm() {
+    public String[] getSignatureAlgorithm() {
         if (jwksUri == null) {
             return null;
         } else {

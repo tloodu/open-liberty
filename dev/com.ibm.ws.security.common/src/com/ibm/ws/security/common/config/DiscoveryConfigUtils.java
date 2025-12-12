@@ -28,7 +28,7 @@ public class DiscoveryConfigUtils {
     private String tokenEndpointAuthMethod;
     private String tokenEndpointAuthSigningAlgorithm;
     private String scope;
-    private String signatureAlgorithm;
+    private String[] signatureAlgorithm;
     private String id;
     private String discoveryURL;
 
@@ -71,8 +71,8 @@ public class DiscoveryConfigUtils {
         return this;
     }
 
-    public DiscoveryConfigUtils discoveredConfig(String alg, String tokenepAuthMethod, String tokenEndpointAuthSigningAlgorithm, String scope) {
-        this.signatureAlgorithm = alg;
+    public DiscoveryConfigUtils discoveredConfig(String[] signatureAlgorithm, String tokenepAuthMethod, String tokenEndpointAuthSigningAlgorithm, String scope) {
+        this.signatureAlgorithm = signatureAlgorithm;
         this.tokenEndpointAuthMethod = tokenepAuthMethod;
         this.tokenEndpointAuthSigningAlgorithm = tokenEndpointAuthSigningAlgorithm;
         this.scope = scope;

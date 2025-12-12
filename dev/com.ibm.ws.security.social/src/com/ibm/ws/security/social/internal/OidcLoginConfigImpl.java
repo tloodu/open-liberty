@@ -71,7 +71,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
     String issuer = null;
 
     public static final String KEY_SIGNATURE_ALGORITHM = "signatureAlgorithm";
-    String signatureAlgorithm = null;
+    String signatureAlgorithm[] = null;
 
     public static final String KEY_CLOCKSKEW = "clockSkew";
     int clockSkewMsec = 0;
@@ -170,7 +170,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
         jwkClientSecret = configUtils.processProtectedString(props, KEY_JWK_CLIENT_SECRET);
         hostNameVerificationEnabled = configUtils.getBooleanConfigAttribute(props, CFG_KEY_HOST_NAME_VERIFICATION_ENABLED, hostNameVerificationEnabled);
         userInfoEndpointEnabled = configUtils.getBooleanConfigAttribute(props, KEY_USERINFO_ENDPOINT_ENABLED, userInfoEndpointEnabled);
-        signatureAlgorithm = configUtils.getConfigAttribute(props, KEY_SIGNATURE_ALGORITHM);
+        signatureAlgorithm = configUtils.getStringArrayConfigAttribute(props, KEY_SIGNATURE_ALGORITHM);
         tokenEndpointAuthMethod = configUtils.getConfigAttribute(props, KEY_tokenEndpointAuthMethod);
         tokenEndpointAuthSigningAlgorithm = configUtils.getConfigAttribute(props, CFG_KEY_TOKEN_ENDPOINT_AUTH_SIGNING_ALGORITHM);
         keyAliasName = configUtils.getConfigAttribute(props, KEY_keyAliasName);
@@ -438,7 +438,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
             Tr.debug(tc, KEY_groupNameAttribute + " = " + groupNameAttribute);
             Tr.debug(tc, KEY_userUniqueIdAttribute + " = " + userUniqueIdAttribute);
             Tr.debug(tc, KEY_CLOCKSKEW + " = " + clockSkewMsec);
-            Tr.debug(tc, KEY_SIGNATURE_ALGORITHM + " = " + signatureAlgorithm);
+            Tr.debug(tc, KEY_SIGNATURE_ALGORITHM + " = " + Arrays.toString(signatureAlgorithm));
             Tr.debug(tc, KEY_tokenEndpointAuthMethod + " = " + tokenEndpointAuthMethod);
             Tr.debug(tc, CFG_KEY_TOKEN_ENDPOINT_AUTH_SIGNING_ALGORITHM + " = " + tokenEndpointAuthSigningAlgorithm);
             Tr.debug(tc, KEY_keyAliasName + " = " + keyAliasName);
@@ -542,7 +542,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
 
     /** {@inheritDoc} */
     @Override
-    public String getSignatureAlgorithm() {
+    public String[] getSignatureAlgorithm() {
         return signatureAlgorithm;
     }
 

@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -16,6 +16,7 @@ import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.osgi.framework.ServiceReference;
-import org.osgi.framework.Version;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -52,6 +52,7 @@ import com.ibm.wsspi.kernel.service.utils.AtomicServiceReference;
 import com.ibm.wsspi.ssl.SSLSupport;
 
 import io.openliberty.security.mp.jwt.osgi.MpJwtRuntimeVersion;
+import junit.runner.Version;
 
 /**
  *
@@ -124,7 +125,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
 
     public static final String CFG_KEY_SIGALG = "signatureAlgorithm";
 
-    String signatureAlgorithm = null;
+    String[] signatureAlgorithm = null;
 
     public static final String KEY_authFilterRef = "authFilterRef";
     protected String authFilterRef;
@@ -207,7 +208,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
         this.mapToUserRegistry = configUtils.getBooleanConfigAttribute(props, CFG_KEY_mapToUserRegistry, mapToUserRegistry);
         jwkSet = null; // the jwkEndpoint may have been changed during dynamic update
         consumerUtils = null; // the parameters in consumerUtils may have been changed during dynamic changing
-        this.signatureAlgorithm = configUtils.getConfigAttribute(props, CFG_KEY_SIGALG);
+        this.signatureAlgorithm = configUtils.getStringArrayConfigAttribute(props, CFG_KEY_SIGALG);
         sharedKey = JwtUtils.processProtectedString(props, JwtUtils.CFG_KEY_SHARED_KEY);
 
         loadConfigValuesForHigherVersions(cc, props);
@@ -273,7 +274,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
             Tr.debug(tc, "mapToUserRegistry:" + mapToUserRegistry);
             Tr.debug(tc, "authFilterRef = " + authFilterRef);
             Tr.debug(tc, "sslRef = " + sslRef);
-            Tr.debug(tc, "sigAlg = " + signatureAlgorithm);
+            Tr.debug(tc, "sigAlg = " + Arrays.toString(signatureAlgorithm));
             Tr.debug(tc, "sharedKey" + sharedKey == null ? "null" : "*********");
             Tr.debug(tc, "useSystemPropertiesForHttpClientConnections = " + useSystemPropertiesForHttpClientConnections);
         }
@@ -324,7 +325,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
 
     /** {@inheritDoc} */
     @Override
-    public String getSignatureAlgorithm() {
+    public String[] getSignatureAlgorithm() {
         return this.signatureAlgorithm;
     }
 
