@@ -25,6 +25,10 @@ import io.openliberty.mcp.internal.fat.lifecycle.tests.LifecycleTest;
 import io.openliberty.mcp.internal.fat.protocol.HttpTest;
 import io.openliberty.mcp.internal.fat.protocol.ProtocolVersionTest;
 import io.openliberty.mcp.internal.fat.security.AdminsRoleAllowedTests;
+import io.openliberty.mcp.internal.fat.security.AsyncAdminsRoleAllowedTests;
+import io.openliberty.mcp.internal.fat.security.AsyncDenyAllTests;
+import io.openliberty.mcp.internal.fat.security.AsyncNoClassAnnotationTests;
+import io.openliberty.mcp.internal.fat.security.AsyncPermitAllTests;
 import io.openliberty.mcp.internal.fat.security.DenyAllTests;
 import io.openliberty.mcp.internal.fat.security.NoClassAnnotationTests;
 import io.openliberty.mcp.internal.fat.security.PermitAllTests;
@@ -65,7 +69,12 @@ import io.openliberty.mcp.internal.fat.tool.ToolTest;
                 StatelessModeTest.class,
                 ToolErrorHandlingTest.class,
                 ToolTest.class,
-                //Authorisation Tests
+                // Async Authorisation Tests
+                AsyncAdminsRoleAllowedTests.class,
+                AsyncDenyAllTests.class,
+                AsyncNoClassAnnotationTests.class,
+                AsyncPermitAllTests.class,
+                // Authorisation Tests
                 AdminsRoleAllowedTests.class,
                 DenyAllTests.class,
                 NoClassAnnotationTests.class,
