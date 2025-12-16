@@ -1901,14 +1901,14 @@ public class BaseMessagingEngineImpl implements JsEngineComponent, LWMConfig, Co
             SibTr.exception(tc, e);
         }
         
-        dump(dumpSpec, fw, date);
+        dump(dumpSpec, fw, date, true);
 
         if(TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
             SibTr.exit(tc, methodName);
         
     }
     
-    public void dump(String dumpSpec, FormattedWriter fw, Date date) {
+    public void dump(String dumpSpec, FormattedWriter fw, Date date, boolean shouldClose) {
         String methodName = "dump";
         if(TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
             SibTr.entry(tc, methodName, dumpSpec);
@@ -1950,7 +1950,9 @@ public class BaseMessagingEngineImpl implements JsEngineComponent, LWMConfig, Co
                 fw.endTag("XMI");
                 fw.newLine();
                 fw.flush();
-                fw.close();
+                if (shouldClose) {
+                    fw.close();
+                }
             }
             catch(IOException e)
             {

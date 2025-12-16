@@ -20,56 +20,94 @@ import org.osgi.service.component.annotations.Reference;
 
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
+import com.ibm.ws.sib.admin.JsEngineComponent;
 import com.ibm.ws.sib.admin.JsMain;
 import com.ibm.ws.sib.admin.JsMessagingEngine;
+import com.ibm.ws.sib.processor.impl.DestinationManager;
+import com.ibm.ws.sib.processor.impl.MessageProcessor;
 import com.ibm.ws.sib.utils.ras.FormattedWriter;
 import com.ibm.wsspi.logging.Introspector;
 
-@Component( immediate = true,
-configurationPolicy = ConfigurationPolicy.IGNORE,
-property = { Constants.SERVICE_VENDOR + "=" + "IBM" } )
+@Component(immediate = true, configurationPolicy = ConfigurationPolicy.IGNORE, property = {
+		Constants.SERVICE_VENDOR + "=" + "IBM" })
 public class SibIntrospectorImpl implements Introspector {
-    private static final TraceComponent tc = Tr.register(SibIntrospectorImpl.class);
-    
-    /**
-     * This spec controls what will be dumped. It splits on ":" into tokens and then dumps classNames that match the token. Only these two classes will be searched for
-     * MessageStoreImpl can be upgraded to MessageStoreImpl=all but I think the null value is what we want. 
-     */
-    private final static String DUMP_SPEC = "com.ibm.ws.sib.processor.impl.MessageProcessor:com.ibm.ws.sib.msgstore.impl.MessageStoreImpl";
+	private static final TraceComponent tc = Tr.register(SibIntrospectorImpl.class);
 
-    @Reference
-    JsMain jsMain;
+	/**
+	 * This spec controls what will be dumped. It splits on ":" into tokens and then
+	 * dumps classNames that match the token. Only these two classes will be
+	 * searched for
+	 * MessageStoreImpl can be upgraded to MessageStoreImpl=all (see
+	 * MessageStoreInterface) but I think the null value is what we want.
+	 */
+	private final static String DUMP_SPEC = "com.ibm.ws.sib.processor.impl.MessageProcessor:com.ibm.ws.sib.msgstore.impl.MessageStoreImpl";
 
-    @Override
-    public String getIntrospectorName() {
-        return "MessagingIntrospector";
-    }
+	@Reference
+	JsMain jsMain;
 
-    @Override
-    public String getIntrospectorDescription(){
-        return "Messaging Diagnostics";
-    }
+	@Override
+	public String getIntrospectorName() {
+		return "MessagingIntrospector";
+	}
 
-    @Override
-    public void introspect(PrintWriter out) throws Exception{
-    	
-    	if (! (jsMain instanceof JsMainImpl)) {
-    		out.println();
-            out.println("The JsMain class was not an instance of JsMainImpl");
-            return;
-    	}
-    	
-    	JsMainImpl mainImpl = (JsMainImpl) jsMain;
-    	Enumeration<JsMessagingEngine> engines = mainImpl.listMessagingEngines();
-    	
-    	while (engines.hasMoreElements()) {
-    		JsMessagingEngine engine = engines.nextElement();
-    		
-    		if (engine instanceof JsMessagingEngineImpl) {
-    			JsMessagingEngineImpl jsEngine = (JsMessagingEngineImpl) engine;
-    			
-    			jsEngine.dump(DUMP_SPEC, new FormattedWriter(out), new Date());
-    		}
-    	}
-    }
+	@Override
+	public String getIntrospectorDescription() {
+		return "Messaging Diagnostics";
+	}
+
+	@Override
+	public void introspect(PrintWriter out) throws Exception {
+		FormattedWriter fw = new FormattedWriter(out);
+		try {
+
+			if (!(jsMain instanceof JsMainImpl)) {
+				out.println();
+				out.println("The JsMain class was not an instance of JsMainImpl");
+				return;
+			}
+
+			// This dump lists the message stores and their configuration.
+			JsMainImpl mainImpl = (JsMainImpl) jsMain;
+			Enumeration<JsMessagingEngine> engines = mainImpl.listMessagingEngines();
+
+			JsMessagingEngine engine = null; // The API returns a list but the impl is hardcoded to one.
+			while (engines.hasMoreElements()) {
+				engine = engines.nextElement();
+
+				if (engine instanceof JsMessagingEngineImpl) {
+					JsMessagingEngineImpl jsEngine = (JsMessagingEngineImpl) engine;
+
+					jsEngine.dump(DUMP_SPEC, fw, new Date(), false);
+
+				}
+			}
+			out.println();
+
+			// Next lets add info about the prepared transactions.
+
+			out.println("=== prepared transactions ===");
+			out.println(String.join(", ", ((JsMessagingEngineImpl) engine).listPreparedTransactions()));
+			out.println();
+
+			// Next lets add info about the destinations.
+			out.println("=== destinations ===");
+			JsEngineComponent messageProcessor = engine.getMessageProcessor();
+			if (messageProcessor != null && messageProcessor instanceof MessageProcessor) {
+
+				//As per comments on DM:
+				//* Cold start constructor. There should be only one destination
+				//* manager per ME.
+
+				DestinationManager destinationManager = ((MessageProcessor) messageProcessor).getDestinationManager();
+				destinationManager.getDurableSubscriptionsTable();
+				
+
+			}
+
+		} finally {
+			fw.flush();
+			fw.close();
+		}
+
+	}
 }
