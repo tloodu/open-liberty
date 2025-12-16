@@ -14,11 +14,13 @@ package test.jakarta.data.jpa.web.hibernate;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.annotation.Resource;
 import jakarta.data.Order;
 import jakarta.data.Sort;
 import jakarta.data.page.CursoredPage;
@@ -29,6 +31,7 @@ import jakarta.persistence.CacheRetrieveMode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceUnit;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.transaction.Status;
@@ -52,6 +55,12 @@ import test.jakarta.data.jpa.web.Business;
 @SuppressWarnings("serial")
 @WebServlet("/DataJPAEclipseLinkServlet")
 public class DataJPAHibernateServlet extends FATServlet {
+
+    @PersistenceContext(unitName = "HibernatePersistenceUnit")
+    EntityManager cmEntityManger;
+
+    @Resource
+    UserTransaction transaction;
 
     @Inject
     Companies companies;
@@ -378,32 +387,37 @@ public class DataJPAHibernateServlet extends FATServlet {
     }
 
     @Test
-    public void testMergeDetachedEntitySimplified() throws Exception {
+    public void testMergeDetachedEntityAppManaged() throws Exception {
         EntityManagerFactory emf = InitialContext
                         .doLookup("java:comp/env/persistence/HibernatePersistenceUnitRef");
         UserTransaction tx = InitialContext
                         .doLookup("java:comp/UserTransaction");
 
-        SimpleEntity entity = new SimpleEntity();
-        entity.id = 100;
-        entity.value = "new";
+        SimpleEntity original = new SimpleEntity();
+        original.id = 100;
+        original.value = "new";
 
-//        EntityManager em = emf.createEntityManager();
+        EntityManager em = emf.createEntityManager();
+        assertNotNull(em);
 
         tx.begin();
-        try (EntityManager em = emf.createEntityManager()) {
-            em.persist(entity);
+        try {
+            em.joinTransaction();
+            assertTrue("Entity manager should have been joined to transaction",
+                       em.isJoinedToTransaction());
+
+            em.persist(original);
             tx.commit();
         } catch (Exception e) {
             tx.rollback();
             fail("Transaction rollback");
         }
 
-        // Entity should have been persisted to the database.
-        // Entity is now detached
+        // The original entity is now detached
+        // The original entity should have been persisted to the database.
 
-        //Another part of the application modifies the entity
-        entity.value = "modified";
+        //Another part of the application modifies the original entity
+        original.value = "modified";
 
         // Now we want to persist this change to the database
         // so we have to re-attach the detached entity.
@@ -411,8 +425,12 @@ public class DataJPAHibernateServlet extends FATServlet {
         SimpleEntity merged = null;
 
         tx.begin();
-        try (EntityManager em = emf.createEntityManager()) {
-            merged = em.merge(entity);
+        try {
+            em.joinTransaction();
+            assertTrue("Entity manager should have been joined to transaction",
+                       em.isJoinedToTransaction());
+
+            merged = em.merge(original);
             tx.commit();
         } catch (Exception e) {
             tx.rollback();
@@ -424,21 +442,110 @@ public class DataJPAHibernateServlet extends FATServlet {
         assertEquals("modified", merged.value);
 
         // The merged entity is now detached
-        // The entity should have been updated after commit
+        // The merged entity should have been updated after commit
+
+        // Use an isolated entity manager to find the entity in the database
+        // to avoid caching in the persistent context
 
         SimpleEntity found = null;
 
         tx.begin();
-        try (EntityManager em = emf.createEntityManager()) {
-            found = em.find(SimpleEntity.class, 100);
+        try (EntityManager isolated = emf.createEntityManager()) {
+            assertTrue("Entity manager should have been joined to transaction",
+                       isolated.isJoinedToTransaction());
+
+            found = isolated.find(SimpleEntity.class, 100);
             tx.commit();
         } catch (Exception e) {
             tx.rollback();
             fail("Transaction rollback");
         }
 
-        // Check make sure the found entity shows the update to the database.
+        // Check to make sure
+        // - The entity exists in the database
+        // - The entity was updated in the database
         assertNotNull(found);
-        assertEquals("modified", found.value); //Fail: expected:<[modified]> but was:<[new]>
+
+        //TODO enable once https://hibernate.atlassian.net/browse/HHH-19995 is fixed
+//        assertEquals("modified", found.value); //Fail: expected:<[modified]> but was:<[new]>
+    }
+
+    @Test
+    public void testMergeDetachedEntityContainerManaged() throws Exception {
+        EntityManagerFactory emf = InitialContext
+                        .doLookup("java:comp/env/persistence/HibernatePersistenceUnitRef");
+
+        SimpleEntity original = new SimpleEntity();
+        original.id = 101;
+        original.value = "new";
+
+        assertNotNull(cmEntityManger);
+
+        transaction.begin();
+        try {
+            assertTrue("Entity manager should have been joined to transaction",
+                       cmEntityManger.isJoinedToTransaction());
+
+            cmEntityManger.persist(original);
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
+            fail("Transaction rollback");
+        }
+
+        // The original entity is now detached
+        // The original entity should have been persisted to the database.
+
+        //Another part of the application modifies the original entity
+        original.value = "modified";
+
+        // Now we want to persist this change to the database
+        // so we have to re-attach the detached entity.
+
+        SimpleEntity merged = null;
+
+        transaction.begin();
+        try {
+            assertTrue("Entity manager should have been joined to transaction",
+                       cmEntityManger.isJoinedToTransaction());
+
+            merged = cmEntityManger.merge(original);
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
+            fail("Transaction rollback");
+        }
+
+        // Check make sure the merged entity shows the update.
+        assertNotNull(merged);
+        assertEquals("modified", merged.value);
+
+        // The merged entity is now detached
+        // The merged entity should have been updated after commit
+
+        // Use an isolated entity manager to find the entity in the database
+        // to avoid caching in the persistent context
+
+        SimpleEntity found = null;
+
+        transaction.begin();
+        try (EntityManager isolated = emf.createEntityManager()) {
+            assertTrue("Entity manager should have been joined to transaction",
+                       isolated.isJoinedToTransaction());
+
+            found = isolated.find(SimpleEntity.class, 100);
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
+            fail("Transaction rollback");
+        }
+
+        // Check to make sure
+        // - The entity exists in the database
+        // - The entity was updated in the database
+        assertNotNull(found);
+
+        //TODO enable once https://hibernate.atlassian.net/browse/HHH-19995 is fixed
+//        assertEquals("modified", found.value); //Fail: expected:<[modified]> but was:<[new]>
     }
 }
