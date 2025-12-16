@@ -34,6 +34,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.osgi.framework.ServiceReference;
+import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -798,12 +799,11 @@ public class OidcClientConfigImpl implements OidcClientConfig {
         ArrayList<String> discoverySigAlgorithm = discoveryUtils.discoverOPConfig(discoveryjson.get(OPDISCOVERY_IDTOKEN_SIGN_ALG));
         if (isRPUsingDefault("alg") && !opHasRPDefault("alg", discoverySigAlgorithm)) {
             if (tc.isDebugEnabled()) {
-                Tr.debug(tc, "See if we need to Adjust the signature algorithm. The original value is : " + signatureAlgorithm);
+                Tr.debug(tc, "See if we need to Adjust the signature algorithm. The original value is : " + Arrays.toString(signatureAlgorithm));
             }
             String supported = rpSupportsOPConfig("alg", discoverySigAlgorithm);
             if (supported != null) {
-                Tr.info(tc, "OIDC_CLIENT_DISCOVERY_OVERRIDE_DEFAULT", this.signatureAlgorithm, CFG_KEY_SIGNATURE_ALGORITHM, supported, getId());
-
+                Tr.info(tc, "OIDC_CLIENT_DISCOVERY_OVERRIDE_DEFAULT", Arrays.toString(this.signatureAlgorithm), CFG_KEY_SIGNATURE_ALGORITHM, supported, getId());
                 this.signatureAlgorithm = new String[] { supported };
                 if (tc.isDebugEnabled()) {
                     Tr.debug(tc, "The adjusted value is : " + Arrays.toString(signatureAlgorithm));

@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.Key;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
@@ -348,12 +349,13 @@ public class Jose4jUtil {
             JsonWebStructure jsonStruct = JwtParsingUtils.getJsonWebStructureFromJwtContext(jwtContext);
 
             Key key = getSignatureVerificationKeyFromJsonWebStructure(jsonStruct, clientConfig, oidcClientRequest);
+            String tokenAlg = jsonStruct.getAlgorithmHeaderValue();
 
             Jose4jValidator validator = new Jose4jValidator(key,
                     clientConfig.getClockSkewInSeconds(),
                     OIDCClientAuthenticatorUtil.getIssuerIdentifier(clientConfig),
                     clientConfig.getClientId(),
-                    clientConfig.getSignatureAlgorithm(),
+                    tokenAlg,
                     oidcClientRequest);
 
             return validator.parseJwtWithValidation(jwtString, jwtContext, (JsonWebSignature) jsonStruct);
@@ -365,9 +367,37 @@ public class Jose4jUtil {
         }
     }
 
+    private void validateTokenAlgorithm(String tokenAlg, String[] configuredAlgorithms, 
+        ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) 
+        throws JWTTokenValidationFailedException {
+    
+        if (configuredAlgorithms == null || configuredAlgorithms.length == 0) {
+            return;
+        }
+        
+        if (tokenAlg == null || tokenAlg.isEmpty()) {
+            Object[] objs = new Object[] { clientConfig.getClientId(), Arrays.toString(configuredAlgorithms) };
+            throw oidcClientRequest.error(true, tc, "JWT_MISSING_ALG_HEADER", objs);
+        }
+        
+        for (String configuredAlg : configuredAlgorithms) {
+            if (configuredAlg != null && configuredAlg.equals(tokenAlg)) {
+                return;
+            }
+        }
+        
+        // No match - algorithm not allowed
+        Object[] objs = new Object[] { clientConfig.getClientId(), tokenAlg, Arrays.toString(configuredAlgorithms) };
+        throw oidcClientRequest.error(true, tc, "JWT_ALGORITHM_MISMATCH", objs);
+    }
+
+
     @FFDCIgnore({ Exception.class })
     public Key getSignatureVerificationKeyFromJsonWebStructure(JsonWebStructure jsonStruct, ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) throws JWTTokenValidationFailedException {
         String kid = jsonStruct.getKeyIdHeaderValue();
+        String tokenAlg = jsonStruct.getAlgorithmHeaderValue();
+        String[] configuredAlgorithms = clientConfig.getSignatureAlgorithm();
+        validateTokenAlgorithm(tokenAlg, configuredAlgorithms, clientConfig, oidcClientRequest);
         // Support for 'x5t' header remains for interoperability purposes.
         // If FIPS 140-3 is enabled, usage of the 'x5t' header for signature verification is disabled
         String x5t = CryptoUtils.isFips140_3Enabled() ? null : jsonStruct.getX509CertSha1ThumbprintHeaderValue();
@@ -375,14 +405,14 @@ public class Jose4jUtil {
         Key key = null;
         Exception caughtException = null;
         try {
-            key = getVerifyKey(clientConfig, kid, x5t, x5tS256);
+            key = getVerifyKey(clientConfig, kid, x5t, x5tS256, tokenAlg);
         } catch (Exception e) {
             caughtException = e;
         }
-        if (key == null && !SIGNATURE_ALG_NONE.equals(clientConfig.getSignatureAlgorithm())) {
-            Object[] objs = new Object[] { clientConfig.getSignatureAlgorithm(), "" };
+        if (key == null && !SIGNATURE_ALG_NONE.equals(tokenAlg)) {
+            Object[] objs = new Object[] { tokenAlg, "" };
             if (caughtException != null) {
-                objs = new Object[] { clientConfig.getSignatureAlgorithm(), caughtException.getLocalizedMessage() };
+                objs = new Object[] { tokenAlg, caughtException.getLocalizedMessage() };
             }
             if (oidcClientRequest != null) {
                 oidcClientRequest.setRsFailMsg(OidcClientRequest.NO_KEY, Tr.formatMessage(tc, "OIDC_CLIENT_NO_VERIFYING_KEY", objs));
@@ -394,32 +424,28 @@ public class Jose4jUtil {
         return key;
     }
 
-    public Key getVerifyKey(ConvergedClientConfig clientConfig, String kid, String x5t, String x5tS256) throws Exception {
+    public Key getVerifyKey(ConvergedClientConfig clientConfig, String kid, String x5t, String x5tS256, String alg) throws Exception {
         Key keyValue = null;
-        String signatureAlgorithm = clientConfig.getSignatureAlgorithm();
-        if (signatureAlgorithm == null) {
-            return keyValue;
-        }
-        if (signatureAlgorithm.startsWith(SIGNATURE_ALG_HS)) {
+        if (alg.startsWith(SIGNATURE_ALG_HS)) {
             //keyValue = Base64Coder.getBytes(clientConfig.getSharedKey());
             keyValue = new HmacKey(clientConfig.getSharedKey().getBytes(StandardCharsets.UTF_8));
-        } else if (signatureAlgorithm.startsWith(SIGNATURE_ALG_RS) || signatureAlgorithm.startsWith(SIGNATURE_ALG_ES)) {
+        } else if (alg.startsWith(SIGNATURE_ALG_RS) || alg.startsWith(SIGNATURE_ALG_ES)) {
             if (clientConfig.getJwkEndpointUrl() != null || clientConfig.getJsonWebKey() != null) {
-                JwKRetriever retriever = createJwkRetriever(clientConfig);
+                JwKRetriever retriever = createJwkRetriever(clientConfig, alg);
                 keyValue = retriever.getPublicKeyFromJwk(kid, x5t, x5tS256, "sig", clientConfig.getUseSystemPropertiesForHttpClientConnections());
             } else {
                 keyValue = clientConfig.getPublicKey();
             }
-        } else if (SIGNATURE_ALG_NONE.equals(signatureAlgorithm)) {
+        } else if (SIGNATURE_ALG_NONE.equals(alg)) {
             keyValue = null;
         }
         return keyValue;
     }
 
-    public JwKRetriever createJwkRetriever(ConvergedClientConfig oidcClientConfig) {
+    public JwKRetriever createJwkRetriever(ConvergedClientConfig oidcClientConfig, String alg) {
         JwKRetriever retriever = null;
         if (oidcClientConfig != null) { // to support unittests, config cannot be null
-            retriever = new JwKRetriever(oidcClientConfig.getId(), oidcClientConfig.getSslRef(), oidcClientConfig.getJwkEndpointUrl(), oidcClientConfig.getJwkSet(), this.sslSupport, oidcClientConfig.isHostNameVerificationEnabled(), oidcClientConfig.getJwkClientId(), oidcClientConfig.getJwkClientSecret(), oidcClientConfig.getSignatureAlgorithm());
+            retriever = new JwKRetriever(oidcClientConfig.getId(), oidcClientConfig.getSslRef(), oidcClientConfig.getJwkEndpointUrl(), oidcClientConfig.getJwkSet(), this.sslSupport, oidcClientConfig.isHostNameVerificationEnabled(), oidcClientConfig.getJwkClientId(), oidcClientConfig.getJwkClientSecret(), alg);
         }
         return retriever;
     }
@@ -553,14 +579,16 @@ public class Jose4jUtil {
     }
 
     public JwtClaims validateJwsSignature(JwtContext jwtContext, ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) throws Exception {
-        // TODO - update to use io.openliberty.security.common.jwt.jws.JwsVerificationKeyHelper and io.openliberty.security.common.jwt.jws.JwsSignatureVerifier
         JsonWebStructure jwStructure = JwtParsingUtils.getJsonWebStructureFromJwtContext(jwtContext);
+        String tokenAlg = jwStructure.getAlgorithmHeaderValue();
         Key key = getSignatureVerificationKeyFromJsonWebStructure(jwStructure, clientConfig, oidcClientRequest);
 
-        // Clock skew and issuer aren't needed to validate the signature
-        Jose4jValidator validator = new Jose4jValidator(key, 0L, null, clientConfig.getClientId(), clientConfig.getSignatureAlgorithm(), oidcClientRequest);
+        Jose4jValidator validator = new Jose4jValidator(key, 0L, null, clientConfig.getClientId(), 
+            tokenAlg, oidcClientRequest);
+        
         return validator.validateJwsSignature((JsonWebSignature) jwStructure, jwtContext.getJwt());
     }
+
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -80,7 +80,7 @@ public class JwtSsoComponent implements JwtSsoConfig {
     protected static final String KEY_UNIQUE_ID = "id";
     protected String uniqueId = null;
 
-    private String signatureAlgorithm;
+    private String[] signatureAlgorithm;
 
     ConsumerUtils consumerUtils = null; // lazy init
 
@@ -268,7 +268,7 @@ public class JwtSsoComponent implements JwtSsoConfig {
 
     private void setJwtSsoConsumerDefaults() {
         mpjwtConsumerRef = getId();
-        signatureAlgorithm = "RS256";
+        signatureAlgorithm = new String[] { "RS256" };
         if (tc.isDebugEnabled()) {
             Tr.debug(tc, "consumer id = ", mpjwtConsumerRef);
         }
@@ -297,7 +297,7 @@ public class JwtSsoComponent implements JwtSsoConfig {
 
     /** {@inheritDoc} */
     @Override
-    public String getSignatureAlgorithm() {
+    public String[] getSignatureAlgorithm() {
         // TODO Auto-generated method stub
         return signatureAlgorithm;
     }

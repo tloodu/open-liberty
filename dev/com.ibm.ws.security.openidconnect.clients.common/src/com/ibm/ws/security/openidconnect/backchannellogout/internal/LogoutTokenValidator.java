@@ -21,6 +21,7 @@ import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
 import org.jose4j.jwt.NumericDate;
 import org.jose4j.jwt.consumer.JwtContext;
+import org.jose4j.jwx.JsonWebStructure;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -40,6 +41,7 @@ import com.ibm.ws.security.openidconnect.jose4j.Jose4jValidator;
 import com.ibm.ws.security.openidconnect.token.IDTokenValidationFailedException;
 import com.ibm.ws.security.openidconnect.token.JWTTokenValidationFailedException;
 import com.ibm.wsspi.ssl.SSLSupport;
+import io.openliberty.security.common.jwt.JwtParsingUtils;
 
 @Component(name = "com.ibm.ws.security.openidconnect.backchannellogout.LogoutTokenValidator", service = {}, property = { "service.vendor=IBM" })
 public class LogoutTokenValidator {
@@ -82,9 +84,11 @@ public class LogoutTokenValidator {
         try {
             JwtContext jwtContext = jose4jUtil.validateJwtStructureAndGetContext(logoutTokenString, config);
             JwtClaims claims = jose4jUtil.validateJwsSignature(jwtContext, config);
+            JsonWebStructure jwStructure = JwtParsingUtils.getJsonWebStructureFromJwtContext(jwtContext);
+            String tokenAlg = jwStructure.getAlgorithmHeaderValue();
 
             verifyAllRequiredClaimsArePresent(claims);
-            verifyIssAudIatExpClaims(claims);
+            verifyIssAudIatExpClaims(claims, tokenAlg);
             verifySubAndOrSidPresent(claims);
             verifyEventsClaim(claims);
             verifyNonceClaimNotPresent(claims);
@@ -132,15 +136,15 @@ public class LogoutTokenValidator {
     /**
      * Validate the iss, aud, iat, and exp Claims in the same way they are validated in ID Tokens.
      */
-    void verifyIssAudIatExpClaims(JwtClaims claims) throws IDTokenValidationFailedException, Exception, MalformedClaimException, JWTTokenValidationFailedException {
-        Jose4jValidator validator = getJose4jValidator();
+    void verifyIssAudIatExpClaims(JwtClaims claims, String tokenAlg) throws IDTokenValidationFailedException, Exception, MalformedClaimException, JWTTokenValidationFailedException {
+        Jose4jValidator validator = getJose4jValidator(tokenAlg);
         validator.verifyIssForIdToken(claims.getIssuer());
         validator.verifyAudForIdToken(claims.getAudience());
         validator.verifyIatAndExpClaims(claims.getIssuedAt(), claims.getExpirationTime(), claims.getSubject());
     }
 
-    Jose4jValidator getJose4jValidator() {
-        return new Jose4jValidator(null, config.getClockSkewInSeconds(), OIDCClientAuthenticatorUtil.getIssuerIdentifier(config), config.getClientId(), config.getSignatureAlgorithm(), null);
+    Jose4jValidator getJose4jValidator(String tokenAlg) {
+        return new Jose4jValidator(null, config.getClockSkewInSeconds(), OIDCClientAuthenticatorUtil.getIssuerIdentifier(config), config.getClientId(), tokenAlg, null);
     }
 
     /**

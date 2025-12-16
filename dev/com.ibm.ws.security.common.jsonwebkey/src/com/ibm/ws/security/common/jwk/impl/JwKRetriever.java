@@ -747,7 +747,7 @@ public class JwKRetriever {
         if (JwkConstants.RSA.equalsIgnoreCase(kty)) {
             jwk = getRsaJwk(keyEntry);
         } else if (JwkConstants.EC.equalsIgnoreCase(kty)) {
-            jwk = getEllipticCurveJwk(keyEntry, signatureAlgorithm);
+            jwk = getEllipticCurveJwk(keyEntry);
         }
         return jwk;
     }
@@ -761,13 +761,8 @@ public class JwKRetriever {
     }
 
     @Sensitive
-    JWK getEllipticCurveJwk(@Sensitive JSONObject thing, String signatureAlgorithm) {
-        // let get the map<String, Object> from keyObject
-        if (signatureAlgorithm != null && signatureAlgorithm.startsWith("ES")) { // ES256, ES384, ES512
-            return Jose4jEllipticCurveJWK.getInstance(thing); // if implemented
-                                                              // ES256
-        }
-        return null;
+    JWK getEllipticCurveJwk(@Sensitive JSONObject thing) {
+            return Jose4jEllipticCurveJWK.getInstance(thing);
     }
 
     protected JSSEHelper getJSSEHelper(SSLSupport sslSupport) throws SSLException {
