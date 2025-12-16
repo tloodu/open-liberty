@@ -533,7 +533,7 @@ public class DataJPAHibernateServlet extends FATServlet {
             assertTrue("Entity manager should have been joined to transaction",
                        isolated.isJoinedToTransaction());
 
-            found = isolated.find(SimpleEntity.class, 100);
+            found = isolated.find(SimpleEntity.class, 101);
             transaction.commit();
         } catch (Exception e) {
             transaction.rollback();
