@@ -107,7 +107,7 @@ public class FailedApplicationStartTest {
         JsonObject jsonResponse = getJSONPayload(connhealth);
         JsonArray checks = (JsonArray) jsonResponse.get("checks");
         assertTrue("The JSON response was not empty.", checks.isEmpty());
-        assertEquals("The status of the (overall) health check was epected to be DOWN, but we recieved UP.", jsonResponse.getString("status"), "DOWN");
+        assertEquals("The status of the (overall) health check was epected to be DOWN, but we received UP.", jsonResponse.getString("status"), "DOWN");
 
     }
 
@@ -142,7 +142,7 @@ public class FailedApplicationStartTest {
         JsonObject jsonResponse = getJSONPayload(connhealth);
         JsonArray checks = (JsonArray) jsonResponse.get("checks");
         assertTrue("The JSON response was not empty.", checks.isEmpty());
-        assertEquals("The status of the (overall) health check was epected to be DOWN, but we recieved UP.", jsonResponse.getString("status"), "DOWN");
+        assertEquals("The status of the (overall) health check was epected to be DOWN, but we received UP.", jsonResponse.getString("status"), "DOWN");
 
     }
 
