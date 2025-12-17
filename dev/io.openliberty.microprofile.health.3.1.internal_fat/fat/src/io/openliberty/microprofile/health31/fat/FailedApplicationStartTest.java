@@ -116,7 +116,7 @@ public class FailedApplicationStartTest {
         assertEquals("The status of the (overall) health check was epected to be DOWN, but we received UP.", jsonResponse.getString("status"), "DOWN");
 
         // Check /health/started -> expect that we report DOWN.
-        // Must skip for mpHealth-2.0 and mpHealth-3.1, does not contain start health check
+        // Must skip for mpHealth-2.0 and mpHealth-3.0, does not contain start health check
         if (!server.getServerConfiguration().getFeatureManager().getFeatures().contains("mpHealth-2.0") &&
             !server.getServerConfiguration().getFeatureManager().getFeatures().contains("mpHealth-3.0")) {
             connhealth = HttpUtils.getHttpConnectionWithAnyResponseCode(server, STARTED_ENDPOINT);
@@ -178,7 +178,7 @@ public class FailedApplicationStartTest {
         assertEquals("The status of the (overall) health check was epected to be DOWN, but we received UP.", jsonResponse.getString("status"), "DOWN");
 
         // Check /health/started -> expect that we report DOWN.
-        // Must skip for mpHealth-2.0, does not contain start health check
+        // Must skip for mpHealth-2.0 and mpHealth-3.0, does not contain start health check
         if (!server.getServerConfiguration().getFeatureManager().getFeatures().contains("mpHealth-2.0") &&
             !server.getServerConfiguration().getFeatureManager().getFeatures().contains("mpHealth-3.0")) {
             connhealth = HttpUtils.getHttpConnectionWithAnyResponseCode(server, STARTED_ENDPOINT);
