@@ -45,24 +45,6 @@ public class AsyncNoClassAnnotationTools {
         return CompletableFuture.completedStage(input);
     }
 
-    @RolesAllowed("TestUsers")
-    @Tool(name = "noClassAnnotationAsync_echoTestUserAllowed", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> noClassAnnotationAsync_echoTestUserAllowed(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
-    @RolesAllowed({ "Admins", "TestUsers" })
-    @Tool(name = "noClassAnnotationAsync_echoTwoRolesAllowed", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> noClassAnnotationAsync_echoTwoRolesAllowed(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
-    @RolesAllowed({ "RoleDoesNotExist" })
-    @Tool(name = "noClassAnnotationAsync_echoRoleDoesNotExist", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> noClassAnnotationAsync_echoRoleDoesNotExist(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
     @Tool(name = "noClassAnnotationAsync_echoNoSecurityAnnotationExists", title = "Echoes the input", description = "Returns the input unchanged")
     public CompletionStage<String> noClassAnnotationAsync_echoNoSecurityAnnotationExists(@ToolArg(name = "input", description = "input to echo") String input) {
         return CompletableFuture.completedStage(input);

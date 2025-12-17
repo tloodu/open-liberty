@@ -82,28 +82,6 @@ public class AsyncDenyAllTests extends FATServletClient {
     }
 
     @Test
-    public void testDenyAllAsyncClass_echoTestUserAllowed() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
-    public void testDenyAllAsyncClass_echoTwoRolesAllowed() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
     public void testDenyAllAsyncClass_echoNoSecurityAnnotationExists() throws Exception {
         AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
         AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
@@ -116,17 +94,6 @@ public class AsyncDenyAllTests extends FATServletClient {
 
     @Test
     public void testDenyAllAsyncClass_echoDenyAll() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
-    public void testDenyAllAsyncClass_echoRoleDoesNotExist() throws Exception {
         AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
         AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
         AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);

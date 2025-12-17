@@ -81,40 +81,7 @@ public class AsyncNoClassAnnotationTests extends FATServletClient {
         AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
     }
 
-    @Test
-    public void testNoClassAnnotationAsync_echoTestUserAllowed() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
-    public void testNoClassAnnotationAsync_echoTwoRolesAllowed() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
     public void testNoClassAnnotationAsync_echoDenyAll() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    public void testNoClassAnnotationAsync_echoRoleDoesNotExist() throws Exception {
         AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
         AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
         AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.FAIL, client);

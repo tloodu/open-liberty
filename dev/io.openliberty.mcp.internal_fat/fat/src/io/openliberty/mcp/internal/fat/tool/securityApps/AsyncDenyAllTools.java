@@ -40,18 +40,6 @@ public class AsyncDenyAllTools {
         return CompletableFuture.completedStage(input);
     }
 
-    @RolesAllowed("TestUsers")
-    @Tool(name = "denyAllAsyncClass_echoTestUserAllowed", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> denyAllAsyncClass_echoTestUserAllowed(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
-    @RolesAllowed({ "Admins", "TestUsers" })
-    @Tool(name = "denyAllAsyncClass_echoTwoRolesAllowed", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> denyAllAsyncClass_echoTwoRolesAllowed(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
     @PermitAll
     @Tool(name = "denyAllAsyncClass_echoPermitAll", title = "Echoes the input", description = "Returns the input unchanged")
     public CompletionStage<String> denyAllAsyncClass_echoPermitAll(@ToolArg(name = "input", description = "input to echo") String input) {
@@ -60,12 +48,6 @@ public class AsyncDenyAllTools {
 
     @Tool(name = "denyAllAsyncClass_echoNoSecurityAnnotationExists", title = "Echoes the input", description = "Returns the input unchanged")
     public CompletionStage<String> denyAllAsyncClass_echoNoSecurityAnnotationExists(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
-    @RolesAllowed({ "RoleDoesNotExist" })
-    @Tool(name = "denyAllAsyncClass_echoRoleDoesNotExist", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> denyAllAsyncClass_echoRoleDoesNotExist(@ToolArg(name = "input", description = "input to echo") String input) {
         return CompletableFuture.completedStage(input);
     }
 }

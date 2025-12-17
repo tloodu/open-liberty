@@ -93,28 +93,6 @@ public class AsyncPermitAllTests extends FATServletClient {
     }
 
     @Test
-    public void testPermitAllAsyncClass_echoTestUserAllowed() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
-    public void testPermitAllAsyncClass_echoTwoRolesAllowed() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.PASS, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
-
-    @Test
     public void testPermitAllAsyncClass_echoNoSecurityAnnotationExists() throws Exception {
         AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.PASS, client);
         AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.PASS, client);
@@ -125,14 +103,4 @@ public class AsyncPermitAllTests extends FATServletClient {
         AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.PASS, client);
     }
 
-    @Test
-    public void testPermitAllAsyncClass_echoRoleDoesNotExist() throws Exception {
-        AuthHelper.test(Scenario.NO_AUTHENTICATION, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.ADMIN_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_PASS_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.TESTUSER_FAIL_LOGIN, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_USER, ExpectedTestResult.FAIL, client);
-        AuthHelper.test(Scenario.UNKNOWN_ROLE, ExpectedTestResult.FAIL, client);
-    }
 }

@@ -46,26 +46,9 @@ public class AsyncPermitAllTools {
         return CompletableFuture.completedStage(input);
     }
 
-    @RolesAllowed("TestUsers")
-    @Tool(name = "permitAllAsyncClass_echoTestUserAllowed", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> permitAllAsyncClass_echoTestUserAllowed(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
-    @RolesAllowed({ "Admins", "TestUsers" })
-    @Tool(name = "permitAllAsyncClass_echoTwoRolesAllowed", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> permitAllAsyncClass_echoTwoRolesAllowed(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
-
     @Tool(name = "permitAllAsyncClass_echoNoSecurityAnnotationExists", title = "Echoes the input", description = "Returns the input unchanged")
     public CompletionStage<String> permitAllAsyncClass_echoNoSecurityAnnotationExists(@ToolArg(name = "input", description = "input to echo") String input) {
         return CompletableFuture.completedStage(input);
     }
 
-    @RolesAllowed({ "RoleDoesNotExist" })
-    @Tool(name = "permitAllAsyncClass_echoRoleDoesNotExist", title = "Echoes the input", description = "Returns the input unchanged")
-    public CompletionStage<String> permitAllAsyncClass_echoRoleDoesNotExist(@ToolArg(name = "input", description = "input to echo") String input) {
-        return CompletableFuture.completedStage(input);
-    }
 }
