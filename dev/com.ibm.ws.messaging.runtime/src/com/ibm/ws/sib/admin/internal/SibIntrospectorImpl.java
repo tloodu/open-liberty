@@ -12,6 +12,8 @@ package com.ibm.ws.sib.admin.internal;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Component;
@@ -23,6 +25,7 @@ import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.ws.sib.admin.JsEngineComponent;
 import com.ibm.ws.sib.admin.JsMain;
 import com.ibm.ws.sib.admin.JsMessagingEngine;
+import com.ibm.ws.sib.processor.impl.ConsumerDispatcher;
 import com.ibm.ws.sib.processor.impl.DestinationManager;
 import com.ibm.ws.sib.processor.impl.MessageProcessor;
 import com.ibm.ws.sib.utils.ras.FormattedWriter;
@@ -99,9 +102,11 @@ public class SibIntrospectorImpl implements Introspector {
 				//* manager per ME.
 
 				DestinationManager destinationManager = ((MessageProcessor) messageProcessor).getDestinationManager();
-				destinationManager.getDurableSubscriptionsTable();
+				HashMap<String, ConsumerDispatcher> durableSubscriptions = destinationManager.getDurableSubscriptionsTable();				
+				durableSubscriptions.entrySet().stream().forEach(entry -> out.println(entry.getKey() + " : " + entry.getValue()));
 				
-
+				ConcurrentHashMap<String, ConsumerDispatcher> nonDurableSubscirptions = destinationManager.getNondurableSharedSubscriptions();
+				nonDurableSubscirptions.entrySet().stream().forEach(entry -> out.println(entry.getKey() + " : " + entry.getValue()));
 			}
 
 		} finally {
