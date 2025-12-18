@@ -1,0 +1,14 @@
+<server>
+  	<featureManager>
+		<feature>localConnector-1.0</feature>
+		<feature>jsp-2.3</feature>
+		<feature>jaxws-2.2</feature>
+		<feature>servlet-3.1</feature>
+  	</featureManager>
+
+  	<include location="../fatTestPorts.xml"/>
+
+	<webApplication name="AttachmentProperties" contextRoot="AttachmentProperties" location="AttachmentProperties.war" />
+     
+  	<javaPermission className="java.security.AllPermission" name="*" actions="*"/>
+</server>

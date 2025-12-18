@@ -87,7 +87,7 @@ public class SOAPHandlerInterceptor extends
         AbstractProtocolHandlerInterceptor<SoapMessage> implements
         SoapInterceptor {
     private static final SAAJOutInterceptor SAAJ_OUT = new SAAJOutInterceptor();
- 
+
     private static final Logger LOG = LogUtils.getLogger(SOAPHandlerInterceptor.class); // Liberty Change #26529
     AbstractSoapInterceptor ending = new AbstractSoapInterceptor(
             SOAPHandlerInterceptor.class.getName() + ".ENDING",
@@ -186,7 +186,7 @@ public class SOAPHandlerInterceptor extends
                     } // Liberty Change end #26529
                 }
             }
-        }       
+        }
     }
 
     private void checkUnderstoodHeaders(SoapMessage soapMessage) {

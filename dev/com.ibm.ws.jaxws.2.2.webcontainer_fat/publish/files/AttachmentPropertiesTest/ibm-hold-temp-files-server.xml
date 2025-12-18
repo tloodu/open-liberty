@@ -1,0 +1,18 @@
+<server>
+  	<featureManager>
+		<feature>localConnector-1.0</feature>
+		<feature>jsp-2.3</feature>
+		<feature>jaxws-2.2</feature>
+		<feature>servlet-3.1</feature>
+  	</featureManager>
+
+  	<include location="../fatTestPorts.xml"/>
+
+	<webApplication name="AttachmentProperties" contextRoot="AttachmentProperties" location="AttachmentProperties.war" >
+	    <webservices-bnd>
+	        <webservice-endpoint-properties ibm-hold-temp-files="true" attachment-memory-threshold="50000" attachment-directory="tmp" />
+	    </webservices-bnd>
+	</webApplication>
+     
+  	<javaPermission className="java.security.AllPermission" name="*" actions="*"/>
+</server>
