@@ -78,9 +78,10 @@ public class Utils {
         if (clazz.isAnnotationPresent(Provider.class)) {
             return true;
         }
-        return hasEndpointMethod(clazz);
+        return hasEndpointMethod(clazz); // Liberty Change
     }
 
+    // Liberty Change Start
     /**
      * Checks each method on the class looking for any method annotated with {@link Path @Path} or any of the
      * {@link HttpMethod}'s.
@@ -102,6 +103,7 @@ public class Utils {
         }
         return false;
     }
+    // Liberty Change End
 
     /**
      * Returns true if and only if the given class is a JAX-RS root resource or a

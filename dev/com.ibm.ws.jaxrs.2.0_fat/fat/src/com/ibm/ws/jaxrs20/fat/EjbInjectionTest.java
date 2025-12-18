@@ -12,9 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.jaxrs20.fat;
 
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
@@ -59,10 +57,4 @@ public class EjbInjectionTest extends FATServletClient {
             server.stopServer("CWWKE1102W");  //ignore server quiesce timeouts due to slow test machines
         }
     }
-
-    @Before
-    public void beforeTest() {}
-
-    @After
-    public void afterTest() {}
 }

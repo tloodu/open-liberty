@@ -13,7 +13,6 @@ import javax.annotation.Resource;
 import javax.ejb.Local;
 import javax.ejb.SessionContext;
 import javax.ejb.Stateless;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 
 import com.ibm.ws.jaxrs.fat.ejbinjection.interfaces.annotated.EchoEJBAnnotatedInterface;
@@ -27,8 +26,6 @@ public class EjbInjectionSingleAnnotatedInterfaceResource implements EchoEJBAnno
     SessionContext ctx;
 
     @Override
-    @POST
-    @Path("echo")
     public String echo(String message) {
         if (ctx == null) {
             return "ctx is null";
