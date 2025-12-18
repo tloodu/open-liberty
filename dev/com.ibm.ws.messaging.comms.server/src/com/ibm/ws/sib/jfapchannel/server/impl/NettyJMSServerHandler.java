@@ -215,7 +215,7 @@ public class NettyJMSServerHandler extends SimpleChannelInboundHandler<WsByteBuf
 	}
 
     /* 
-     * Inactive channel means it's closed. 
+     * Inactive channel means it's closed.  (No need)
      */
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
@@ -232,6 +232,9 @@ public class NettyJMSServerHandler extends SimpleChannelInboundHandler<WsByteBuf
         }
 
 		ctx.channel().attr(NettyNetworkConnectionFactory.CONNECTION).set(null);
+
+        // No need to call ctx.close as it's already closed.
+
 		if (tc.isEntryEnabled())
 			SibTr.exit(this, tc, "channelInactive", ctx.channel());
 	}
@@ -243,7 +246,13 @@ public class NettyJMSServerHandler extends SimpleChannelInboundHandler<WsByteBuf
 		if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
 			SibTr.debug(this, tc, "exceptionCaught", cause);
 		}
-		// TODO: Check how to manage an exception
+
+        Connection conn = ctx.channel().attr(NettyNetworkConnectionFactory.CONNECTION).get();
+        if(conn != null) {
+            conn.invalidate(false, cause, "Exception Caught");
+        }
+		ctx.channel().attr(NettyNetworkConnectionFactory.CONNECTION).set(null);
+
 		ctx.close();
 		super.exceptionCaught(ctx, cause);
 		if (tc.isEntryEnabled())
