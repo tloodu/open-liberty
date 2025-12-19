@@ -28,7 +28,7 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.topology.impl.LibertyServer;
 import io.openliberty.mcp.internal.fat.tool.securityApps.PermitAllTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
-import io.openliberty.mcp.internal.fat.utils.McpClient.Mode;
+import io.openliberty.mcp.internal.fat.utils.McpClient.StateMode;
 
 /**
  *
@@ -41,7 +41,7 @@ public class PermitAllTestsStateless extends AbstractPermitAll {
     Logger logger = Logger.getLogger(PermitAllTestsStateless.class.getName());
 
     @Rule
-    public McpClient client = new McpClient(server, "/permitAllToolsStateless", Mode.STATELESS);
+    public McpClient client = new McpClient(server, "/permitAllToolsStateless", StateMode.STATELESS);
 
     /** {@inheritDoc} */
     @Override

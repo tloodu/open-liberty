@@ -51,10 +51,13 @@ public class McpClient extends ExternalResource {
     private String sessionId;
     private LibertyServer server;
     private String path;
-    private Mode mode = Mode.STATEFUL;
+    private StateMode mode = StateMode.STATEFUL;
 
-    public static enum Mode {
-        STATEFUL, STATELESS
+    public static enum StateMode {
+        // STATEFUL - Uses sessions and session IDs to maintain state across requests
+        STATEFUL,
+        // STATELESS - Each request is independent with no session information e.g. authentication will be required for each request
+        STATELESS
     }
 
     /**
@@ -67,7 +70,7 @@ public class McpClient extends ExternalResource {
         this.path = path;
     }
 
-    public McpClient(LibertyServer server, String path, Mode mode) {
+    public McpClient(LibertyServer server, String path, StateMode mode) {
         super();
         this.server = server;
         this.path = path;
@@ -118,7 +121,7 @@ public class McpClient extends ExternalResource {
                         """;
         JSONAssert.assertEquals(expectedResponse, response, JSONCompareMode.LENIENT);
 
-        if (mode.equals(Mode.STATEFUL)) {
+        if (mode.equals(StateMode.STATEFUL)) {
             sessionId = httpRequest.getResponseHeader(MCP_SESSION_ID);
             assertNotNull(sessionId);
         }
@@ -139,7 +142,7 @@ public class McpClient extends ExternalResource {
 
     @Override
     protected void after() {
-        if (mode.equals(Mode.STATEFUL)) {
+        if (mode.equals(StateMode.STATEFUL)) {
             if (sessionDeleted) {
                 return;
             }
@@ -158,7 +161,7 @@ public class McpClient extends ExternalResource {
     }
 
     public void deleteSession() {
-        if (mode.equals(Mode.STATEFUL)) {
+        if (mode.equals(StateMode.STATEFUL)) {
             try {
                 new HttpRequest(server, path + "/mcp")
                                                       .requestProp(MCP_SESSION_ID, sessionId)
@@ -173,10 +176,13 @@ public class McpClient extends ExternalResource {
     }
 
     /**
+     *
+     * Sets up and runs a HTTP request
+     * Only requests a sessionId if Stateful mode is enabled
+     *
      * @param request
      * @param jsonRequestBody
      * @return
-     * @throws Exception
      */
     private String setupAndRunRequest(final HttpRequest request, String jsonRequestBody) throws Exception {
         request.requestProp(ACCEPT, VALUE_ACCEPT_DEFAULT)
@@ -184,7 +190,7 @@ public class McpClient extends ExternalResource {
                .jsonBody(jsonRequestBody)
                .method("POST");
 
-        if (mode.equals(Mode.STATEFUL)) {
+        if (mode.equals(StateMode.STATEFUL)) {
             request.requestProp(MCP_SESSION_ID, sessionId);
         }
 

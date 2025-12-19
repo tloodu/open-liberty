@@ -28,7 +28,7 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.topology.impl.LibertyServer;
 import io.openliberty.mcp.internal.fat.tool.securityApps.DenyAllTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
-import io.openliberty.mcp.internal.fat.utils.McpClient.Mode;
+import io.openliberty.mcp.internal.fat.utils.McpClient.StateMode;
 
 /**
  *
@@ -41,7 +41,7 @@ public class DenyAllTestsStateless extends AbstractDenyAll {
     Logger logger = Logger.getLogger(DenyAllTestsStateless.class.getName());
 
     @Rule
-    public McpClient client = new McpClient(server, "/denyAllToolStateless", Mode.STATELESS);
+    public McpClient client = new McpClient(server, "/denyAllToolStateless", StateMode.STATELESS);
 
     /** {@inheritDoc} */
     @Override

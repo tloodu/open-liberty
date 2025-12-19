@@ -28,7 +28,7 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.topology.impl.LibertyServer;
 import io.openliberty.mcp.internal.fat.tool.securityApps.AdminsRoleTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
-import io.openliberty.mcp.internal.fat.utils.McpClient.Mode;
+import io.openliberty.mcp.internal.fat.utils.McpClient.StateMode;
 
 /**
  *
@@ -41,7 +41,7 @@ public class AdminsRoleAllowedTestsStateless extends AbstractRolesAllowed {
     Logger logger = Logger.getLogger(AdminsRoleAllowedTestsStateless.class.getName());
 
     @Rule
-    public McpClient client = new McpClient(server, "/adminsRoleToolsStateless", Mode.STATELESS);
+    public McpClient client = new McpClient(server, "/adminsRoleToolsStateless", StateMode.STATELESS);
 
     /** {@inheritDoc} */
     @Override

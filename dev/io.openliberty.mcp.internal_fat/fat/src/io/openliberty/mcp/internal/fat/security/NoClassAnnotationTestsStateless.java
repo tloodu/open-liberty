@@ -28,7 +28,7 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.topology.impl.LibertyServer;
 import io.openliberty.mcp.internal.fat.tool.securityApps.NoClassAnnotationTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
-import io.openliberty.mcp.internal.fat.utils.McpClient.Mode;
+import io.openliberty.mcp.internal.fat.utils.McpClient.StateMode;
 
 /**
  *
@@ -41,7 +41,7 @@ public class NoClassAnnotationTestsStateless extends AbstractNoClassAnnotation {
     Logger logger = Logger.getLogger(NoClassAnnotationTestsStateless.class.getName());
 
     @Rule
-    public McpClient client = new McpClient(server, "/noClassAnnotationToolsStateless", Mode.STATELESS);
+    public McpClient client = new McpClient(server, "/noClassAnnotationToolsStateless", StateMode.STATELESS);
 
     /** {@inheritDoc} */
     @Override
