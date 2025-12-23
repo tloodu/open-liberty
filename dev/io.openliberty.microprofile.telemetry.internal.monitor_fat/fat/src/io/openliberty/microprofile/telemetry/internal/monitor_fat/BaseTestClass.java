@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 IBM Corporation and others.
+ * Copyright (c) 2024, 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -105,7 +105,7 @@ public abstract class BaseTestClass {
      * @param expectedString String array of expected strings
      */
     protected void matchStringsWithRetries(Supplier<String> metricsOutput, String[] expectedString) throws InterruptedException {
-	matchStringsWithRetries(metricsOutput, expectedString, 5);
+	matchStringsWithRetries(metricsOutput, expectedString, 20);
     }
 
     /**

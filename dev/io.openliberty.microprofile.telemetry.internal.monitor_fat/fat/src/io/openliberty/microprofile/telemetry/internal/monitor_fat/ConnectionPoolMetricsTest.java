@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 IBM Corporation and others.
+ * Copyright (c) 2024, 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -70,6 +70,7 @@ public class ConnectionPoolMetricsTest extends BaseTestClass {
         ShrinkHelper.exportDropinAppToServer(server, testWAR,
                                      DeployOptions.SERVER_ONLY);
 		
+		server.addEnvVar("OTEL_METRIC_EXPORT_INTERVAL", "5000");
 		server.addEnvVar("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
 				"http://" + container.getHost() + ":" + container.getMappedPort(4317));
 		server.startServer();
@@ -106,6 +107,9 @@ public class ConnectionPoolMetricsTest extends BaseTestClass {
     	String connectionPoolStatsDS2Notification = server.waitForStringInTrace("javax\\.management\\.MBeanServerNotification\\[source=JMImplementation:type=MBeanServerDelegate\\]\\[type=JMX\\.mbean\\.registered\\]\\[message=\\]\\[mbeanName=WebSphere:type=ConnectionPoolStats,name=jdbc/exampleDS2\\]");
     	connectionPoolStatsDS2Notification = (connectionPoolStatsDS2Notification != null) ? "Found trace: " + connectionPoolStatsDS2Notification.trim() : "Could not find ConnectionPoolStatsDS2 MBean Registration notification.";
     	Log.info(c, "waitForStringInTrace", connectionPoolStatsDS2Notification);
+
+		// Wait for any metrics to pop up first.
+		matchStringsWithRetries(() -> getContainerCollectorMetrics(container), new String[] {".*"});
 
 		// Allow time for the collector to receive and expose metrics
 		matchStringsWithRetries(() -> getContainerCollectorMetrics(container),
