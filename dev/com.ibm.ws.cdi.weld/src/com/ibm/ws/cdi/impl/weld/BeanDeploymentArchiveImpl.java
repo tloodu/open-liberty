@@ -1159,6 +1159,15 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             out.println("=========== Beginning Introspection of " + getHumanReadableName() + " =================");
 
             out.println("++++ id:" + id + "++++");
+            out.println("++++ scanned:" + scanned + "++++");
+            out.println("++++ hasBeans:" + hasBeans + "++++");
+            out.println("++++ endpointsScanned:" + endpointsScanned + "++++");
+            out.println("++++ isExtension:" + isExtension + "++++");
+            out.println("++++ extensionCanSeeApplicationBDAs:" + extensionCanSeeApplicationBDAs + "++++");
+
+            if (beansXml != null)
+                out.println("++++ beansXml:" + beansXml + "++++");
+            out.println("++++ beanDiscoveryMode:" + beanDiscoveryMode + "++++");
 
             out.println("++++ archiveClassNames ++++");
             if (archiveClassNames != null)
@@ -1172,8 +1181,7 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             if (beanClasses != null)
                 beanClasses.entrySet().stream().forEach(e -> out.println("beanClass: " + e.getKey() + " : " + e.getValue().getName()));
 
-            if (classloader != null)
-                out.println("++++ classloader:" + classloader + "++++");
+            out.println("++++ classloader:" + classloader + " ++++");
 
             out.println("++++ ejbClasses ++++");
             if (ejbClasses != null)
@@ -1191,10 +1199,15 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             if (jeeComponentClasses != null)
                 jeeComponentClasses.stream().forEach(c -> out.println("jeeComponentClasses: " + c.getName()));
 
+            out.println("++++ additionalClasses ++++");
             if (additionalClasses != null)
                 out.println("additionalClasses: " + additionalClasses.stream().collect(Collectors.joining(", ")));
+
+            out.println("++++ additionalBeanDefiningAnnotations ++++");
             if (additionalBeanDefiningAnnotations != null)
                 out.println("additionalBeanDefinngAnnotations: " + additionalBeanDefiningAnnotations.stream().collect(Collectors.joining(", ")));
+
+            out.println("++++ extensionClassNames ++++");
             if (extensionClassNames != null)
                 out.println("extensionClassNames: " + extensionClassNames.stream().collect(Collectors.joining(", ")));
 
@@ -1203,7 +1216,7 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             //not needed out.println("++++ weldServiceRegistry:" + weldServiceRegistry + "++++");
             //moved to top of method. out.println("++++ id:" + id + "++++");
             if (eeModuleDescriptor != null)
-                out.println("++++ eeModuleDescriptor:" + eeModuleDescriptor.toString() + "++++"); //TODO toString isn't enough
+                out.println("++++ eeModuleDescriptor:" + eeModuleDescriptor.toString() + "++++"); //TODO toString isn't enough. We need to
 
             out.println("++++ accessibleBDAs ++++");
             if (accessibleBDAs != null)
@@ -1221,17 +1234,9 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
                 ejbDescriptorMap.entrySet().stream().forEach(e -> out.println("ejbDescriptorMapEntry: " + e.getKey().getName() + " : [" +
                                                                               e.getValue().getClass() + " , " + introsepectorHelperEjbDescritorsToString(e.getValue())));
 
-            out.println("++++ scanned:" + scanned + "++++");
-            out.println("++++ hasBeans:" + hasBeans + "++++");
-            out.println("++++ endpointsScanned:" + endpointsScanned + "++++");
-
             out.println("++++ nonCDIInterceptors ++++");
             if (nonCDIInterceptors != null)
                 nonCDIInterceptors.stream().forEach(e -> out.println("nonCDIInterceptors: " + e.getName()));
-
-            if (beansXml != null)
-                out.println("++++ beansXml:" + beansXml + "++++");
-            out.println("++++ beanDiscoveryMode:" + beanDiscoveryMode + "++++");
 
             out.println("++++ directBeanDefiningAnnotations ++++");
             if (directBeanDefiningAnnotations != null) {
@@ -1242,11 +1247,7 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             if (accessibleBeanDefiningAnnotations != null)
                 accessibleBeanDefiningAnnotations.stream().forEach(e -> out.println("accessibleBeanDefiningAnnotation: " + e));
 
-            out.println("++++ isExtension:" + isExtension + "++++");
-            out.println("++++ extensionCanSeeApplicationBDAs:" + extensionCanSeeApplicationBDAs + "++++");
-
             out.println("++++ injectionTargets ++++");
-
             if (injectionTargets != null)
                 injectionTargets.entrySet().stream().forEach(e -> out.println("injectionTarget: " + e.getKey().getName() + " : " + e.getValue()));
 
@@ -1257,6 +1258,7 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             out.println("=========== Ending Introspection of " + getHumanReadableName() + " =================");
         } catch (Exception e) {
             out.println("While introspecting, caught exception " + e.toString());
+            e.printStackTrace(out);
         } finally {
             out.flush();
         }

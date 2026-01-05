@@ -10,7 +10,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
- package com.ibm.ws.cdi.liberty;
+package com.ibm.ws.cdi.liberty;
 
 import java.io.PrintWriter;
 import java.util.Collection;
@@ -22,7 +22,6 @@ import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Reference;
 
 import com.ibm.ws.cdi.CDIService;
-import com.ibm.ws.cdi.impl.weld.WebSphereCDIDeploymentImpl;
 import com.ibm.ws.cdi.internal.archive.liberty.RuntimeFactory;
 import com.ibm.ws.cdi.internal.interfaces.Application;
 import com.ibm.ws.cdi.internal.interfaces.WebSphereBeanDeploymentArchive;
@@ -68,18 +67,24 @@ public class CDIIntrospector implements Introspector {
                     WebSphereCDIDeployment deployment = deploymentOptional.get();
                     deployment.getApplicationBDAs();
 
-                    Collection<WebSphereBeanDeploymentArchive> BDAs = deployment.getWebSphereBeanDeploymentArchives();
+                    Collection<WebSphereBeanDeploymentArchive> bdas = deployment.getWebSphereBeanDeploymentArchives();
 
-                    for (WebSphereBeanDeploymentArchive BDA : BDAs) {
-                        BDA.introspect(out);
+                    for (WebSphereBeanDeploymentArchive bda : bdas) {
+                        bda.introspect(out);
                     }
 
-                    if (deployment instanceof WebSphereCDIDeploymentImpl) {
-                        WebSphereCDIDeploymentImpl deploymentImpl = (WebSphereCDIDeploymentImpl) deployment;
-                        for (WebSphereBeanDeploymentArchive BDA : deploymentImpl.getExtensionBDAs()) {
-                            BDA.introspect(out);
-                        }
-                    }
+                    //Every getExtensionBDAs was copied into that map from the deploymentBDAs we went introspected above
+                    //there is no need to call this separately.
+                    /*
+                     * if (deployment instanceof WebSphereCDIDeploymentImpl) {
+                     * WebSphereCDIDeploymentImpl deploymentImpl = (WebSphereCDIDeploymentImpl) deployment;
+                     * for (WebSphereBeanDeploymentArchive bda : deploymentImpl.getExtensionBDAs()) {
+                     * bda.introspect(out);
+                     * }
+                     * }
+                     */
+                } else {
+                    out.println("This application had no associated Deployment");
                 }
 
                 out.println("************** End introspection of Application: " + application.getName() + " *******************");
