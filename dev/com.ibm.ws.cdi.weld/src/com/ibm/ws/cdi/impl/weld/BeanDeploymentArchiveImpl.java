@@ -1214,9 +1214,8 @@ public class BeanDeploymentArchiveImpl implements WebSphereBeanDeploymentArchive
             //not needed spiExtensionSuppliers
 
             //not needed out.println("++++ weldServiceRegistry:" + weldServiceRegistry + "++++");
-            //moved to top of method. out.println("++++ id:" + id + "++++");
             if (eeModuleDescriptor != null)
-                out.println("++++ eeModuleDescriptor:" + eeModuleDescriptor.toString() + "++++"); //TODO toString isn't enough. We need to
+                out.println("++++ eeModuleDescriptor:" + eeModuleDescriptor.toString() + "++++");
 
             out.println("++++ accessibleBDAs ++++");
             if (accessibleBDAs != null)

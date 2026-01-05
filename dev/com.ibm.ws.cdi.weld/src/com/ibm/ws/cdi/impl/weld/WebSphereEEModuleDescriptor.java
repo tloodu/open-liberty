@@ -81,4 +81,12 @@ public class WebSphereEEModuleDescriptor extends EEModuleDescriptorImpl {
     public J2EEName getJ2eeName() {
         return j2eeName;
     }
+
+    @Override
+    public String toString() {
+        String j2eeName = getJ2eeName() != null ? getJ2eeName().toString() : "null";
+        ModuleType type = getType();
+
+        return ("WebSphereEEModuleDescriptor. Id: " + this.getId() + " J2EEName: " + j2eeName + " type: " + type.toString());
+    }
 }
