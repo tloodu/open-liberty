@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -9,6 +9,7 @@
  *******************************************************************************/
 package io.openliberty.microprofile.health.file.healthcheck.fat;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -146,14 +147,15 @@ public class LongIntervalHealthCheckTest {
         Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "First `run` entry trace: " + traceEntryStartofFirstStartCheck);
 
         //We only care about time
-        DateTimeFormatter justTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss:SSS");
+        DateTimeFormatter timeFormatterHH = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
+        //Expect to see something like this (ISO date format) : 2026-01-06T22:02:43.886+0300
         String dateTimeString = traceEntryStartofFirstStartCheck.split("]")[0].substring(1);
         Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "Debug: first `run` trace's timestamp : " + dateTimeString);
 
         String time = resolveTime(dateTimeString);
 
-        LocalTime timeOfFirstQuery = LocalTime.parse(time, justTimeFormatter);
+        LocalTime timeOfFirstQuery = LocalTime.parse(time, timeFormatterHH);
 
         /*
          * Find the second `run` entry trace
@@ -166,7 +168,7 @@ public class LongIntervalHealthCheckTest {
 
         String time2 = resolveTime(dateTimeString);
 
-        LocalTime timeOfSecondQuery = LocalTime.parse(time2, justTimeFormatter);
+        LocalTime timeOfSecondQuery = LocalTime.parse(time2, timeFormatterHH);
 
         /*
          * Time to calculate the difference.
@@ -196,21 +198,20 @@ public class LongIntervalHealthCheckTest {
 
     }
 
+    /*
+     * trace date time should be in ISO:
+     * e.g. 2026-01-06T22:02:43.886+0300
+     */
     String resolveTime(String traceEntryDateTimeStamp) {
-        String split[] = traceEntryDateTimeStamp.split(" ");
-        String time = null;
+        String dateTime[] = traceEntryDateTimeStamp.split("T");
+        assertEquals("Should be split into two parts (split by the `T`), the date and time", 2, dateTime.length);
 
-        if (split.length == 3) {
-            time = split[1];
-        } else {
-            for (String s : split) {
-                if (s.matches("\\d{2}:\\d{2}:\\d{2}:\\d{3}")) {
-                    time = s;
-                }
-            }
-        }
+        //ignore zone offset
+        String time = dateTime[1].split("[+-]")[0];
+
         //time can't be null;
         assertNotNull("Unable to resolve time, the time stamp is: " + traceEntryDateTimeStamp, time);
+
         Log.info(getClass(), "resolveTime", "Debug: the resolved time is: " + time);
         return time;
     }
