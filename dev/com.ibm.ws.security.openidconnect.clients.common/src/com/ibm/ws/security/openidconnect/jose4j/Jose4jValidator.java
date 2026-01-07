@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -14,6 +14,7 @@ package com.ibm.ws.security.openidconnect.jose4j;
 
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -54,15 +55,16 @@ public class Jose4jValidator {
     //need these for verification of token
     private String clientId = null;
     private String issuers = null;
-    private String signingAlgorithm = "none";
+    private final String[] signingAlgorithm;
     private final Key key;
     private long clockSkewInSeconds = 0;
     boolean rpSpecifiedSigningAlgorithm = true;
+    boolean rpAndJwtSpecifiedNoneAlgorithm = false;
     OidcClientRequest oidcClientRequest = null;
 
     public Jose4jValidator(Key key, long clockSkewInSeconds,
             String issuers, String clientId,
-            String signatureAlgorithm,
+            String[] signatureAlgorithm,
             OidcClientRequest oidcClientRequest) {
         this.key = key;
         this.clockSkewInSeconds = clockSkewInSeconds;
@@ -181,7 +183,7 @@ public class Jose4jValidator {
         if (audiences.isEmpty()) { // no audience claim in jwtClaims
             builder.setSkipDefaultAudienceValidation();
         }
-        if (!rpSpecifiedSigningAlgorithm) { // allow signatureAlgorithme as none
+        if (rpAndJwtSpecifiedNoneAlgorithm) { // JWT signature algorithm is "none"
             builder.setDisableRequireSignature()
                     .setSkipSignatureVerification(); // Once the alg is specified as none, we trust any JWT. Do not check the signature
         } else {
@@ -196,7 +198,7 @@ public class Jose4jValidator {
 
             jwtClaims = validatedJwtContext.getJwtClaims();
         } catch (InvalidJwtSignatureException e) {
-            Object[] objs = new Object[] { this.clientId, e.getLocalizedMessage(), this.signingAlgorithm };
+            Object[] objs = new Object[] { this.clientId, e.getLocalizedMessage(), Arrays.toString(this.signingAlgorithm) };
             oidcClientRequest.errorCommon(new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR",
                     "OIDC_JWT_SIGNATURE_VERIFY_ERR" }, objs); // 219214
 
@@ -320,8 +322,8 @@ public class Jose4jValidator {
 
         JwtConsumerBuilder builder = new JwtConsumerBuilder();
         builder.setSkipAllDefaultValidators();
-        if (!rpSpecifiedSigningAlgorithm) {
-            // Signature algorithm is set to "none"; don't check the signature
+        if (rpAndJwtSpecifiedNoneAlgorithm) {
+            // JWT signature algorithm is "none"; don't check the signature
             builder.setDisableRequireSignature()
                     .setSkipSignatureVerification();
         } else {
@@ -335,7 +337,7 @@ public class Jose4jValidator {
             JwtContext validatedJwtContext = jwtConsumer.process(jwtString);
             return validatedJwtContext.getJwtClaims();
         } catch (InvalidJwtSignatureException e) {
-            Object[] objs = new Object[] { this.clientId, e.getLocalizedMessage(), this.signingAlgorithm };
+            Object[] objs = new Object[] { this.clientId, e.getLocalizedMessage(), Arrays.toString(this.signingAlgorithm) };
             if (oidcClientRequest != null) {
                 oidcClientRequest.errorCommon(new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR",
                         "OIDC_JWT_SIGNATURE_VERIFY_ERR" }, objs); // 219214
@@ -407,11 +409,20 @@ public class Jose4jValidator {
         if (tc.isDebugEnabled()) {
             Tr.debug(tc, "Signing Algorithm from header: " + algHeader);
         }
-        rpSpecifiedSigningAlgorithm = !this.signingAlgorithm.equals(Constants.SIG_ALG_NONE);
-        if (rpSpecifiedSigningAlgorithm) {
-            // if algorithm is not NONE, then check the signature of jwt first
+        
+        for (String configuredAlg : this.signingAlgorithm) {
+            if (Constants.SIG_ALG_NONE.equals(configuredAlg)) {
+                rpSpecifiedSigningAlgorithm = false;
+                break;
+            }
+        }
+        
+        rpAndJwtSpecifiedNoneAlgorithm = !rpSpecifiedSigningAlgorithm && Constants.SIG_ALG_NONE.equals(algHeader);
+        
+        if (!rpAndJwtSpecifiedNoneAlgorithm) {
+            // JWT's algorithm is not "none", so check the signature
             if (signature.getEncodedSignature().isEmpty()) {
-                Object[] objects = new Object[] { this.clientId, this.signingAlgorithm };
+                Object[] objects = new Object[] { this.clientId, Arrays.toString(this.signingAlgorithm) };
                 if (oidcClientRequest != null) {
                     throw oidcClientRequest.errorCommon(true, tc, new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_MISSING_SIGNATURE_ERR",
                             "OIDC_JWT_SIGNATURE_VERIFY_MISSING_SIGNATURE_ERR" }, objects);
@@ -421,18 +432,24 @@ public class Jose4jValidator {
                     throw new JWTTokenValidationFailedException(errorMsg);
                 }
             }
-
-            // Doing the same thing as old jwt
-            if (!(this.signingAlgorithm.equals(algHeader))) {
-                Object[] objects = new Object[] { this.clientId, this.signingAlgorithm, algHeader };
-                if (oidcClientRequest != null) {
-                    throw oidcClientRequest.errorCommon(true, tc, new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR_ALG_MISMATCH",
-                            "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH" }, objects);
-                } else {
-                    String errorMsg = Tr.formatMessage(tc, "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH", objects);
-                    Tr.error(tc, errorMsg);
-                    throw new JWTTokenValidationFailedException(errorMsg);
-                }
+        }
+        
+        boolean algMatches = false;
+        for (String configuredAlg : this.signingAlgorithm) {
+            if (configuredAlg.equals(algHeader)) {
+                algMatches = true;
+                break;
+            }
+        }
+        if (!algMatches) {
+            Object[] objects = new Object[] { this.clientId, Arrays.toString(this.signingAlgorithm), algHeader };
+            if (oidcClientRequest != null) {
+                throw oidcClientRequest.errorCommon(true, tc, new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR_ALG_MISMATCH",
+                        "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH" }, objects);
+            } else {
+                String errorMsg = Tr.formatMessage(tc, "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH", objects);
+                Tr.error(tc, errorMsg);
+                throw new JWTTokenValidationFailedException(errorMsg);
             }
         }
     }

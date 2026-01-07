@@ -16,8 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.Key;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -349,13 +349,12 @@ public class Jose4jUtil {
             JsonWebStructure jsonStruct = JwtParsingUtils.getJsonWebStructureFromJwtContext(jwtContext);
 
             Key key = getSignatureVerificationKeyFromJsonWebStructure(jsonStruct, clientConfig, oidcClientRequest);
-            String tokenAlg = jsonStruct.getAlgorithmHeaderValue();
 
             Jose4jValidator validator = new Jose4jValidator(key,
                     clientConfig.getClockSkewInSeconds(),
                     OIDCClientAuthenticatorUtil.getIssuerIdentifier(clientConfig),
                     clientConfig.getClientId(),
-                    tokenAlg,
+                    clientConfig.getSignatureAlgorithm(),
                     oidcClientRequest);
 
             return validator.parseJwtWithValidation(jwtString, jwtContext, (JsonWebSignature) jsonStruct);
@@ -367,30 +366,25 @@ public class Jose4jUtil {
         }
     }
 
-    private void validateTokenAlgorithm(String tokenAlg, String[] configuredAlgorithms, 
-        ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) 
-        throws JWTTokenValidationFailedException {
-    
-        if (configuredAlgorithms == null || configuredAlgorithms.length == 0) {
-            return;
-        }
-        
+    private void validateTokenAlgorithm(String tokenAlg, String[] configuredAlgorithms,
+            ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest)
+            throws JWTTokenValidationFailedException {
+
         if (tokenAlg == null || tokenAlg.isEmpty()) {
             Object[] objs = new Object[] { clientConfig.getClientId(), Arrays.toString(configuredAlgorithms) };
             throw oidcClientRequest.error(true, tc, "JWT_MISSING_ALG_HEADER", objs);
         }
-        
+
         for (String configuredAlg : configuredAlgorithms) {
             if (configuredAlg != null && configuredAlg.equals(tokenAlg)) {
                 return;
             }
         }
-        
+
         // No match - algorithm not allowed
         Object[] objs = new Object[] { clientConfig.getClientId(), tokenAlg, Arrays.toString(configuredAlgorithms) };
         throw oidcClientRequest.error(true, tc, "JWT_ALGORITHM_MISMATCH", objs);
     }
-
 
     @FFDCIgnore({ Exception.class })
     public Key getSignatureVerificationKeyFromJsonWebStructure(JsonWebStructure jsonStruct, ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) throws JWTTokenValidationFailedException {
@@ -580,15 +574,13 @@ public class Jose4jUtil {
 
     public JwtClaims validateJwsSignature(JwtContext jwtContext, ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) throws Exception {
         JsonWebStructure jwStructure = JwtParsingUtils.getJsonWebStructureFromJwtContext(jwtContext);
-        String tokenAlg = jwStructure.getAlgorithmHeaderValue();
         Key key = getSignatureVerificationKeyFromJsonWebStructure(jwStructure, clientConfig, oidcClientRequest);
 
-        Jose4jValidator validator = new Jose4jValidator(key, 0L, null, clientConfig.getClientId(), 
-            tokenAlg, oidcClientRequest);
-        
+        Jose4jValidator validator = new Jose4jValidator(key, 0L, null, clientConfig.getClientId(),
+                clientConfig.getSignatureAlgorithm(), oidcClientRequest);
+
         return validator.validateJwsSignature((JsonWebSignature) jwStructure, jwtContext.getJwt());
     }
-
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
 
