@@ -14,7 +14,6 @@ package test.jakarta.data.web;
 
 import static componenttest.annotation.SkipIfSysProp.DB_Oracle;
 import static componenttest.annotation.SkipIfSysProp.DB_Postgres;
-import static componenttest.annotation.SkipIfSysProp.DB_SQLServer;
 import static jakarta.data.repository.By.ID;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -2624,10 +2623,6 @@ public class DataTestServlet extends FATServlet {
      * Tests repository insert methods.
      */
     @AllowedFFDC("jakarta.data.exceptions.EntityExistsException")
-    @SkipIfSysProp({
-                     DB_Postgres, //Failing on Postgres due to eclipselink issue:  https://github.com/OpenLiberty/open-liberty/issues/28380
-                     DB_SQLServer //Failing on SQLServer due to eclipselink issue: https://github.com/OpenLiberty/open-liberty/issues/28737
-    })
     @Test
     public void testInsert() throws Exception {
         people.deleteBySSN_IdBetween(0L, 999999999L);
@@ -2733,10 +2728,6 @@ public class DataTestServlet extends FATServlet {
      * Insert and delete multiple entities.
      */
     // @AllowedFFDC("jakarta.data.exceptions.EntityExistsException")
-    @SkipIfSysProp({
-                     DB_Postgres, //Failing on Postgres due to eclipselink issue:  https://github.com/OpenLiberty/open-liberty/issues/28380
-                     DB_SQLServer //Failing on SQLServer due to eclipselink issue: https://github.com/OpenLiberty/open-liberty/issues/28737
-    })
     @Test
     public void testInsertAndDeleteMultiple() throws Exception {
         people.deleteBySSN_IdBetween(0L, 999999999L);
