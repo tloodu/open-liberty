@@ -101,10 +101,11 @@ public class MpConfigProperties extends HashMap<String, String> {
             // values
             return signatureAlgorithm;
         }
-        return getSignatureAlgorithmFromMpConfigProps();
+        String mpConfigSigAlg = getSignatureAlgorithmFromMpConfigProps();
+        return new String[] { mpConfigSigAlg };
     }
 
-    String[] getSignatureAlgorithmFromMpConfigProps() {
+    String getSignatureAlgorithmFromMpConfigProps() {
         String defaultAlg = "RS256";
         String publicKeyAlgMpConfigProp = get(PUBLIC_KEY_ALG);
         if (publicKeyAlgMpConfigProp == null) {
@@ -112,43 +113,22 @@ public class MpConfigProperties extends HashMap<String, String> {
                 Tr.debug(tc,
                         "Didn't find " + PUBLIC_KEY_ALG + " property in MP Config props; defaulting to " + defaultAlg);
             }
-            return new String[] { defaultAlg };
+            return defaultAlg;
         }
-        String[] mpConfigAlgorithms = parseAlgorithms(publicKeyAlgMpConfigProp);
 
-        if (!isSupportedSignatureAlgorithm(mpConfigAlgorithms)) {
+        if (!isSupportedSignatureAlgorithm(publicKeyAlgMpConfigProp)) {
             Tr.warning(tc, "MP_CONFIG_PUBLIC_KEY_ALG_NOT_SUPPORTED",
                     new Object[] { publicKeyAlgMpConfigProp, defaultAlg, getSupportedSignatureAlgorithms() });
-            return new String[] { defaultAlg };
+            return defaultAlg;
         }
-        return mpConfigAlgorithms;
+        return publicKeyAlgMpConfigProp;
     }
 
-    private String[] parseAlgorithms(String algorithmsString) {   
-        String[] splitAlgorithms = algorithmsString.split(",");
-        List<String> algorithms = new ArrayList<>();
-        
-        for (String rawAlgorithm : splitAlgorithms) {
-            String trimmed = rawAlgorithm.trim();
-            if (!trimmed.isEmpty()) {
-                algorithms.add(trimmed);
-            }
-        }
-        
-        return algorithms.toArray(new String[0]);
-    }
-
-    private boolean isSupportedSignatureAlgorithm(String[] mpConfigAlgorithms) {
-        if (mpConfigAlgorithms == null || mpConfigAlgorithms.length == 0) {
+    private boolean isSupportedSignatureAlgorithm(String sigAlg) {
+        if (sigAlg == null) {
             return false;
         }
-        List<String> supportedAlgorithms = getSupportedSignatureAlgorithms();
-        for (String alg : mpConfigAlgorithms) {
-            if (!supportedAlgorithms.contains(alg)) {
-                return false;
-            }
-        }
-        return true;
+        return getSupportedSignatureAlgorithms().contains(sigAlg);
     }
 
     private List<String> getSupportedSignatureAlgorithms() {
