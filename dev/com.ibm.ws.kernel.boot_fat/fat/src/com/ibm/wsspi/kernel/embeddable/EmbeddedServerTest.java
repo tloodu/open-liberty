@@ -1,10 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2019 IBM Corporation and others.
+ * Copyright (c) 2013, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -12,22 +12,21 @@
  *******************************************************************************/
 package com.ibm.wsspi.kernel.embeddable;
 
+import static componenttest.topology.utils.FileUtils.copyDirectory;
+import static componenttest.topology.utils.FileUtils.copyFile;
+import static componenttest.topology.utils.FileUtils.recursiveDelete;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.channels.FileChannel;
 import java.util.List;
 
+import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -38,6 +37,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.model.Statement;
 
 import com.ibm.websphere.simplicity.OperatingSystem;
+import com.ibm.websphere.simplicity.ShrinkHelper;
 import com.ibm.websphere.simplicity.log.Log;
 
 import componenttest.custom.junit.runner.FATRunner;
@@ -49,6 +49,8 @@ import junit.framework.AssertionFailedError;
 public class EmbeddedServerTest {
 
     static final Class<?> c = EmbeddedServerTest.class;
+    static final String SIMPLE_APP_WAR_NAME = "simpleApp";
+    static WebArchive simpleAppWar;
 
     static LibertyServer ls = null;
     static Object driver = null;
@@ -72,11 +74,19 @@ public class EmbeddedServerTest {
                 public void evaluate() throws Throwable {
                     try {
                         testName = desc.getMethodName();
-                        embeddedServerTestHelper(testName);
+                        Object[] args = getArgs(testName);
+                        embeddedServerTestHelper(testName, args);
                         stmt.evaluate();
                     } finally {
                         testName = null;
                     }
+                }
+
+                private Object[] getArgs(String testName) {
+                    if (testName.equals("testBootstrapAccess")) {
+                        return new Object[] { ls.getHostname(), ls.getHttpDefaultPort() };
+                    }
+                    return new Object[0];
                 }
             };
         }
@@ -113,9 +123,9 @@ public class EmbeddedServerTest {
         destDir.mkdirs();
         copyDirectory(srcDir, destDir);
 
-        File dest_TestPorts = new File(destDir, "/../testports.properties");
-        File src_TestPorts = new File(srcDir, "/../testports.properties");
-        copyFile(src_TestPorts, dest_TestPorts);
+        copyConfigFile("/../testports.properties", srcDir, destDir);
+        copyConfigFile("/../fatTestPorts.xml", srcDir, destDir);
+        copyConfigFile("/../fatTestCommon.xml", srcDir, destDir);
         // END PI20344
 
         Log.info(c, METHOD_NAME, "wsServerBundle: " + wsServerBundle.getAbsolutePath());
@@ -133,7 +143,7 @@ public class EmbeddedServerTest {
 
                 result = findLoadedClass(name);
 
-                if (result == null && name != null) {
+                if (result == null && name != null && !name.startsWith("com.ibm.ws.kernel.testapp.")) {
                     try {
                         // Try to load the class from the child classpath first...
                         result = findClass(name);
@@ -149,6 +159,16 @@ public class EmbeddedServerTest {
         driverClazz = classloader.loadClass("com.ibm.wsspi.kernel.embeddable.EmbeddedServerDriver");
         Constructor<?> dCTOR = driverClazz.getConstructor(String.class, String.class, String.class);
         driver = dCTOR.newInstance(serverName, userDir, outputDir);
+
+        simpleAppWar = ShrinkHelper.buildDefaultApp(SIMPLE_APP_WAR_NAME + ".war",
+                                                    com.ibm.ws.kernel.testapp.bootstrap.access.BootStrapAccess.class.getPackage().getName());
+        ShrinkHelper.exportArtifact(simpleAppWar, destDir.getAbsolutePath() + "/dropins", false, true);
+    }
+
+    private static void copyConfigFile(String name, File srcDir, File destDir) throws IOException {
+        File dest_config = new File(destDir, name);
+        File src_config = new File(srcDir, name);
+        copyFile(src_config, dest_config);
     }
 
     @AfterClass
@@ -164,6 +184,7 @@ public class EmbeddedServerTest {
 
         File srcDir = new File(ls.getUserDir() + "/../NonDefaultUser");
         copyDirectory(srcDir, outputAutoFVTDirectory.getAbsoluteFile());
+        recursiveDelete(srcDir);
     }
 
     @Test
@@ -198,20 +219,24 @@ public class EmbeddedServerTest {
     public void testServerDoesNotExist() throws Throwable {
     }
 
-    private static void embeddedServerTestHelper(final String REMOTE_METHOD_NAME) throws Throwable {
-        final String METHOD_NAME = "testEmbeddedServer";
+    @Test
+    public void testBootstrapAccess() throws Throwable {
+    }
+
+    private static void embeddedServerTestHelper(final String REMOTE_METHOD_NAME, Object... args) throws Throwable {
+        final String METHOD_NAME = "embeddedServerTestHelper";
         Log.info(c, METHOD_NAME, "Preparing to run: " + REMOTE_METHOD_NAME);
 
         Method testMethod = driverClazz.getDeclaredMethod(REMOTE_METHOD_NAME);
 
-        Method initMethod = driverClazz.getDeclaredMethod("init", new Class[] { String.class });
+        Method initMethod = driverClazz.getDeclaredMethod("init", new Class[] { String.class, Object[].class });
 
         Method tearDownMethod = driverClazz.getDeclaredMethod("tearDown");
 
         Method getFailuresMethod = driverClazz.getDeclaredMethod("getFailures");
 
         try {
-            initMethod.invoke(driver, new Object[] { REMOTE_METHOD_NAME });
+            initMethod.invoke(driver, new Object[] { REMOTE_METHOD_NAME, args });
             testMethod.invoke(driver);
             tearDownMethod.invoke(driver);
 
@@ -227,57 +252,4 @@ public class EmbeddedServerTest {
         }
     }
 
-    private static void copyFile(File fromFile, File toFile) throws IOException {
-        // Open the source file
-        FileInputStream fis = new FileInputStream(fromFile);
-        try {
-            // Open the destination file
-            File destDir = toFile.getParentFile();
-            if (!destDir.exists() && !destDir.mkdirs()) {
-                throw new IOException("Failed to create path: " + destDir.getAbsolutePath());
-            }
-
-            System.out.println("Copying file from: " + fromFile.getAbsolutePath());
-            System.out.println("Copying file to:   " + toFile.getAbsolutePath());
-
-            FileOutputStream fos = new FileOutputStream(toFile);
-
-            // Perform the transfer using nio channels; this is simpler, and usually
-            // faster, than copying the file a chunk at a time
-            try {
-                FileChannel inChan = fis.getChannel();
-                FileChannel outChan = fos.getChannel();
-                inChan.transferTo(0, inChan.size(), outChan);
-            } finally {
-                fos.close();
-            }
-        } finally {
-            fis.close();
-        }
-    }
-
-    public static void copyDirectory(File source, File target) throws IOException {
-        if (source.isDirectory()) {
-            if (!target.exists()) {
-                target.mkdir();
-            }
-
-            String[] children = source.list();
-            for (int i = 0; i < children.length; i++) {
-                copyDirectory(new File(source, children[i]),
-                              new File(target, children[i]));
-            }
-        } else {
-            InputStream in = new FileInputStream(source);
-            OutputStream out = new FileOutputStream(target);
-
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
-            in.close();
-            out.close();
-        }
-    }
 }

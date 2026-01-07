@@ -1,10 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2019 IBM Corporation and others.
+ * Copyright (c) 2013, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -12,12 +12,20 @@
  *******************************************************************************/
 package com.ibm.wsspi.kernel.embeddable;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
@@ -48,6 +56,7 @@ public class EmbeddedServerDriver implements ServerEventListener {
     private CountDownLatch startedEventOccurred;
     private CountDownLatch stoppedEventOccurred;
     private CountDownLatch failedEventOccurred;
+    private Object[] args;
 
     private String serverName = null;
     private String userDir = null;
@@ -77,7 +86,7 @@ public class EmbeddedServerDriver implements ServerEventListener {
         this.props3.setProperty("com.ibm.websphere.productInstall", "wlp/usr/servers/com.ibm.wsspi.kernel.embeddable.add.product.extension.multiple.fat/producttest");
     }
 
-    public void init(String CURRENT_METHOD_NAME) throws UnsupportedEncodingException {
+    public void init(String CURRENT_METHOD_NAME, Object... args) throws UnsupportedEncodingException {
         this.CURRENT_METHOD_NAME = CURRENT_METHOD_NAME;
 
         Log.info(c, "init", "Setting up for " + this.CURRENT_METHOD_NAME);
@@ -86,6 +95,7 @@ public class EmbeddedServerDriver implements ServerEventListener {
         startedEventOccurred = new CountDownLatch(1);
         stoppedEventOccurred = new CountDownLatch(1);
         failedEventOccurred = new CountDownLatch(1);
+        this.args = args;
 
         failures = new ArrayList<AssertionFailedError>();
 
@@ -114,7 +124,7 @@ public class EmbeddedServerDriver implements ServerEventListener {
     }
 
     public void tearDown() {
-        Log.info(c, "init", "Cleaning up after " + this.CURRENT_METHOD_NAME);
+        Log.info(c, "tearDown", "Cleaning up after " + this.CURRENT_METHOD_NAME);
 
         if (server != null) {
             Future<Result> stopFuture = server.stop();
@@ -182,6 +192,58 @@ public class EmbeddedServerDriver implements ServerEventListener {
         }
     }
 
+    public void testBootstrapAccess() {
+        PrintStream originalSysOut = System.out;
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            System.setOut(new PrintStream(baos, true, "UTF-8"));
+            coldStartServer(Collections.singletonMap("io.openliberty.classloading.app.parent", "PLATFORM"));
+            verifyServerEvent("\"STARTING\" ServerEvent should have fired", startingEventOccurred);
+            verifyServerEvent("\"STARTED\" ServerEvent should have fired", startedEventOccurred);
+
+            String serverConsoleOutput = new String(baos.toByteArray(), "UTF-8");
+            Log.info(c, "testStartingAStoppedServer", "consoleOutput = " + serverConsoleOutput);
+            try {
+                Pattern p = Pattern.compile(".*CWWKZ0001I:.*simpleApp.*", Pattern.DOTALL);
+                Assert.assertTrue("No indication that application started", p.matcher(serverConsoleOutput).matches());
+            } catch (Throwable t) {
+                failures.add(new AssertionFailedError("Exception occurred while searching for app started message in logs - " + t));
+                Log.error(c, CURRENT_METHOD_NAME, t);
+            }
+
+            checkBootstrapAccess(this.getClass().getName(), true);
+            checkBootstrapAccess(String.class.getName(), false);
+
+            stopRunningServer();
+        } catch (IOException e) {
+            Assert.assertEquals("Unexpected exception", null, e);
+        } finally {
+            System.setOut(originalSysOut);
+        }
+    }
+
+    private void checkBootstrapAccess(String className, boolean expectFailure) throws IOException {
+        final String m = "checkBootstrapAccess";
+        URL url = new URL("http://" + args[0] + ":" + args[1] + "/simpleApp/bootstrapAccess?classname=" + className + "&expectFailure=" + expectFailure);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        Log.info(c, m, "HTTP response: " + con.getResponseCode());
+
+        InputStream in = con.getInputStream();
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+
+            for (String line; (line = reader.readLine()) != null;) {
+                Log.info(c, m, "Output: " + line);
+            }
+        } finally {
+            try {
+                in.close();
+            } catch (IOException e) {
+                Log.error(c, m, e);
+            }
+        }
+    }
+
     public void testAddProductExtension() {
         PrintStream originalSysOut = System.out;
         try {
@@ -239,7 +301,7 @@ public class EmbeddedServerDriver implements ServerEventListener {
     /**
      * Determine if the input product extension exists in the input string.
      *
-     * @param inputString string to search.
+     * @param inputString      string to search.
      * @param productExtension product extension to search for.
      * @return true if input product extension is found in the input string.
      */
@@ -559,7 +621,11 @@ public class EmbeddedServerDriver implements ServerEventListener {
     }
 
     private void coldStartServer() {
-        Future<Result> startFuture = server.start(new String[] { "--clean" });
+        coldStartServer(null);
+    }
+
+    private void coldStartServer(Map<String, String> props) {
+        Future<Result> startFuture = props == null ? server.start(new String[] { "--clean" }) : server.start(props, new String[] { "--clean" });
 
         try {
             result = startFuture.get(SERVER_START_TIMEOUT, SERVER_START_TIMEOUT_UNIT);
