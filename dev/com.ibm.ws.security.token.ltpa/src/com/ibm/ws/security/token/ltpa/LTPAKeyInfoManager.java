@@ -12,6 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.security.token.ltpa;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.OffsetDateTime;
@@ -219,8 +220,18 @@ public class LTPAKeyInfoManager {
         //Check to see if the LTPA key import file exists, create the keys and file if not
         WsResource ltpaKeyFileResource = getLTPAKeyFileResource(locService, keyImportFile);
 
-        try {
-            props = loadPropertiesFile(ltpaKeyFileResource);
+        if (ltpaKeyFileResource != null) {
+            try {
+                props = loadPropertiesFile(ltpaKeyFileResource);
+            } catch (FileNotFoundException e) {
+                if (validationKey) {
+                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
+                        Tr.error(tc, "LTPA_KEYS_FILE_DOES_NOT_EXIST", keyImportFile);
+                    return;
+                } else {
+                    props = createPrimaryKeyFile(locService, keyImportFile, keyPassword);
+                }
+            }
             String version = props.getProperty(LTPAKeyFileUtility.LTPA_VERSION_PROPERTY);
             if (tc.isDebugEnabled()) {
                 Tr.debug(this, tc, "LTPA key version: " + version);
