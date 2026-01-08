@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
+import com.ibm.ws.kernel.service.util.ServiceCaller;
 
 import io.openliberty.mcp.annotations.Tool;
 import io.openliberty.mcp.content.ContentEncoder;
@@ -27,6 +28,7 @@ import io.openliberty.mcp.internal.ToolMetadata.ArgumentMetadata;
 import io.openliberty.mcp.internal.ToolMetadata.SpecialArgumentMetadata;
 import io.openliberty.mcp.internal.encoders.EncoderRegistry;
 import io.openliberty.mcp.internal.exceptions.GenericArgumentException;
+import io.openliberty.mcp.internal.introspection.McpIntrospector;
 import io.openliberty.mcp.internal.requests.BuiltinDefaultValueConverters;
 import io.openliberty.mcp.internal.requests.DefaultValueConverter;
 import io.openliberty.mcp.internal.requests.McpRequestIdDeserializer;
@@ -36,6 +38,8 @@ import io.openliberty.mcp.internal.schemas.TypeUtility;
 import io.openliberty.mcp.internal.tools.BeanMethodHandler.MethodMetadata;
 import io.openliberty.mcp.messaging.Encoder;
 import io.openliberty.mcp.tools.ToolResponseEncoder;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.BeforeDestroyed;
 import jakarta.enterprise.context.spi.CreationalContext;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.spi.AfterDeploymentValidation;
@@ -45,15 +49,19 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.Extension;
 import jakarta.enterprise.inject.spi.ProcessManagedBean;
+import jakarta.inject.Inject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.json.bind.JsonbConfig;
+import jakarta.servlet.ServletContext;
 
 /**
  * Finds tools
  */
 
 public class McpCdiExtension implements Extension {
+    @Inject
+    private ServletContext servletContext;
 
     private static final TraceComponent tc = Tr.register(McpCdiExtension.class);
 
@@ -93,11 +101,29 @@ public class McpCdiExtension implements Extension {
     void afterDeploymentValidation(@Observes AfterDeploymentValidation afterDeploymentValidation, BeanManager manager) {
         registerEncoders(manager);
 
-        boolean error = reportOnDuplicateTools(afterDeploymentValidation) | reportOnToolArgEdgeCases(afterDeploymentValidation) |
-                        reportOnDuplicateSpecialArguments(afterDeploymentValidation) | reportOnInvalidSpecialArguments(afterDeploymentValidation);
+        boolean error = reportOnDuplicateTools(afterDeploymentValidation) |
+                        reportOnToolArgEdgeCases(afterDeploymentValidation) |
+                        reportOnDuplicateSpecialArguments(afterDeploymentValidation) |
+                        reportOnInvalidSpecialArguments(afterDeploymentValidation);
+
         if (error) {
             afterDeploymentValidation.addDeploymentProblem(new Exception(Tr.formatMessage(tc, "CWMCM0005E.validation.error")));
         }
+
+        String appName = servletContext != null ? servletContext.getContextPath() : "unknown-app";
+
+        ServiceCaller.callOnce(McpCdiExtension.class, McpIntrospector.class, introspector -> {
+            introspector.register(appName, tools);
+        });
+    }
+
+    void beforeShutdown(@Observes @BeforeDestroyed(ApplicationScoped.class) Object shutdownEvent) {
+        String appName = System.getProperty("wlp.application.name", "unknown-app");
+
+        ServiceCaller.callOnce(
+                               McpCdiExtension.class,
+                               McpIntrospector.class,
+                               introspector -> introspector.unregister(appName));
     }
 
     void registerEncoders(BeanManager beanManager) {
