@@ -84,7 +84,7 @@ public class BasicAuthenticationMechanismTest extends JavaEESecTestBase {
         /*
          * Wait for the SSL endpoint to start.
          */
-        myServer.waitForStringInLog("CWWKO0219I.*defaultHttpEndpoint-ssl");
+        myServer.waitForSSLStart();
     }
 
     @AfterClass
