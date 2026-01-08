@@ -221,11 +221,6 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
     }
 
     @Override
-    public String getMIMEType() {
-        return HttpUtil.getMimeType(nettyResponse).toString();
-    }
-
-    @Override
     public HttpTrailers getTrailers() {
         return nettyTrailerWrapper;
     }

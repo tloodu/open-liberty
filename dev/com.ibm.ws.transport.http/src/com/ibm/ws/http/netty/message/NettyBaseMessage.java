@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2023, 2025 IBM Corporation and others.
+ * Copyright (c) 2023, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -40,6 +40,7 @@ import com.ibm.ws.http.channel.internal.cookies.CookieCacheData;
 import com.ibm.ws.http.channel.internal.cookies.CookieHeaderByteParser;
 import com.ibm.ws.http.channel.internal.cookies.CookieUtils;
 import com.ibm.ws.http.channel.internal.cookies.SameSiteCookieUtils;
+import com.ibm.wsspi.genericbnf.BNFHeaders;
 import com.ibm.wsspi.genericbnf.HeaderField;
 import com.ibm.wsspi.genericbnf.HeaderKeys;
 import com.ibm.wsspi.genericbnf.exception.UnsupportedProtocolVersionException;
@@ -837,7 +838,10 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public String getMIMEType() {
-        return HttpUtil.getMimeType(message).toString();
+        CharSequence type = HttpUtil.getMimeType(message);
+        if (null == type)
+            return null;
+        return type.toString();
     }
 
     @Override
@@ -847,12 +851,39 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     @Override
     public Charset getCharset() {
-        throw new UnsupportedOperationException("getCharset() not supported in Netty context");
+        return HttpUtil.getCharset(message);
     }
 
     @Override
     public void setCharset(Charset set) {
-        throw new UnsupportedOperationException("setCharset(Charset set) not supported in Netty context");
+        String contentType = getHeader(HttpHeaderKeys.HDR_CONTENT_TYPE).asString();
+        if (null == contentType) {
+            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                Tr.debug(tc, "setCharset: no Content-Type header present");
+            }
+            contentType = "test/html";
+        } else {
+            // Get everything prior to the first semicolon (if any).
+            int length = contentType.length();
+            int end = -1;
+            for (int i = 0; i < length; i++) {
+                // Semi-colon exists, <type>;<charset>
+                if (BNFHeaders.SEMICOLON == contentType.charAt(i)) {
+                    end = i;
+                    break;
+                }
+            }
+            // check to see if the semi-colon was not found (just <type>)
+            if (-1 == end) {
+                end = length;
+            }
+            contentType = contentType.substring(0, end);
+        }
+        StringBuilder buff = new StringBuilder();
+        buff.append(contentType);
+        buff.append(";charset=");
+        buff.append(set.toString());
+        setHeader(HttpHeaderKeys.HDR_CONTENT_TYPE, buff.toString());
     }
 
     @Override
