@@ -83,7 +83,7 @@
             <Option label="%tokenSignAlgorithm.ES512" value="ES512" />
         </AD>
         <AD id="trustStoreRef" name="%trustStoreRef" description="%trustStoreRef.consumer.desc" required="false" type="String" ibmui:uiReference="com.ibm.ws.ssl.keystore" />
-        <AD id="trustedAlias" name="%trustedAliasName" description="%trustedAliasName.desc" required="false" type="String" />
+        <AD id="trustedAlias" name="%trustedAliasName" description="%trustedAliasName.desc" required="false" type="String" cardinality="2147483647"/>
         <AD id="clockSkew" name="%clockSkew" description="%clockSkew.desc" required="false" type="String" default="5m" ibm:type="duration" />
         <AD id="validationRequired" name="internal" description="internal use only"  required="false" type="Boolean" default="true"/>
         <AD id="jwkEnabled" name="%jwkEnabled" description="%jwkEnabled.desc" required="false" type="Boolean" default="false"/>

@@ -30,7 +30,7 @@
             required="false" type="String" default="upn" />    
         <AD id="sslRef" name="%sslRef" description="%sslRef.desc" 
             required="false" type="String" ibmui:uiReference="com.ibm.ws.ssl.repertoire" />
-        <AD id="keyName" name="%trustAliasName" description="%trustAliasName.desc" required="false" type="String" />
+        <AD id="keyName" name="%trustAliasName" description="%trustAliasName.desc" required="false" type="String" cardinality="2147483647"/>
         <AD id="issuer" name="%issuer" description="%issuer.desc" required="false" type="String" />
         <AD id="groupNameAttribute" name="%groupNameAttribute" description="%groupNameAttribute.desc"
             required="false"  type="String" default="groups" />

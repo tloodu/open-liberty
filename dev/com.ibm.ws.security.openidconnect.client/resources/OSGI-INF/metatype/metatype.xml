@@ -26,7 +26,7 @@
          <AD id="mapIdentityToRegistryUser" name="%mapIdentityToRegistryUser" description="%mapIdentityToRegistryUser.desc" required="false" type="Boolean" default="false"/>
          <AD id="oidcclientRequestParameterSupported" name="internal" description="internal use only" required="false" type="Boolean" default="true"/>
          <AD id="trustStoreRef" name="%trustStoreRef" description="%trustStoreRef.desc" required="false" type="String" ibmui:uiReference="com.ibm.ws.ssl.keystore" />
-         <AD id="trustAliasName" name="%trustAliasName" description="%trustAliasName.desc" required="false" type="String" />
+         <AD id="trustAliasName" name="%trustAliasName" description="%trustAliasName.desc" required="false" type="String" cardinality="2147483647"/>
          <AD id="httpsRequired" name="%httpsRequired" description="%httpsRequired.desc" required="true" type="Boolean" default="true"/>
          <AD id="nonceEnabled" name="%nonceEnabled" description="%nonceEnabled.desc" required="false" type="Boolean" default="false"/>
          <AD id="realmName" name="%realmName" description="%realmName.desc" required="false" type="String" />

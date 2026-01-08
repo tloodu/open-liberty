@@ -393,7 +393,7 @@
             required="false" type="String" ibmui:uiReference="com.ibm.ws.ssl.repertoire" />
         <AD id="authFilterRef" name="%authFilterRef" description="%authFilterRef.desc" ibm:type="pid"
              ibm:reference="com.ibm.ws.security.authentication.filter" required="false" type="String"  />
-        <AD id="trustAliasName" name="%trustAliasName" description="%trustAliasName.desc" required="false" type="String" />
+        <AD id="trustAliasName" name="%trustAliasName" description="%trustAliasName.desc" required="false" type="String" cardinality="2147483647"/>
         <AD id="jwt" ibm:type="pid" ibm:reference="com.ibm.ws.security.social.login.jwt"
              required="false" type="String" />
         <AD id="isClientSideRedirectSupported" name="%isClientSideRedirectSupported" description="%isClientSideRedirectSupported.desc"
