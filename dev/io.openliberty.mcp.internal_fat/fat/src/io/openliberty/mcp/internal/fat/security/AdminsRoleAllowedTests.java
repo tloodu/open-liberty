@@ -54,6 +54,7 @@ public class AdminsRoleAllowedTests extends AbstractRolesAllowed {
         ShrinkHelper.exportDropinAppToServer(server, war, SERVER_ONLY);
         server.startServer();
         assertNotNull(server.findStringsInLogs("MCP server endpoint: .*/mcp$")); // regex matches string that ends with /mcp e.g. "MCP server endpoint: http://macbookpro.home:8010/toolTest/mcp"
+        server.waitForStringInLog("CWWKS4105I.*");
     }
 
     @AfterClass
