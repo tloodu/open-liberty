@@ -19,6 +19,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 import componenttest.rules.repeater.EERepeatActions;
 import componenttest.rules.repeater.RepeatTests;
+import io.openliberty.mcp.internal.fat.introspector.IntrospectorTest;
 import io.openliberty.mcp.internal.fat.lifecycle.tests.AsyncToolLifecycleTest;
 import io.openliberty.mcp.internal.fat.lifecycle.tests.BeanLifecycleTest;
 import io.openliberty.mcp.internal.fat.lifecycle.tests.LifecycleTest;
@@ -68,6 +69,7 @@ import io.openliberty.mcp.internal.fat.tool.ToolTest;
                 HttpTest.class,
                 GenericToolTest.class,
                 InactiveCdiTest.class,
+                IntrospectorTest.class,
                 LifecycleTest.class,
                 McpUrlPathTest.class,
                 NonRequiredArgsToolsTest.class,
