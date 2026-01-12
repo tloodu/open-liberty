@@ -285,12 +285,19 @@ public class LTPAKeyRotationTests {
     }
 
     @Before
-    public void moveLogMark() throws Exception {
+    public void before() throws Exception {
         if (!server.isStarted()) {
             server.startServer();
             // Assert that a default ltpa.keys file exists prior to next test case
             assertFileWasCreated(DEFAULT_KEY_PATH);
         }
+        moveLogMark();
+    }
+
+    /**
+     * @throws Exception
+     */
+    private static void moveLogMark() throws Exception {
         server.setMarkToEndOfLog(messagesLogFile);
     }
 
@@ -1398,7 +1405,7 @@ public class LTPAKeyRotationTests {
         assertNotNull("Expected invalid date format exception not found in the log.",
                       server.waitForStringInLog("CWWKS4110E", 5000));
         testSpecificMessages.add("CWWKS4110E");
-        
+
         // Set validUntilDate value to an invalid date string
         configurationUpdateNeeded = setLTPAvalidationKeyValidUntilDateElement(ltpa, "2023-18T18:08:35Z");
         updateConfigDynamically(server, serverConfiguration);
@@ -2232,7 +2239,7 @@ public class LTPAKeyRotationTests {
         assertFileWasCreated(DEFAULT_KEY_PATH);
         server.setKeysAndJVMOptsForFips();
         if (setLogMarkToEnd)
-            server.setMarkToEndOfLog(messagesLogFile);
+            moveLogMark();
     }
 
     // Function to configure the keysFileName to a specific value
@@ -2452,7 +2459,7 @@ public class LTPAKeyRotationTests {
      */
     private static void moveKeyFileIfExists(String filePath, String newFilePath, String fileName, boolean checkFileIsGone) throws Exception {
         Log.info(thisClass, "moveFileIfExists", "\nfilepath: " + filePath + "\nfileName: " + fileName + "\nnewFilePath: " + newFilePath + "\nfileName: " + fileName);
-        server.setMarkToEndOfLog(messagesLogFile);
+        moveLogMark();
         if (absoluteFileExists(filePath + "/" + fileName, 1)) {
             Log.info(thisClass, "moveFileIfExists", "file exists, moving...");
             server.renameFileToAbsolutePathInLibertyServerRootFile(filePath, newFilePath, fileName);
