@@ -314,18 +314,58 @@ public class ConsumerUtil {
 
     Key getKeyForJwkDisabled(JwtConsumerConfig config, JwtContext jwtContext, MpConfigProperties mpConfigProps) throws KeyException {
         Key signingKey = null;
-        String trustedAlias = config.getTrustedAlias();
+        String[] trustedAlias = config.getTrustedAlias();
         String trustStoreRef = config.getTrustStoreRef();
         String tokenAlgorithm = getAlgorithmFromJwtHeader(jwtContext);
+        String tokenKeyId = getKeyIdFromJwtHeader(jwtContext);
+        String matchedAlias = matchKidToAlias(tokenKeyId, trustedAlias);
+
         try {
-            signingKey = getPublicKey(trustedAlias, trustStoreRef,
+            signingKey = getPublicKey(matchedAlias, trustStoreRef,
                     tokenAlgorithm);
         } catch (Exception e) {
             String msg = Tr.formatMessage(tc, "JWT_ERROR_GETTING_PUBLIC_KEY",
-                    new Object[] { trustedAlias, trustStoreRef, e.getLocalizedMessage() });
+                    new Object[] { matchedAlias, trustStoreRef, e.getLocalizedMessage() });
             throw new KeyException(msg, e);
         }
         return signingKey;
+    }
+
+    String matchKidToAlias(String kid, String[] trustedAliases) throws KeyException{
+        // TODO: Handle case where option keyId header from token is null
+        // Then we want to try the xtS256 and x5t headers
+
+        // If trustedAlias is NOT set in the config
+        // TODO: Handle this case by trying all keys in the configured truststore to see which works
+        if (trustedAliases == null || trustedAliases.length == 0) {
+            return null;
+        }
+
+        if (trustedAliases.length == 1) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Only one trustedAlias configured. Using '" + trustedAliases[0]);
+            }
+            return trustedAliases[0];
+        }
+
+        // If trustedAlias is set in the config
+        if (trustedAliases != null && trustedAliases.length > 0) {
+            for (String alias : trustedAliases) {
+            if (kid.equals(alias)){
+                if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Matched kid '" + kid + "' to alias '" + alias + "'");
+                }
+                return alias;
+                }
+            }
+            String msg = Tr.formatMessage(tc, "No matched alias found",
+                new Object[] { kid, Arrays.toString(trustedAliases) });
+            throw new KeyException(msg);
+        }
+        
+        else {
+            return null;
+        }
     }
 
     /**
@@ -900,6 +940,30 @@ public class ConsumerUtil {
             Tr.debug(tc, "JWT is signed with algorithm: ", algHeader);
         }
         return algHeader;
+    }
+
+    String getKeyIdFromJwtHeader(JwtContext jwtContext) {
+        if (jwtContext == null) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "JwtContext is null");
+            }
+            return null;
+        }
+        JsonWebStructure jwtHeader = null;
+        try {
+            jwtHeader = getJwtHeader(jwtContext);
+        } catch (Exception e) {
+            // TODO - NLS message?
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Failed to obtain JWT header");
+            }
+            return null;
+        }
+        String keyIdHeader = jwtHeader.getKeyIdHeaderValue();
+        if (tc.isDebugEnabled()) {
+            Tr.debug(tc, "JWT has key ID: ", keyIdHeader);
+        }
+        return keyIdHeader;
     }
 
     Throwable getRootCause(Exception e) {

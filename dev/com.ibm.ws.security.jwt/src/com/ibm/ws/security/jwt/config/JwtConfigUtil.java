@@ -75,4 +75,13 @@ public class JwtConfigUtil {
         return signatureAlgorithmArray;
     }
 
+    public static String[] getTrustedAliasArray(String configId, Map<String, Object> props, String trustedAliasAttrName) {
+         List<String> trustedAlias = JwtUtils.trimIt((String[]) props.get(trustedAliasAttrName));
+        if (trustedAlias == null) {
+            return null;
+        }
+        String[] trustedAliasArray = trustedAlias.toArray(new String[0]);
+        return trustedAliasArray;
+    }
+
 }

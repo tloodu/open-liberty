@@ -15,6 +15,7 @@ package com.ibm.ws.security.openidconnect.client.jose4j.util;
 import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.Key;
+import java.security.KeyException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -428,12 +429,53 @@ public class Jose4jUtil {
                 JwKRetriever retriever = createJwkRetriever(clientConfig, alg);
                 keyValue = retriever.getPublicKeyFromJwk(kid, x5t, x5tS256, "sig", clientConfig.getUseSystemPropertiesForHttpClientConnections());
             } else {
-                keyValue = clientConfig.getPublicKey();
+                
+                String[] trustAliases = clientConfig.getTrustedAlias();
+                String selectedAlias = matchKidToAlias(kid, trustAliases);
+                
+                keyValue = clientConfig.getPublicKey(selectedAlias);
             }
         } else if (SIGNATURE_ALG_NONE.equals(alg)) {
             keyValue = null;
         }
         return keyValue;
+    }
+
+    String matchKidToAlias(String kid, String[] trustedAliases) throws KeyException{
+        // TODO: Handle case where option keyId header from token is null
+        // Then we want to try the xtS256 and x5t headers
+
+        // If trustedAlias is NOT set in the config
+        // TODO: Handle this case by trying all keys in the configured truststore to see which works
+        if (trustedAliases == null || trustedAliases.length == 0) {
+            return null;
+        }
+
+        if (trustedAliases.length == 1) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Only one trustedAlias configured. Using '" + trustedAliases[0]);
+            }
+            return trustedAliases[0];
+        }
+
+        // If trustedAlias is set in the config
+        if (trustedAliases != null && trustedAliases.length > 0) {
+            for (String alias : trustedAliases) {
+            if (kid.equals(alias)){
+                if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Matched kid '" + kid + "' to alias '" + alias + "'");
+                }
+                return alias;
+                }
+            }
+            String msg = Tr.formatMessage(tc, "No matched alias found",
+                new Object[] { kid, Arrays.toString(trustedAliases) });
+            throw new KeyException(msg);
+        }
+        
+        else {
+            return null;
+        }
     }
 
     public JwKRetriever createJwkRetriever(ConvergedClientConfig oidcClientConfig, String alg) {
