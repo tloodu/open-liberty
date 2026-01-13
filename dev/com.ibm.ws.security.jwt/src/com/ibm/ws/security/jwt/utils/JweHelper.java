@@ -255,7 +255,6 @@ public class JweHelper {
         String keyLocation = mpConfigProps.get(MpConfigProperties.DECRYPT_KEY_LOCATION);
         checkDecryptKeyLocationForInlineKey(keyLocation);
         JwKRetriever jwkRetriever = new JwKRetriever(config.getJwkSet());
-        jwkRetriever.setSignatureAlgorithm(null);
         jwkRetriever.setKeyLocation(keyLocation);
         return jwkRetriever.getPrivateKeyFromJwk(kid, config.getUseSystemPropertiesForHttpClientConnections());
     }

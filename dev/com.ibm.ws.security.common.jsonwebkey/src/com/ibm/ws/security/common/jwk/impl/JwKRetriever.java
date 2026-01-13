@@ -26,6 +26,7 @@ import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -532,6 +533,9 @@ public class JwKRetriever {
     }
 
     boolean isPemSupportedAlgorithm(String signatureAlgorithm) {
+        if (signatureAlgorithm == null)
+            return true;
+
         return KeyAlgorithmChecker.isRSAlgorithm(signatureAlgorithm) || KeyAlgorithmChecker.isESAlgorithm(signatureAlgorithm);
     }
 
@@ -570,11 +574,12 @@ public class JwKRetriever {
     @Sensitive
     JWK parsePrivateKeyJwk(@Sensitive String keyText, String signatureAlgorithm) throws Exception {
         PrivateKey privateKey = PemKeyUtil.getPrivateKey(keyText);
-        if (KeyAlgorithmChecker.isESAlgorithm(signatureAlgorithm)) {
+        if (privateKey instanceof ECPrivateKey) {
             return getEcJwkPrivateKey(privateKey, signatureAlgorithm);
-        } else {
+        } else if (privateKey instanceof RSAPrivateKey) {
             return getRsaJwkPrivateKey(privateKey, signatureAlgorithm);
         }
+        return null;
     }
 
     @FFDCIgnore(Exception.class)
@@ -607,7 +612,7 @@ public class JwKRetriever {
         }
         Jose4jEllipticCurveJWK jwk = null;
         try {
-            jwk = Jose4jEllipticCurveJWK.getInstance(null, signatureAlgorithm, JwkConstants.sig);
+            jwk = Jose4jEllipticCurveJWK.getInstance(null, null, JwkConstants.sig);
             jwk.setPrivateKey(privateKey);
         } catch (Exception e) {
             if (tc.isDebugEnabled()) {
@@ -634,7 +639,7 @@ public class JwKRetriever {
     private Jose4jRsaJWK getRsaJwkPrivateKey(@Sensitive PrivateKey privateKey, String signatureAlgorithm) {
         Jose4jRsaJWK jwk = null;
         try {
-            jwk = Jose4jRsaJWK.getInstance(signatureAlgorithm, null, null, privateKey, null);
+            jwk = Jose4jRsaJWK.getInstance(null, null, null, privateKey, null);
         } catch (Exception e) {
         }
         return jwk;
