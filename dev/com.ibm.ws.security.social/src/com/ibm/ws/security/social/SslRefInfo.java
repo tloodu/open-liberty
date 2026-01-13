@@ -39,6 +39,12 @@ public interface SslRefInfo {
     PublicKey getPublicKey() throws SocialLoginException;
 
     /**
+     * @return public key.
+     * @throws SocialLoginException
+     */
+    PublicKey getPublicKey(String alias) throws SocialLoginException;
+
+    /**
      * @return private key.
      * @throws SocialLoginException
      */

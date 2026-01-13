@@ -226,7 +226,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
     private boolean validateAccessTokenLocally;
     private boolean disableLtpaCookie = false; // default
     private String sharedKey;
-    private String trustAliasName;
+    private String[] trustAliasName;
     private boolean httpsRequired;
     private boolean clientSideRedirect;
     private boolean nonceEnabled;
@@ -453,7 +453,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
         disableLtpaCookie = (Boolean) props.get(CFG_KEY_disableLtpaCookie);
         sharedKey = processProtectedString(props, CFG_KEY_SHARED_KEY);// (String)
                                                                       // props.get(CFG_KEY_SHARED_KEY);
-        trustAliasName = trimIt((String) props.get(CFG_KEY_TRUST_ALIAS_NAME));
+        trustAliasName = trimIt((String[]) props.get(CFG_KEY_TRUST_ALIAS_NAME));
         httpsRequired = (Boolean) props.get(CFG_KEY_HTTPS_REQUIRED);
         clientSideRedirect = (Boolean) props.get(CFG_KEY_CLIENTSIDE_REDIRECT);
         nonceEnabled = (Boolean) props.get(CFG_KEY_NONCE_ENABLED);
@@ -599,7 +599,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
             Tr.debug(tc, "oidcclientRequestParameterSupported: " + oidcclientRequestParameterSupported);
             Tr.debug(tc, "validateAccessTokenLocally: " + validateAccessTokenLocally);
             Tr.debug(tc, "disableLtpaCookie:" + disableLtpaCookie);
-            Tr.debug(tc, "trustAliasName: " + trustAliasName);
+            Tr.debug(tc, "trustAliasName: " + Arrays.toString(trustAliasName));
             Tr.debug(tc, "httpsRequired: " + httpsRequired);
             Tr.debug(tc, "isClientSideRedirectSupported: " + clientSideRedirect);
             Tr.debug(tc, "nonceEnabled: " + nonceEnabled);
@@ -1293,7 +1293,7 @@ public class OidcClientConfigImpl implements OidcClientConfig {
 
     /** {@inheritDoc} */
     @Override
-    public String getTrustAliasName() {
+    public String[] getTrustAliasName() {
         return trustAliasName;
     }
 
@@ -1394,9 +1394,9 @@ public class OidcClientConfigImpl implements OidcClientConfig {
      * @throws KeyStoreException
      */
     @Override
-    public PublicKey getPublicKey() throws KeyStoreException, CertificateException {
+    public PublicKey getPublicKey(String alias) throws KeyStoreException, CertificateException {
         KeyStoreService keyStoreService = keyStoreServiceRef.getService();
-        return keyStoreService.getCertificateFromKeyStore(trustStoreRef, trustAliasName).getPublicKey();
+        return keyStoreService.getCertificateFromKeyStore(trustStoreRef, alias).getPublicKey();
     }
 
     /** {@inheritDoc} */
@@ -1898,9 +1898,9 @@ public class OidcClientConfigImpl implements OidcClientConfig {
     }
 
     @Override
-    public String getTrustedAlias() {
+    public String[] getTrustedAlias() {
         // TODO Auto-generated method stub
-        return null;
+        return trustAliasName;
     }
 
     @Override

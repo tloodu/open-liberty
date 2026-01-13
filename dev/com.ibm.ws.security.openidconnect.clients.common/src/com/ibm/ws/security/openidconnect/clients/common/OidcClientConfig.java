@@ -24,7 +24,7 @@ public interface OidcClientConfig extends ConvergedClientConfig {
 
     boolean isValidateAccessTokenLocally();
 
-    String getTrustAliasName();
+    String[] getTrustAliasName();
 
     String getValidationEndpointUrl();
 

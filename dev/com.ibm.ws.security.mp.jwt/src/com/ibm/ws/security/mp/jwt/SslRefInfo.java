@@ -39,6 +39,12 @@ public interface SslRefInfo {
     PublicKey getPublicKey() throws MpJwtProcessingException;
 
     /**
+     * @return public key.
+     * @throws SocialLoginException
+     */
+    PublicKey getPublicKey(String alias) throws MpJwtProcessingException;
+
+    /**
      * @return private key.
      * @throws MpJwtProcessingException
      */

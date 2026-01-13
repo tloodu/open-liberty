@@ -16,6 +16,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -47,13 +48,15 @@ public class SslRefInfoImpl implements SslRefInfo {
     String sslKeyStoreName = null;
     String sslTrustStoreName = null;
     private String keyAliasName = null;
+    private String[] trustAliasNames = null;
     AtomicServiceReference<KeyStoreService> keyStoreServiceRef = null;
 
-    public SslRefInfoImpl(SSLSupport sslSupport, AtomicServiceReference<KeyStoreService> keyStoreServiceRef, String sslRef, String keyAliasName) {
+    public SslRefInfoImpl(SSLSupport sslSupport, AtomicServiceReference<KeyStoreService> keyStoreServiceRef, String sslRef, String keyAliasName, String[] trustAliasNames) {
         this.sslSupport = sslSupport;
         this.sslRef = sslRef;
         this.keyStoreServiceRef = keyStoreServiceRef;
         this.keyAliasName = keyAliasName;
+        this.trustAliasNames = trustAliasNames;
     }
 
     @Override
@@ -122,22 +125,37 @@ public class SslRefInfoImpl implements SslRefInfo {
             if (keyStoreService == null) {
                 throw new SocialLoginException("KEYSTORE_SERVICE_NOT_FOUND", null, new Object[0]);
             }
-            Collection<String> names = null;
-            try {
-                names = keyStoreService.getTrustedCertEntriesInKeyStore(sslTrustStoreName);
-            } catch (KeyStoreException e) {
-                throw new SocialLoginException("ERROR_LOADING_KEYSTORE_CERTIFICATES", e, new Object[] { sslTrustStoreName, e.getLocalizedMessage() });
-            }
-            Iterator<String> aliasNames = names.iterator();
-            while (aliasNames.hasNext()) {
-                String aliasName = aliasNames.next();
-                PublicKey publicKey = null;
-                try {
-                    publicKey = keyStoreService.getCertificateFromKeyStore(sslTrustStoreName, aliasName).getPublicKey();
-                } catch (GeneralSecurityException e) {
-                    throw new SocialLoginException("ERROR_LOADING_CERTIFICATE", e, new Object[] { aliasName, sslTrustStoreName, e.getLocalizedMessage() });
+            
+            // If specific aliases are configured, only get those keys
+            if (trustAliasNames != null && trustAliasNames.length > 0) {
+                for (String aliasName : trustAliasNames) {
+                    PublicKey publicKey = null;
+                    try {
+                        publicKey = keyStoreService.getCertificateFromKeyStore(sslTrustStoreName, aliasName).getPublicKey();
+                        publicKeys.put(aliasName, publicKey);
+                    } catch (GeneralSecurityException e) {
+                        throw new SocialLoginException("ERROR_LOADING_CERTIFICATE", e, new Object[] { aliasName, sslTrustStoreName, e.getLocalizedMessage() });
+                    }
                 }
-                publicKeys.put(aliasName, publicKey);
+            } else {
+                // Otherwise get all keys from truststore
+                Collection<String> names = null;
+                try {
+                    names = keyStoreService.getTrustedCertEntriesInKeyStore(sslTrustStoreName);
+                } catch (KeyStoreException e) {
+                    throw new SocialLoginException("ERROR_LOADING_KEYSTORE_CERTIFICATES", e, new Object[] { sslTrustStoreName, e.getLocalizedMessage() });
+                }
+                Iterator<String> aliasNames = names.iterator();
+                while (aliasNames.hasNext()) {
+                    String aliasName = aliasNames.next();
+                    PublicKey publicKey = null;
+                    try {
+                        publicKey = keyStoreService.getCertificateFromKeyStore(sslTrustStoreName, aliasName).getPublicKey();
+                    } catch (GeneralSecurityException e) {
+                        throw new SocialLoginException("ERROR_LOADING_CERTIFICATE", e, new Object[] { aliasName, sslTrustStoreName, e.getLocalizedMessage() });
+                    }
+                    publicKeys.put(aliasName, publicKey);
+                }
             }
         }
 
@@ -145,7 +163,39 @@ public class SslRefInfoImpl implements SslRefInfo {
     }
 
     /** {@inheritDoc} */
-    @FFDCIgnore({ SocialLoginException.class })
+    @Override
+    public PublicKey getPublicKey(String alias) throws SocialLoginException {
+        if (this.jsseHelper == null) {
+            init();
+        }
+        if (sslKeyStoreName != null) {
+            if (alias != null && alias.trim().isEmpty() == false) {
+                KeyStoreService keyStoreService = keyStoreServiceRef.getService();
+                if (keyStoreService == null) {
+                    throw new SocialLoginException("KEYSTORE_SERVICE_NOT_FOUND", null, new Object[0]);
+                }
+                // TODO: Determine if the first public key should be used if a public key is not found for the key alias.
+                try {
+                    return keyStoreService.getCertificateFromKeyStore(sslKeyStoreName, alias).getPublicKey();
+                } catch (GeneralSecurityException e) {
+                    throw new SocialLoginException("ERROR_LOADING_CERTIFICATE", e, new Object[] { alias, sslTrustStoreName, e.getLocalizedMessage() });
+                }
+            } else {
+                Iterator<Entry<String, PublicKey>> publicKeysIterator = null;
+                try {
+                    // Get first public key
+                    publicKeysIterator = getPublicKeys().entrySet().iterator();
+                } catch (SocialLoginException e) {
+                    throw new SocialLoginException("ERROR_LOADING_GETTING_PUBLIC_KEYS", e, new Object[] { alias, sslTrustStoreName, e.getLocalizedMessage() });
+                }
+                if (publicKeysIterator.hasNext()) {
+                    return publicKeysIterator.next().getValue();
+                }
+            }
+        }
+        return null;
+    }
+
     @Override
     public PublicKey getPublicKey() throws SocialLoginException {
         if (this.jsseHelper == null) {

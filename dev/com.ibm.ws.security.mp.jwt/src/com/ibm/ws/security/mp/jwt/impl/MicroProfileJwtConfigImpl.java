@@ -93,7 +93,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
     protected boolean hostNameVerificationEnabled = true;
 
     public static final String KEY_TRUSTED_ALIAS = "keyName";
-    private String trustAliasName = null;
+    private String[] trustAliasName = null;
 
     public static final String KEY_userNameAttribute = "userNameAttribute";
     protected String userNameAttribute = null;
@@ -199,7 +199,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
         //this.authFilter = null; // lazy init
 
         this.sslContext = null;
-        this.trustAliasName = configUtils.getConfigAttribute(props, KEY_TRUSTED_ALIAS);
+        this.trustAliasName = configUtils.getStringArrayConfigAttribute(props, KEY_TRUSTED_ALIAS);
         this.hostNameVerificationEnabled = configUtils.getBooleanConfigAttribute(props, CFG_KEY_HOST_NAME_VERIFICATION_ENABLED, hostNameVerificationEnabled);
         this.tokenReuse = configUtils.getBooleanConfigAttribute(props, CFG_KEY_TOKEN_REUSE, tokenReuse);
         this.ignoreApplicationAuthMethod = configUtils.getBooleanConfigAttribute(props, CFG_KEY_IGNORE_APP_AUTH_METHOD, ignoreApplicationAuthMethod);
@@ -266,7 +266,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
             //            Tr.debug(tc, KEY_SIGNATURE_ALGORITHM + ": " + signatureAlgorithm);
             Tr.debug(tc, CFG_KEY_HOST_NAME_VERIFICATION_ENABLED + ": " + hostNameVerificationEnabled);
             Tr.debug(tc, CFG_KEY_TOKEN_REUSE + ": " + tokenReuse);
-            Tr.debug(tc, KEY_TRUSTED_ALIAS + ": " + trustAliasName);
+            Tr.debug(tc, KEY_TRUSTED_ALIAS + ": " + Arrays.toString(trustAliasName));
             Tr.debug(tc, "jwksUri:" + jwksUri);
             Tr.debug(tc, "userNameAttribute:" + userNameAttribute);
             Tr.debug(tc, "groupNameAttribute:" + groupNameAttribute);
@@ -377,7 +377,7 @@ public class MicroProfileJwtConfigImpl implements MicroProfileJwtConfig {
 
     /** {@inheritDoc} */
     @Override
-    public String getTrustedAlias() {
+    public String[] getTrustedAlias() {
         return trustAliasName;
     }
 

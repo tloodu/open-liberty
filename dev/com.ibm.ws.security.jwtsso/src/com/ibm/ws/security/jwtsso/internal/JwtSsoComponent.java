@@ -324,7 +324,7 @@ public class JwtSsoComponent implements JwtSsoConfig {
 
     /** {@inheritDoc} */
     @Override
-    public String getTrustedAlias() {
+    public String[] getTrustedAlias() {
         // TODO Auto-generated method stub
         return null;
     }

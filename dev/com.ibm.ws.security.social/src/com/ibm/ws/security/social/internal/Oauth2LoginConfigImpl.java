@@ -784,7 +784,7 @@ public class Oauth2LoginConfigImpl implements SocialLoginConfig {
     }
 
     protected SslRefInfoImpl createSslRefInfoImpl(SocialLoginService socialLoginService) {
-        return new SslRefInfoImpl(socialLoginService.getSslSupport(), socialLoginService.getKeyStoreServiceRef(), sslRef, keyAliasName);
+        return new SslRefInfoImpl(socialLoginService.getSslSupport(), socialLoginService.getKeyStoreServiceRef(), sslRef, keyAliasName, null);
     }
 
     @Override

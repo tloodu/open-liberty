@@ -109,7 +109,7 @@ public interface ConvergedClientConfig extends JwtConsumerConfig {
 
     public String getUniqueUserIdentifier();
 
-    public Key getPublicKey() throws Exception;
+    public Key getPublicKey(String alias) throws Exception;
 
     public String getJsonWebKey();
 

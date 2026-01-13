@@ -38,7 +38,7 @@ public interface JwtConsumerConfig {
 
     String getKeyStoreRef();
 
-    String getTrustedAlias();
+    String[] getTrustedAlias();
 
     long getClockSkew();
 

@@ -57,7 +57,7 @@ public class JwtConsumerConfigImpl implements JwtConsumerConfig {
     private List<String> audiences;
     private String[] sigAlg;
     private String trustStoreRef;
-    private String trustedAlias;
+    private String[] trustedAlias;
     private long clockSkewMilliSeconds;
     private boolean jwkEnabled;
     private String jwkEndpointUrl;
@@ -119,7 +119,7 @@ public class JwtConsumerConfigImpl implements JwtConsumerConfig {
         audiences = JwtUtils.trimIt((String[]) props.get(JwtUtils.CFG_KEY_AUDIENCES));
         sigAlg = JwtConfigUtil.getSignatureAlgorithmArray(getId(), props, JwtUtils.CFG_KEY_SIGNATURE_ALGORITHM);
         trustStoreRef = JwtUtils.trimIt((String) props.get(JwtUtils.CFG_KEY_TRUSTSTORE_REF));
-        trustedAlias = JwtUtils.trimIt((String) props.get(JwtUtils.CFG_KEY_TRUSTED_ALIAS));
+        trustedAlias = JwtConfigUtil.getTrustedAliasArray(getId(), props, JwtUtils.CFG_KEY_TRUSTED_ALIAS);
         clockSkewMilliSeconds = (Long) props.get(JwtUtils.CFG_KEY_CLOCK_SKEW);
         validationRequired = (Boolean) props.get(JwtUtils.CFG_KEY_VALIDATION_REQUIRED); // internal
         jwkEnabled = (Boolean) props.get(JwtUtils.CFG_KEY_JWK_ENABLED); // internal
@@ -213,7 +213,7 @@ public class JwtConsumerConfigImpl implements JwtConsumerConfig {
     }
 
     @Override
-    public String getTrustedAlias() {
+    public String[] getTrustedAlias() {
         return trustedAlias;
     }
 

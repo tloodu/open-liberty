@@ -44,10 +44,10 @@ public class SslRefInfoImpl implements SslRefInfo {
     JSSEHelper jsseHelper = null;
     String sslKeyStoreName = null;
     String sslTrustStoreName = null;
-    private String keyAliasName = null;
+    private String[] keyAliasName = null;
     AtomicServiceReference<KeyStoreService> keyStoreServiceRef = null;
 
-    public SslRefInfoImpl(SSLSupport sslSupport, AtomicServiceReference<KeyStoreService> keyStoreServiceRef, String sslRef, String keyAliasName) {
+    public SslRefInfoImpl(SSLSupport sslSupport, AtomicServiceReference<KeyStoreService> keyStoreServiceRef, String sslRef, String[] keyAliasName) {
         String methodName = "<init>";
         if (tc.isDebugEnabled()) {
             Tr.entry(tc, methodName, sslSupport, keyStoreServiceRef, sslRef, keyAliasName);
@@ -186,6 +186,15 @@ public class SslRefInfoImpl implements SslRefInfo {
             }
             return publicKeys;
         }
+        if (isKeyAliasConfigured()){
+            try {
+                publicKeys = getConfiguredPublicKeys();
+            } catch (Exception e) {
+                String msg = Tr.formatMessage(tc, "FAILED_TO_LOAD_PUBLIC_KEYS", new Object[] { sslTrustStoreName, e.getLocalizedMessage() });
+                Tr.error(tc, msg);
+                throw new MpJwtProcessingException(msg, e);
+            }
+        }
         try {
             publicKeys = getPublicKeysFromKeystore();
         } catch (Exception e) {
@@ -198,6 +207,16 @@ public class SslRefInfoImpl implements SslRefInfo {
             Tr.exit(tc, methodName, publicKeys);
         }
         return publicKeys;
+    }
+
+    HashMap<String, PublicKey> getConfiguredPublicKeys() throws MpJwtProcessingException {
+        String methodName = "getConfiguredPublicKeys";
+        if (tc.isDebugEnabled()) {
+            Tr.entry(tc, methodName);
+        }
+        KeyStoreService keyStoreService = getKeyStoreService();
+        Collection<String> aliasNames = java.util.Arrays.asList(keyAliasName);
+        return getPublicKeysFromAliasNames(keyStoreService, aliasNames);
     }
 
     HashMap<String, PublicKey> getPublicKeysFromKeystore() throws MpJwtProcessingException {
@@ -269,9 +288,15 @@ public class SslRefInfoImpl implements SslRefInfo {
     }
 
     /** {@inheritDoc} */
-    @FFDCIgnore({ Exception.class })
     @Override
     public PublicKey getPublicKey() throws MpJwtProcessingException {
+        return getPublicKey(keyAliasName[0]);
+    }
+
+    /** {@inheritDoc} */
+    @FFDCIgnore({ Exception.class })
+    @Override
+    public PublicKey getPublicKey(String alias) throws MpJwtProcessingException {
         String methodName = "getPublicKey";
         if (tc.isDebugEnabled()) {
             Tr.entry(tc, methodName);
@@ -286,7 +311,7 @@ public class SslRefInfoImpl implements SslRefInfo {
             return null;
         }
         try {
-            PublicKey key = getKeyFromKeyAliasOrFirstAvailable();
+            PublicKey key = getKeyFromKeyAliasOrFirstAvailable(alias);
             if (tc.isDebugEnabled()) {
                 Tr.exit(tc, methodName, key);
             }
@@ -298,25 +323,26 @@ public class SslRefInfoImpl implements SslRefInfo {
         }
     }
 
-    PublicKey getKeyFromKeyAliasOrFirstAvailable() throws MpJwtProcessingException {
-        if (isKeyAliasConfigured()) {
-            return getKeyFromKeyAlias();
-        } else {
+    PublicKey getKeyFromKeyAliasOrFirstAvailable(String alias) throws MpJwtProcessingException {
+        if (alias != null){
+            return getKeyFromKeyAlias(alias);
+        }
+        else {
             return getFirstAvailableKey();
         }
     }
 
     boolean isKeyAliasConfigured() {
-        return keyAliasName != null && !keyAliasName.trim().isEmpty();
+        return keyAliasName != null && keyAliasName.length > 0;
     }
 
-    PublicKey getKeyFromKeyAlias() throws MpJwtProcessingException {
+    PublicKey getKeyFromKeyAlias(String alias) throws MpJwtProcessingException {
         KeyStoreService keyStoreService = getKeyStoreService();
         // TODO: Determine if the first public key should be used if a public key is not found for the key alias.
         try {
-            return keyStoreService.getCertificateFromKeyStore(sslKeyStoreName, keyAliasName).getPublicKey();
+            return keyStoreService.getCertificateFromKeyStore(sslKeyStoreName, alias).getPublicKey();
         } catch (Exception e) {
-            String msg = Tr.formatMessage(tc, "ERROR_LOADING_CERTIFICATE", new Object[] { keyAliasName, sslTrustStoreName, e.getLocalizedMessage() });
+            String msg = Tr.formatMessage(tc, "ERROR_LOADING_CERTIFICATE", new Object[] { alias, sslTrustStoreName, e.getLocalizedMessage() });
             Tr.error(tc, msg);
             throw new MpJwtProcessingException(msg, e);
         }

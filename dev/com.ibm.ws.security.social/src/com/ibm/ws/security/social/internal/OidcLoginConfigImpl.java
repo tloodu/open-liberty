@@ -80,7 +80,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
     private boolean hostNameVerificationEnabled = true;
 
     public static final String KEY_TRUSTED_ALIAS = "trustAliasName";
-    private String trustAliasName = null;
+    private String[] trustAliasName = null;
 
     public static final String KEY_USERINFO_ENDPOINT = "userInfoEndpoint";
     private String userInfoEndpoint = null;
@@ -200,7 +200,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
         userNameAttribute = configUtils.getConfigAttribute(props, KEY_userNameAttribute);
         mapToUserRegistry = configUtils.getBooleanConfigAttribute(props, KEY_mapToUserRegistry, mapToUserRegistry);
         authFilterRef = configUtils.getConfigAttribute(props, KEY_authFilterRef);
-        trustAliasName = configUtils.getConfigAttribute(props, KEY_TRUSTED_ALIAS);
+        trustAliasName = configUtils.getStringArrayConfigAttribute(props, KEY_TRUSTED_ALIAS);
         isClientSideRedirectSupported = configUtils.getBooleanConfigAttribute(props, KEY_isClientSideRedirectSupported, isClientSideRedirectSupported);
         displayName = configUtils.getConfigAttribute(props, KEY_displayName);
         website = configUtils.getConfigAttribute(props, KEY_website);
@@ -427,7 +427,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
             Tr.debug(tc, KEY_mapToUserRegistry + " = " + mapToUserRegistry);
             Tr.debug(tc, KEY_sslRef + " = " + sslRef);
             Tr.debug(tc, KEY_authFilterRef + " = " + authFilterRef);
-            Tr.debug(tc, KEY_TRUSTED_ALIAS + " = " + trustAliasName);
+            Tr.debug(tc, KEY_TRUSTED_ALIAS + " = " + Arrays.toString(trustAliasName));
             Tr.debug(tc, CFG_KEY_jwtRef + " = " + jwtRef);
             Tr.debug(tc, CFG_KEY_jwtClaims + " = " + ((jwtClaims == null) ? null : Arrays.toString(jwtClaims)));
             Tr.debug(tc, KEY_isClientSideRedirectSupported + " = " + isClientSideRedirectSupported);
@@ -596,7 +596,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
 
     /** {@inheritDoc} */
     @Override
-    public String getTrustedAlias() {
+    public String[] getTrustedAlias() {
         return trustAliasName;
     }
 
@@ -658,7 +658,7 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
 
     @Override
     protected SslRefInfoImpl createSslRefInfoImpl(SocialLoginService socialLoginService) {
-        return new SslRefInfoImpl(socialLoginService.getSslSupport(), socialLoginService.getKeyStoreServiceRef(), sslRef, trustAliasName);
+        return new SslRefInfoImpl(socialLoginService.getSslSupport(), socialLoginService.getKeyStoreServiceRef(), sslRef, null, trustAliasName);
     }
 
     /** {@inheritDoc} */
@@ -989,8 +989,23 @@ public class OidcLoginConfigImpl extends Oauth2LoginConfigImpl implements Conver
     }
 
     @Override
-    public List<String> getTokenOrderToFetchCallerClaims() {  
+    public List<String> getTokenOrderToFetchCallerClaims() {
         return tokenOrderToFetchCallerClaims;
+    }
+
+    @Override
+    public Key getPublicKey(String alias) throws Exception {
+        if (this.sslRefInfo == null) {
+            SocialLoginService service = socialLoginServiceRef.getService();
+            if (service == null) {
+                if (tc.isDebugEnabled()) {
+                    Tr.debug(tc, "Social login service is not available");
+                }
+                return null;
+            }
+            sslRefInfo = createSslRefInfoImpl(service);
+        }
+        return sslRefInfo.getPublicKey(alias);
     }
 
 }
