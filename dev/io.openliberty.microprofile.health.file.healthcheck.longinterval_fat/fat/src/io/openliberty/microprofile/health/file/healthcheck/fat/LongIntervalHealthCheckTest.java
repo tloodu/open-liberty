@@ -45,6 +45,7 @@ import io.openliberty.microprofile.health.internal_fat.shared.HealthActions;
 @RunWith(FATRunner.class)
 public class LongIntervalHealthCheckTest {
 
+    final static String SERVER_DUMMY = "DummyServer";
     final static String SERVER_LONG_STARTUP_CHECK_INTERVAL = "HealthServerLongStartupCheckInterval";
     final static String SERVER_LONG_CHECK_INTERVAL = "HealthServerLongCheckInterval";
     final static String FAIL_START_APP = "FailStartApp";
@@ -54,11 +55,14 @@ public class LongIntervalHealthCheckTest {
 
     @ClassRule
     public static RepeatTests r = MicroProfileActions.repeat(FeatureReplacementAction.ALL_SERVERS,
-                                                             MicroProfileActions.MP61, // mpHealth-4.0 w/ EE9
+                                                             MicroProfileActions.MP61, // mpHealth-4.0 w/ EE10
                                                              MicroProfileActions.MP70_EE10, // mpHealth-4.0 FULL EE10
                                                              MicroProfileActions.MP70_EE11, // mpHealth-4.0 FULL EE11
                                                              HealthActions.MP14_MPHEALTH40, // mpHealth-4.0 FULL EE7
                                                              HealthActions.MP41_MPHEALTH40); //mpHealth-4.0 FULL EE8
+
+    @Server(SERVER_DUMMY)
+    public static LibertyServer server;
 
     @Server(SERVER_LONG_STARTUP_CHECK_INTERVAL)
     public static LibertyServer serverLongStart;
@@ -76,6 +80,10 @@ public class LongIntervalHealthCheckTest {
             serverLongStart.removeAllInstalledAppsForValidation();
             serverLongStart.deleteAllDropinApplications();
         }
+        if (server != null) {
+            server.removeAllInstalledAppsForValidation();
+            server.deleteAllDropinApplications();
+        }
     }
 
     @After
@@ -87,6 +95,37 @@ public class LongIntervalHealthCheckTest {
         if (serverLongStart != null && serverLongStart.isStarted()) {
             serverLongStart.stopServer(IGNORED_FAILURES);
         }
+
+        if (server != null && server.isStarted()) {
+            server.stopServer(IGNORED_FAILURES);
+        }
+    }
+
+    @Test
+    /*
+     *
+     * The first test/server-start sometimes?/always? needs to generate a fatFeatureList.xml.
+     * Sometimes this takes a VERY LONG TIME. This happens on Windows OS the majority of the time.
+     * Other OS platforms can also take a long time, but is much less likely.
+     *
+     * Previously, the StartedhealthCheckTestLongStartupInterval was the first test to run.
+     * If this encountered a long featFeatureList generation then the window of time we wanted
+     * to test would already be complete (i.e., health check files have already reached their final state).
+     * The test would "start" testing after the fact and would fail.
+     *
+     * This dummy test is put in place to take the brunt of FAT feature generation.
+     *
+     **/
+    public void emptyTestToForceFeatureListGeneration() throws Exception {
+        final String METHOD_NAME = "emptyTest";
+
+        //Test infra checks for fatfeatureList as part of start server.
+        server.startServer();
+
+        // Read to run a smarter planet
+        server.waitForStringInLogUsingMark("CWWKF0011I");
+
+        Log.info(getClass(), METHOD_NAME, "Doing absolutely nothing");
     }
 
     @Test
