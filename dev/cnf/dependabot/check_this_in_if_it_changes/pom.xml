@@ -1694,7 +1694,7 @@
     <dependency>
       <groupId>jakarta.nosql</groupId>
       <artifactId>jakarta.nosql-api</artifactId>
-      <version>1.0.0-M1</version>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
       <groupId>jakarta.persistence</groupId>
@@ -3064,12 +3064,12 @@
     <dependency>
       <groupId>org.eclipse.jnosql.communication</groupId>
       <artifactId>jnosql-communication-semistructured</artifactId>
-      <version>1.1.4</version>
+      <version>1.1.12</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jnosql.mapping</groupId>
       <artifactId>jnosql-mapping-semistructured</artifactId>
-      <version>1.1.4</version>
+      <version>1.1.12</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.microprofile.config</groupId>
