@@ -38,6 +38,9 @@ public class SessionFilter implements Filter {
     private static final TraceComponent tc = Tr.register(SessionFilter.class);
     private static final String LOGIN_ERROR_PAGE = "/adminCenter/login.jsp?no_access";
     private static final String COOKIE_NAME = "csrfToken";
+    private static final String CSRF_HEADER_NAME = "X-CSRF-Token";
+    private static final String SET_COOKIE_HEADER = "Set-Cookie";
+    private static final int TOKEN_MAX_AGE = 3600; // 1 hour
 
     /**
      * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
@@ -55,6 +58,9 @@ public class SessionFilter implements Filter {
         this.filterConfig = null;
     }
 
+    /**
+     * Retrieves CSRF token from cookie
+     */
     public String getCsrfTokenFromCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -64,67 +70,210 @@ public class SessionFilter implements Filter {
                 }
             }
         }
-        return null; // Return null if the cookie is not found
+        return null;
     }
 
     /**
-     * Filters out specific requests and takes the appropriate action for each
-     * 
+     * Validates CSRF token format (UUID)
+     */
+    private boolean isValidTokenFormat(String token) {
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
+        // UUID format: 8-4-4-4-12 hexadecimal characters
+        return token.matches("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$");
+    }
+
+    /**
+     * Validates CSRF token using double-submit cookie pattern
+     * Token must match in both cookie and request header
+     */
+    private boolean validateCsrfToken(HttpServletRequest request) {
+        String cookieToken = getCsrfTokenFromCookie(request);
+        String headerToken = request.getHeader(CSRF_HEADER_NAME);
+
+        if (tc.isDebugEnabled()) {
+            Tr.debug(tc, "CSRF Validation - Cookie Token: " + (cookieToken != null ? "present" : "null") +
+                     ", Header Token: " + (headerToken != null ? "present" : "null"));
+        }
+
+        // Both tokens must be present and match
+        if (cookieToken == null || headerToken == null) {
+            return false;
+        }
+
+        // Validate format
+        if (!isValidTokenFormat(cookieToken) || !isValidTokenFormat(headerToken)) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "CSRF token format validation failed");
+            }
+            return false;
+        }
+
+        // Tokens must match (constant-time comparison to prevent timing attacks)
+        return constantTimeEquals(cookieToken, headerToken);
+    }
+
+    /**
+     * Constant-time string comparison to prevent timing attacks
+     */
+    private boolean constantTimeEquals(String a, String b) {
+        if (a.length() != b.length()) {
+            return false;
+        }
+        int result = 0;
+        for (int i = 0; i < a.length(); i++) {
+            result |= a.charAt(i) ^ b.charAt(i);
+        }
+        return result == 0;
+    }
+
+    /**
+     * Checks if the request requires CSRF validation
+     */
+    private boolean requiresCsrfValidation(String method, String uri) {
+        // Validate state-changing methods
+        if ("POST".equals(method) || "PUT".equals(method) ||
+            "DELETE".equals(method) || "PATCH".equals(method)) {
+            
+            // Exclude login endpoint - needs token generation, not validation
+            if (uri.equals("/adminCenter/j_security_check") ||
+                uri.equals("/j_security_check")) {
+                return false;
+            }
+            
+            // Exclude logout endpoint - user is logging out anyway
+            if (uri.equals("/adminCenter/ibm_security_logout") ||
+                uri.equals("/ibm_security_logout")) {
+                return false;
+            }
+            
+            // Exclude static resources and login page resources
+            if (uri.startsWith("/adminCenter/dojo/") ||
+                uri.startsWith("/adminCenter/login/") ||
+                uri.startsWith("/adminCenter/fonts/") ||
+                uri.startsWith("/adminCenter/404/")) {
+                return false;
+            }
+            
+            // Validate all other state-changing requests
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Builds the Set-Cookie header value with security attributes
+     */
+    private String buildCookieHeaderValue(String token, boolean isSecure) {
+        return String.format(
+            "%s=%s; Path=/; Max-Age=%d; SameSite=Strict%s",
+            COOKIE_NAME,
+            token,
+            TOKEN_MAX_AGE,
+            isSecure ? "; Secure" : ""
+        );
+    }
+
+    /**
+     * Generates and sets a new CSRF token if one doesn't exist
+     */
+    private void generateAndSetCsrfToken(HttpServletRequest request, HttpServletResponse response) {
+        String token = getCsrfTokenFromCookie(request);
+        if (token == null) {
+            // Generate new token only if completely missing
+            token = UUID.randomUUID().toString();
+            
+            // Set cookie with all security attributes including SameSite
+            // Using addHeader() because Cookie class doesn't support SameSite attribute
+            String cookieValue = buildCookieHeaderValue(token, request.isSecure());
+            response.addHeader(SET_COOKIE_HEADER, cookieValue);
+            
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Generated new CSRF token");
+            }
+        } else if (!isValidTokenFormat(token)) {
+            // Token exists but has invalid format - log warning but don't regenerate
+            // This prevents race conditions in multi-tab scenarios
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Invalid CSRF token format detected - will fail validation");
+            }
+        }
+    }
+
+    /**
+     * Validates security check endpoint to prevent GET-based authentication
+     *
+     * @return true if request should be blocked, false otherwise
+     */
+    private boolean handleSecurityCheckValidation(HttpServletRequest request, HttpServletResponse response, String requestURI) throws IOException {
+        HttpSession session = request.getSession(false);
+
+        if (tc.isDebugEnabled()) {
+            Tr.debug(tc, "doFilter", requestURI);
+        }
+
+        // We can't allow users to authenticate by navigating directly to a URL like
+        // https://localhost:9443/adminCenter/j_security_check?j_username=admin&j_password=adminpwd
+        // Doing so creates a security vulnerability
+        if ((requestURI.equals("/adminCenter/j_security_check") &&
+            request.getMethod().equals("GET")) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Session = " + session);
+                Tr.debug(tc, "Redirecting to " + LOGIN_ERROR_PAGE);
+            }
+            response.sendRedirect(LOGIN_ERROR_PAGE);
+            if (session != null) {
+                session.invalidate();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Filters requests and validates CSRF tokens for state-changing operations
+     *
      * @see javax.servlet.Filter#doFilter(javax.servlet.ServletRequest, javax.servlet.ServletResponse, javax.servlet.FilterChain)
      */
     @Override
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException, ServletException {
 
-        String methodName = "doFilter";
         if (tc.isEntryEnabled()) {
-            Tr.entry(tc, methodName);
+            Tr.entry(tc, "doFilter");
         }
+        
         HttpServletRequest httpRequest = (HttpServletRequest) req;
         HttpServletResponse httpResponse = (HttpServletResponse) resp;
+        String requestURI = httpRequest.getRequestURI();
+        String method = httpRequest.getMethod();
 
-        String token = getCsrfTokenFromCookie(httpRequest);
-        if(token == null){
-            token = UUID.randomUUID().toString();
-            Cookie cookie = new Cookie(COOKIE_NAME, token);
-            cookie.setPath("/");
-            cookie.setHttpOnly(false); // client-side JS needs to read it
-            cookie.setSecure(httpRequest.isSecure());
-            // optional: cookie.setMaxAge(...);
-            httpResponse.addCookie(cookie);
-        }
-            
+        // Generate or retrieve CSRF token
+        generateAndSetCsrfToken(httpRequest, httpResponse);
 
-        if (req instanceof HttpServletRequest && resp instanceof HttpServletResponse) {
-
-            HttpServletRequest httpServletReq = (HttpServletRequest) req;
-            HttpServletResponse httpServletResp = (HttpServletResponse) resp;
-            HttpSession session = httpServletReq.getSession(false);
-            //HttpSession session = httpServletReq.getSession();
-            String requestURI = httpServletReq.getRequestURI();
-
-            if (tc.isDebugEnabled()) {
-                Tr.debug(tc, methodName, requestURI);
-            }
-
-            // We can't allow users to authenticate by navigating directly to a URL like
-            // https://localhost:9443/adminCenter/j_security_check?j_username=admin&j_password=adminpwd
-            // Doing so is creates a security vulnerability
-            if (requestURI.equals("/adminCenter/j_security_check") && httpServletReq.getMethod().equals("GET")) {
+        // Validate CSRF token for state-changing requests (Double-Submit Cookie Pattern)
+        if (requiresCsrfValidation(method, requestURI)) {
+            if (!validateCsrfToken(httpRequest)) {
                 if (tc.isDebugEnabled()) {
-                    Tr.debug(tc, "Session = " + session);
-                    Tr.debug(tc, "Redirecting to " + LOGIN_ERROR_PAGE);
+                    Tr.debug(tc, "CSRF validation failed for " + method + " " + requestURI);
                 }
-                httpServletResp.sendRedirect(LOGIN_ERROR_PAGE);
-                if (session != null) {
-                    session.invalidate();
-                }
+                httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, "CSRF token validation failed");
+                return;
             }
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "CSRF validation passed for " + method + " " + requestURI);
+            }
+        }
+
+        // Additional security check for j_security_check endpoint
+        if (handleSecurityCheckValidation(httpRequest, httpResponse, requestURI)) {
+            return;
         }
 
         chain.doFilter(req, resp);
 
         if (tc.isEntryEnabled()) {
-            Tr.exit(tc, methodName);
+            Tr.exit(tc, "doFilter");
         }
     }
 }

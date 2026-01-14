@@ -103,7 +103,9 @@
   
   <filter-mapping>
     <filter-name>SessionFilter</filter-name>
-    <url-pattern>/j_security_check</url-pattern>
+    <url-pattern>/*</url-pattern>
+    <dispatcher>REQUEST</dispatcher>
+    <dispatcher>FORWARD</dispatcher>
   </filter-mapping>
 
 </web-app>

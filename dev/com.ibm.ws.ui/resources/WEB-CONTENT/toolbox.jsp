@@ -18,6 +18,8 @@
 <%@ page import="java.io.InputStreamReader"%>
 <%@ page import="java.io.OutputStreamWriter"%>
 <%@ page import="java.net.*"%>
+<%@ page import="javax.servlet.http.Cookie"%>
+<%@ page import="javax.servlet.http.HttpServletResponse"%>
 
 <!DOCTYPE html>
 <html style="height: 100%; width: 100%; margin: 0px; padding: 0px;">
@@ -50,30 +52,74 @@
 	globalIsAdmin=<%=isAdmin%>
 </script>
 
-<%
-    String csrfCookie = null;
-    Cookie[] cookies = request.getCookies();
-    response.setContentType("text/html");
-    if (cookies != null) {
+<%!
+    // Constants for cookie names
+    private static final String JSESSIONID_COOKIE = "JSESSIONID";
+    private static final String CSRF_TOKEN_COOKIE = "csrfToken";
+    private static final String UUID_PATTERN = "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$";
+    private static final int UUID_LENGTH = 36;
+
+    /**
+     * Finds a cookie by name in the cookies array
+     * @param cookies Array of cookies to search
+     * @param name Name of the cookie to find
+     * @return Cookie object if found, null otherwise
+     */
+    private Cookie findCookieByName(Cookie[] cookies, String name) {
+        if (cookies == null || name == null) {
+            return null;
+        }
         for (Cookie cookie : cookies) {
-            if ("JSESSIONID".equals(cookie.getName())) {
-                String value = cookie.getValue();
-                cookie.setMaxAge(0);
-                cookie.setValue(null);
-                cookie.setPath("/");
-                response.addCookie(cookie);
-                break;
+            if (name.equals(cookie.getName())) {
+                return cookie;
             }
         }
+        return null;
     }
 
-    Cookie[] csrfCookies = request.getCookies();
-    if (cookies != null) {
-        for (Cookie cookie : csrfCookies) {
-            if ("csrfToken".equals(cookie.getName())) {
-                csrfCookie = cookie.getValue();
-                break;
-            }
+    /**
+     * Validates CSRF token format (UUID)
+     * @param token Token string to validate
+     * @return true if token has valid UUID format, false otherwise
+     */
+    private boolean isValidCsrfTokenFormat(String token) {
+        if (token == null || token.length() != UUID_LENGTH) {
+            return false;
+        }
+        return token.matches(UUID_PATTERN);
+    }
+
+    /**
+     * Removes JSESSIONID cookie by setting its max age to 0
+     * @param response HttpServletResponse to add the expired cookie
+     * @param jsessionCookie The JSESSIONID cookie to remove
+     */
+    private void removeJSessionIdCookie(HttpServletResponse response, Cookie jsessionCookie) {
+        if (jsessionCookie != null) {
+            jsessionCookie.setMaxAge(0);
+            jsessionCookie.setValue(null);
+            jsessionCookie.setPath("/");
+            response.addCookie(jsessionCookie);
+        }
+    }
+%>
+<%
+    String csrfToken = null;
+    boolean isValidToken = false;
+    Cookie[] cookies = request.getCookies();
+    response.setContentType("text/html");
+    
+    // Remove old JSESSIONID cookie
+    Cookie jsessionCookie = findCookieByName(cookies, JSESSIONID_COOKIE);
+    removeJSessionIdCookie(response, jsessionCookie);
+
+    // Retrieve and validate CSRF token from cookie
+    Cookie csrfCookie = findCookieByName(cookies, CSRF_TOKEN_COOKIE);
+    if (csrfCookie != null) {
+        String tokenValue = csrfCookie.getValue();
+        if (isValidCsrfTokenFormat(tokenValue)) {
+            csrfToken = tokenValue;
+            isValidToken = true;
         }
     }
 
@@ -87,13 +133,12 @@
     response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response.setDateHeader("Expires", -1);
 
-    // Set security headers	
-    response.setHeader("X-XSS-Protection", "1");	
-    response.setHeader("X-Content-Type-Options", "nosniff");	
+    // Set security headers
+    response.setHeader("X-XSS-Protection", "1");
+    response.setHeader("X-Content-Type-Options", "nosniff");
     response.setHeader("X-Frame-Options", "SAMEORIGIN");
     response.setHeader("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval'; form-action 'self'; frame-ancestors 'self'");
     response.setHeader("Strict-Transport-Security", "max-age=99999999");
-    response.setHeader("X-XSRF-TOKEN", csrfCookie);
 
     String hasBidi = "";       // used to initialize dojo
     String userId = request.getRemoteUser();     // passed to widgets
@@ -177,24 +222,274 @@ BIDI_PREFS_STRING = '<%=line%>';
 
 <script src="404/404.js"></script>
 <script>
-    const HEADER_TOKEN ='<%= response.getHeader("X-XSRF-TOKEN") %>';
+    // Double-Submit Cookie CSRF Protection
+    // Token is read from cookie and sent in custom header for all state-changing requests
+    
+    console.log('=== CSRF Protection Script Loading ===');
+    
     function getCookie(name) {
-        return document.cookie
+        const value = document.cookie
             .split(";")
             .map(c => c.trim())
-            .find(c => c.startsWith(name + "="))
-            ?.split("=")[1];
+            .find(c => c.startsWith(name + "="));
+        return value ? value.split("=")[1] : null;
     }
-    function isValidCsrf(token) {
-        return typeof token === "string" && token.length > 20 && token === HEADER_TOKEN;
+    
+    function isValidCsrfToken(token) {
+        if (!token || typeof token !== "string") return false;
+        // Validate UUID format: 8-4-4-4-12 hexadecimal characters
+        const uuidRegex = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/;
+        return uuidRegex.test(token);
     }
+    
+    // Validate CSRF token on page load
+    const initialToken = getCookie("csrfToken");
+    if (!isValidCsrfToken(initialToken)) {
+        console.error("Invalid or missing CSRF token on page load");
+        window.location.href = "/adminCenter/login.jsp";
+    }
+    
+    // Validate CSRF token on hash changes
     window.addEventListener("hashchange", () => {
         const token = getCookie("csrfToken");
-        if (!isValidCsrf(token)) {
+        if (!isValidCsrfToken(token)) {
+            console.error("Invalid CSRF token detected on hash change");
             window.location.href = "/adminCenter/login.jsp";
             return;
         }
     });
+    
+    // Intercept native XMLHttpRequest as fallback for non-Dojo requests
+    // Check if header already exists to prevent duplication
+    (function() {
+        console.log('=== Setting up Native XHR Interceptor ===');
+        
+        const originalOpen = XMLHttpRequest.prototype.open;
+        const originalSend = XMLHttpRequest.prototype.send;
+        const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+        
+        console.log('Original XHR methods:', {
+            open: typeof originalOpen,
+            send: typeof originalSend,
+            setRequestHeader: typeof originalSetRequestHeader
+        });
+        
+        XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+            console.log('>>> XHR.open() called:', method, url);
+            this._method = method;
+            this._url = url;
+            this._requestHeaders = {}; // Track all headers
+            return originalOpen.apply(this, arguments);
+        };
+        
+        XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+            console.log('>>> XHR.setRequestHeader() called:', header, '=', value);
+            // Track headers being set
+            if (this._requestHeaders) {
+                this._requestHeaders[header.toLowerCase()] = value;
+            }
+            return originalSetRequestHeader.apply(this, arguments);
+        };
+        
+        XMLHttpRequest.prototype.send = function(data) {
+            console.log('>>> XHR.send() called for:', this._method, this._url);
+            
+            // Add CSRF token header for state-changing requests
+            if (this._method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(this._method.toUpperCase())) {
+                console.log('XHR Interceptor - Method:', this._method, 'URL:', this._url);
+                console.log('XHR Interceptor - Request Headers:', this._requestHeaders);
+                
+                // Only add if not already present (check case-insensitive)
+                const hasToken = this._requestHeaders && this._requestHeaders['x-csrf-token'];
+                console.log('XHR Interceptor - Has Token:', hasToken);
+                
+                if (!hasToken) {
+                    const token = getCookie("csrfToken");
+                    console.log('XHR Interceptor - Token from cookie:', token);
+                    console.log('XHR Interceptor - Token valid:', isValidCsrfToken(token));
+                    
+                    if (token && isValidCsrfToken(token)) {
+                        this.setRequestHeader('X-CSRF-Token', token);
+                        console.log('✓ Added CSRF token via native XHR interceptor to:', this._url);
+                    } else {
+                        console.error("Cannot send request: Invalid CSRF token");
+                        throw new Error("CSRF token validation failed");
+                    }
+                } else {
+                    console.log('✓ CSRF token already present, skipping');
+                }
+            }
+            return originalSend.apply(this, arguments);
+        };
+        
+        console.log('=== Native XHR Interceptor Setup Complete ===');
+    })();
+    
+    // Function to inject CSRF interceptor into iframe contexts
+    function injectCsrfInterceptorIntoIframe(iframe) {
+        try {
+            const iframeWindow = iframe.contentWindow;
+            const iframeDocument = iframe.contentDocument || iframeWindow.document;
+            
+            // Check if iframe is accessible (same-origin)
+            if (!iframeWindow || !iframeWindow.XMLHttpRequest) {
+                console.log('Cannot access iframe:', iframe.src, '(cross-origin or not loaded)');
+                return;
+            }
+            
+            console.log('=== Injecting CSRF interceptor into iframe:', iframe.src || iframe.id);
+            
+            // Inject getCookie and isValidCsrfToken functions into iframe
+            iframeWindow.getCookie = getCookie;
+            iframeWindow.isValidCsrfToken = isValidCsrfToken;
+            
+            // Inject XHR interceptor into iframe
+            const originalOpen = iframeWindow.XMLHttpRequest.prototype.open;
+            const originalSend = iframeWindow.XMLHttpRequest.prototype.send;
+            const originalSetRequestHeader = iframeWindow.XMLHttpRequest.prototype.setRequestHeader;
+            
+            iframeWindow.XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+                console.log('[IFRAME] XHR.open():', method, url);
+                this._method = method;
+                this._url = url;
+                this._requestHeaders = {};
+                return originalOpen.apply(this, arguments);
+            };
+            
+            iframeWindow.XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+                if (this._requestHeaders) {
+                    this._requestHeaders[header.toLowerCase()] = value;
+                }
+                return originalSetRequestHeader.apply(this, arguments);
+            };
+            
+            iframeWindow.XMLHttpRequest.prototype.send = function(data) {
+                console.log('[IFRAME] XHR.send():', this._method, this._url);
+                
+                if (this._method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(this._method.toUpperCase())) {
+                    const hasToken = this._requestHeaders && this._requestHeaders['x-csrf-token'];
+                    
+                    if (!hasToken) {
+                        // Get token from parent window's cookie
+                        const token = window.parent.getCookie("csrfToken");
+                        if (token && window.parent.isValidCsrfToken(token)) {
+                            this.setRequestHeader('X-CSRF-Token', token);
+                            console.log('[IFRAME] ✓ Added CSRF token to:', this._url);
+                        } else {
+                            console.error("[IFRAME] Cannot send request: Invalid CSRF token");
+                            throw new Error("CSRF token validation failed");
+                        }
+                    }
+                }
+                return originalSend.apply(this, arguments);
+            };
+            
+            console.log('[IFRAME] ✓ CSRF interceptor injected successfully');
+        } catch (e) {
+            console.error('Failed to inject CSRF interceptor into iframe:', e.message);
+        }
+    }
+    
+    // Setup iframe monitoring after DOM is ready
+    function setupIframeMonitoring() {
+        console.log('=== Setting up iframe CSRF injection monitoring ===');
+        
+        // Monitor for iframes being added to the page
+        const iframeObserver = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.tagName === 'IFRAME') {
+                        console.log('New iframe detected:', node.id || node.src);
+                        // Wait for iframe to load before injecting
+                        node.addEventListener('load', function() {
+                            injectCsrfInterceptorIntoIframe(node);
+                        });
+                        // Also try immediately in case it's already loaded
+                        if (node.contentWindow) {
+                            setTimeout(function() {
+                                injectCsrfInterceptorIntoIframe(node);
+                            }, 100);
+                        }
+                    }
+                });
+            });
+        });
+        
+        // Start observing document.body
+        if (document.body) {
+            iframeObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            console.log('✓ MutationObserver started');
+        } else {
+            console.error('document.body not available yet');
+        }
+        
+        // Inject into any existing iframes
+        const iframes = document.querySelectorAll('iframe');
+        console.log('Found', iframes.length, 'existing iframes');
+        iframes.forEach(function(iframe) {
+            console.log('Processing existing iframe:', iframe.id || iframe.src);
+            if (iframe.contentWindow) {
+                injectCsrfInterceptorIntoIframe(iframe);
+            }
+            iframe.addEventListener('load', function() {
+                console.log('Iframe loaded event:', iframe.id || iframe.src);
+                injectCsrfInterceptorIntoIframe(iframe);
+            });
+        });
+        
+        console.log('=== Iframe CSRF injection monitoring complete ===');
+    }
+    
+    // Run setup when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupIframeMonitoring);
+    } else {
+        // DOM already loaded
+        setupIframeMonitoring();
+    }
+    
+    // Intercept fetch API calls to add CSRF token header (Double-Submit Pattern)
+    (function() {
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            options = options || {};
+            const method = (options.method || 'GET').toUpperCase();
+            
+            // Add CSRF token header for state-changing requests
+            if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                options.headers = options.headers || {};
+                
+                // Check if header already exists (case-insensitive)
+                let hasToken = false;
+                if (options.headers instanceof Headers) {
+                    hasToken = options.headers.has('X-CSRF-Token') || options.headers.has('x-csrf-token');
+                } else {
+                    hasToken = Object.keys(options.headers).some(key =>
+                        key.toLowerCase() === 'x-csrf-token'
+                    );
+                }
+                
+                if (!hasToken) {
+                    const token = getCookie("csrfToken");
+                    if (token && isValidCsrfToken(token)) {
+                        if (options.headers instanceof Headers) {
+                            options.headers.append('X-CSRF-Token', token);
+                        } else {
+                            options.headers['X-CSRF-Token'] = token;
+                        }
+                        console.debug('Added CSRF token via fetch interceptor');
+                    } else {
+                        console.error("Cannot send request: Invalid CSRF token");
+                        return Promise.reject(new Error("CSRF token validation failed"));
+                    }
+                }
+            }
+            return originalFetch.apply(this, arguments);
+        };
+    })();
 </script>
 
 <script type="text/javascript">
@@ -225,7 +520,45 @@ BIDI_PREFS_STRING = '<%=line%>';
     }
 %>
 <script src="dojo/dojo.js"></script>
-<script>require(["js/loadToolbox"])</script>
+<script>
+    // Intercept Dojo XHR requests after Dojo loads
+    require(["dojo/request/xhr", "dojo/aspect"], function(xhr, aspect) {
+        // Wrap each xhr method to add CSRF token
+        function wrapXhrMethod(methodName, httpMethod) {
+            aspect.around(xhr, methodName, function(originalMethod) {
+                return function(url, options) {
+                    options = options || {};
+                    
+                    // Add CSRF token header for state-changing requests
+                    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(httpMethod)) {
+                        options.headers = options.headers || {};
+                        
+                        var token = getCookie("csrfToken");
+                        if (token && isValidCsrfToken(token)) {
+                            options.headers['X-CSRF-Token'] = token;
+                            console.debug('Added CSRF token to Dojo ' + methodName + ' request');
+                        } else {
+                            console.error("Cannot send Dojo request: Invalid CSRF token");
+                            throw new Error("CSRF token validation failed");
+                        }
+                    }
+                    
+                    // Call the original method
+                    return originalMethod.call(this, url, options);
+                };
+            });
+        }
+        
+        // Wrap all state-changing methods
+        wrapXhrMethod('post', 'POST');
+        wrapXhrMethod('put', 'PUT');
+        wrapXhrMethod('del', 'DELETE');
+        
+        console.log('Dojo CSRF protection initialized');
+    });
+    
+    require(["js/loadToolbox"]);
+</script>
 
  
 <title id="toolbox_tab_title"></title>
