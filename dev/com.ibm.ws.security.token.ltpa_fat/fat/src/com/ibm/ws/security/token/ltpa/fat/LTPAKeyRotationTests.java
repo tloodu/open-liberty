@@ -59,8 +59,8 @@ import com.ibm.websphere.simplicity.config.ValidationKeys;
 import com.ibm.websphere.simplicity.log.Log;
 import com.ibm.ws.webcontainer.security.test.servlets.FormLoginClient;
 
-import componenttest.annotation.AllowedFFDC;
 import componenttest.annotation.CheckForLeakedPasswords;
+import componenttest.annotation.ExpectedFFDC;
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
@@ -537,7 +537,7 @@ public class LTPAKeyRotationTests {
      */
     @Test
     @CheckForLeakedPasswords({ validPassword })
-    @AllowedFFDC({ "java.lang.IllegalArgumentException" })
+    @ExpectedFFDC({ "java.lang.IllegalArgumentException" })
     public void testLTPAFileReplacement_invalidSharedKey_monitorValidationKeysDir_true_monitorInterval_10() throws Exception {
         // Configure the server
         configureServer("true", "10", true);
@@ -636,7 +636,7 @@ public class LTPAKeyRotationTests {
      */
     @Test
     @CheckForLeakedPasswords({ validPassword })
-    @AllowedFFDC({ "java.lang.IllegalArgumentException" })
+    @ExpectedFFDC({ "java.lang.IllegalArgumentException" })
     public void testLTPAFileReplacement_invalidPrivateKey_monitorValidationKeysDir_true_monitorInterval_10() throws Exception {
         // Configure the server
         configureServer("true", "10", true);
@@ -734,7 +734,7 @@ public class LTPAKeyRotationTests {
      */
     @Test
     @CheckForLeakedPasswords({ validPassword })
-    @AllowedFFDC({ "java.lang.NullPointerException" })
+    @ExpectedFFDC({ "java.lang.NullPointerException" })
 
     public void testLTPAFileReplacement_invalidPublicKey_monitorValidationKeysDir_true_monitorInterval_10() throws Exception {
         // Configure the server
@@ -1151,7 +1151,7 @@ public class LTPAKeyRotationTests {
      */
     @Test
     @CheckForLeakedPasswords({ validPassword })
-    @AllowedFFDC({ "java.lang.IllegalArgumentException" })
+    @ExpectedFFDC({ "java.lang.IllegalArgumentException" })
     public void testValidationKeys_fileNameAttribute() throws Exception {
         // Configure the server
         configureServer("true", "10", true);
@@ -1266,7 +1266,7 @@ public class LTPAKeyRotationTests {
      */
     @Test
     @CheckForLeakedPasswords({ validPassword })
-    @AllowedFFDC({ "java.lang.NullPointerException" })
+    @ExpectedFFDC({ "java.lang.NullPointerException" })
     public void testValidationKeys_passwordAttribute() throws Exception {
         // Configure the server
         configureServer("true", "10", true);
@@ -1366,7 +1366,7 @@ public class LTPAKeyRotationTests {
     @Mode(TestMode.LITE)
     @Test
     @CheckForLeakedPasswords({ validPassword })
-    @AllowedFFDC({ "java.time.format.DateTimeParseException" })
+    @ExpectedFFDC({ "java.time.format.DateTimeParseException" })
     public void testValidationKeys_validUntilDateAttribute() throws Exception {
         // Configure the server
         configureServer("true", "10", true);
@@ -2651,9 +2651,8 @@ public class LTPAKeyRotationTests {
         try {
             configureServer("true", "10", true);
             server.stopServer(getServerShutdownMessages());
-            testSpecificMessages.clear();
         } finally {
-
+            testSpecificMessages.clear();
             // We need to put the base config back, otherwise the waits below will timeout on some tests
             // Delete any of the listed key files if they exist
             List<String> filesToDelete = Arrays.asList(DEFAULT_KEY_PATH, VALIDATION_KEY1_PATH, VALIDATION_KEY2_PATH, CONFIGURED_VALIDATION_KEY1_PATH);
