@@ -41,6 +41,7 @@ public class SessionFilter implements Filter {
     private static final String CSRF_HEADER_NAME = "X-CSRF-Token";
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
     private static final int TOKEN_MAX_AGE = 3600; // 1 hour
+    private static final String CSRF_VALIDATION_ERROR_MSG = "CSRF token validation failed";
 
     /**
      * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
@@ -137,22 +138,21 @@ public class SessionFilter implements Filter {
             "DELETE".equals(method) || "PATCH".equals(method)) {
             
             // Exclude login endpoint - needs token generation, not validation
-            if (uri.equals("/adminCenter/j_security_check") ||
-                uri.equals("/j_security_check")) {
+            if (uri.endsWith("/j_security_check")) {
                 return false;
             }
             
             // Exclude logout endpoint - user is logging out anyway
-            if (uri.equals("/adminCenter/ibm_security_logout") ||
-                uri.equals("/ibm_security_logout")) {
+            if (uri.endsWith("/ibm_security_logout")) {
                 return false;
             }
             
             // Exclude static resources and login page resources
-            if (uri.startsWith("/adminCenter/dojo/") ||
-                uri.startsWith("/adminCenter/login/") ||
-                uri.startsWith("/adminCenter/fonts/") ||
-                uri.startsWith("/adminCenter/404/")) {
+            // Check if URI contains these paths (works for any context root)
+            if (uri.contains("/dojo/") ||
+                uri.contains("/login/") ||
+                uri.contains("/fonts/") ||
+                uri.contains("/404/")) {
                 return false;
             }
             
@@ -176,9 +176,19 @@ public class SessionFilter implements Filter {
     }
 
     /**
-     * Generates and sets a new CSRF token if one doesn't exist
+     * Generates and sets a new CSRF token if one doesn't exist.
+     * Only generates tokens for authenticated users with active sessions.
      */
     private void generateAndSetCsrfToken(HttpServletRequest request, HttpServletResponse response) {
+        // Only generate tokens for authenticated users
+        HttpSession session = request.getSession(false);
+        if (session == null || request.getUserPrincipal() == null) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Skipping CSRF token generation - no active authenticated session");
+            }
+            return;
+        }
+        
         String token = getCsrfTokenFromCookie(request);
         if (token == null) {
             // Generate new token only if completely missing
@@ -190,7 +200,7 @@ public class SessionFilter implements Filter {
             response.addHeader(SET_COOKIE_HEADER, cookieValue);
             
             if (tc.isDebugEnabled()) {
-                Tr.debug(tc, "Generated new CSRF token");
+                Tr.debug(tc, "Generated new CSRF token for authenticated user");
             }
         } else if (!isValidTokenFormat(token)) {
             // Token exists but has invalid format - log warning but don't regenerate
@@ -216,8 +226,7 @@ public class SessionFilter implements Filter {
         // We can't allow users to authenticate by navigating directly to a URL like
         // https://localhost:9443/adminCenter/j_security_check?j_username=admin&j_password=adminpwd
         // Doing so creates a security vulnerability
-        if ((requestURI.equals("/adminCenter/j_security_check") &&
-            request.getMethod().equals("GET"))) {
+        if (requestURI.endsWith("/j_security_check") && request.getMethod().equals("GET")) {
             if (tc.isDebugEnabled()) {
                 Tr.debug(tc, "Session = " + session);
                 Tr.debug(tc, "Redirecting to " + LOGIN_ERROR_PAGE);
@@ -232,7 +241,25 @@ public class SessionFilter implements Filter {
     }
 
     /**
-     * Filters requests and validates CSRF tokens for state-changing operations
+     * Handles CSRF validation failure by logging and sending error response
+     */
+    private void handleCsrfValidationFailure(HttpServletResponse response, String method, String uri) throws IOException {
+        if (tc.isDebugEnabled()) {
+            Tr.debug(tc, "CSRF validation failed for " + method + " " + uri);
+        }
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, CSRF_VALIDATION_ERROR_MSG);
+    }
+
+    /**
+     * Filters requests and validates CSRF tokens for state-changing operations.
+     *
+     * <p>Security Features:</p>
+     * <ul>
+     *   <li>Generates CSRF tokens using Double-Submit Cookie Pattern</li>
+     *   <li>Validates tokens for POST, PUT, DELETE, PATCH requests</li>
+     *   <li>Prevents GET-based authentication on j_security_check</li>
+     *   <li>Uses constant-time comparison to prevent timing attacks</li>
+     * </ul>
      *
      * @see javax.servlet.Filter#doFilter(javax.servlet.ServletRequest, javax.servlet.ServletResponse, javax.servlet.FilterChain)
      */
@@ -254,10 +281,7 @@ public class SessionFilter implements Filter {
         // Validate CSRF token for state-changing requests (Double-Submit Cookie Pattern)
         if (requiresCsrfValidation(method, requestURI)) {
             if (!validateCsrfToken(httpRequest)) {
-                if (tc.isDebugEnabled()) {
-                    Tr.debug(tc, "CSRF validation failed for " + method + " " + requestURI);
-                }
-                httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, "CSRF token validation failed");
+                handleCsrfValidationFailure(httpResponse, method, requestURI);
                 return;
             }
             if (tc.isDebugEnabled()) {
@@ -270,7 +294,15 @@ public class SessionFilter implements Filter {
             return;
         }
 
-        chain.doFilter(req, resp);
+        try {
+            chain.doFilter(req, resp);
+        } catch (ServletException | IOException e) {
+            // Log and re-throw exception with full stack trace for debugging
+            if (tc.isDebugEnabled()) {
+                Tr.debug(tc, "Exception in filter chain", e);
+            }
+            throw e;
+        }
 
         if (tc.isEntryEnabled()) {
             Tr.exit(tc, "doFilter");
