@@ -12,24 +12,17 @@
  *******************************************************************************/
 package io.openliberty.security.jakartasec.fat;
 
-import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 import componenttest.custom.junit.runner.AlwaysPassesTest;
-import componenttest.rules.repeater.EmptyAction;
-import componenttest.rules.repeater.FeatureReplacementAction;
-import componenttest.rules.repeater.RepeatTests;
-import io.openliberty.security.jakartasec.fat.tests.IdentityStoreTests;
+import io.openliberty.security.jakartasec.fat.tests.InMemoryIdentityStoreTests;
 
 @RunWith(Suite.class)
 @SuiteClasses({
                 AlwaysPassesTest.class,
-                IdentityStoreTests.class
+                InMemoryIdentityStoreTests.class
 })
 public class FATSuite {
-//TO-DO CHANGE REPEAT ACT
-    @ClassRule
-    public static RepeatTests repeat = RepeatTests.with(new EmptyAction().conditionalFullFATOnly(EmptyAction.GREATER_THAN_OR_EQUAL_JAVA_17)).andWith(FeatureReplacementAction.EE11_FEATURES().setSkipTransformation(true));
 }
