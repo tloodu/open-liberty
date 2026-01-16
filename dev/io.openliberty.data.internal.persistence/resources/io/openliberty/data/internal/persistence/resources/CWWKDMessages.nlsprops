@@ -72,7 +72,7 @@ CWWKD1005.find.rtrn.err=CWWKD1005E: The {0} method of the {1} repository \
  interface is not valid. The method specifies a {2} return type that is \
  not convertible from the {3} entity type. The result type of a \
  find operation must be the entity type, a type of an entity attribute \
- chosen by the Select annotation, a Java record composed of entity \
+ that is chosen by the Select annotation, a Java record that is composed of entity \
  attributes, or a type selected by the query that is supplied to the \
  Query annotation. The return type of the repository find method can be \
  the result type, an array of the result type, or any of the following types \
