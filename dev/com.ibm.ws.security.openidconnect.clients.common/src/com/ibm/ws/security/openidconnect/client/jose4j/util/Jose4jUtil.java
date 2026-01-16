@@ -371,28 +371,37 @@ public class Jose4jUtil {
             ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest)
             throws JWTTokenValidationFailedException {
 
-        if (tokenAlg == null || tokenAlg.isEmpty()) {
+        if (tokenAlg == null) {
             Object[] objs = new Object[] { clientConfig.getClientId(), Arrays.toString(configuredAlgorithms) };
-            throw oidcClientRequest.error(true, tc, "JWT_MISSING_ALG_HEADER", objs);
+            throw oidcClientRequest.errorCommon(true, tc, new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR_ALG_MISMATCH",
+                        "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH" }, objs);
+
+
+        }
+        if (tc.isDebugEnabled()) {
+            Tr.debug(tc, "JWT is signed with algorithm: ", tokenAlg);
+            Tr.debug(tc, "JWT is required to be signed with algorithm: ", configuredAlgorithms);
         }
 
-        for (String configuredAlg : configuredAlgorithms) {
-            if (configuredAlg != null && configuredAlg.equals(tokenAlg)) {
+        for (String alg : configuredAlgorithms) {
+            if (alg.equals(tokenAlg)) {
                 return;
             }
         }
 
-        // No match - algorithm not allowed
-        Object[] objs = new Object[] { clientConfig.getClientId(), tokenAlg, Arrays.toString(configuredAlgorithms) };
-        throw oidcClientRequest.error(true, tc, "JWT_ALGORITHM_MISMATCH", objs);
+        Object[] objs = new Object[] { clientConfig.getClientId(), Arrays.toString(configuredAlgorithms), tokenAlg };
+        throw oidcClientRequest.errorCommon(true, tc, new String[] { "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR_ALG_MISMATCH",
+                        "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH" }, objs);
+
+
     }
 
     @FFDCIgnore({ Exception.class })
     public Key getSignatureVerificationKeyFromJsonWebStructure(JsonWebStructure jsonStruct, ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) throws JWTTokenValidationFailedException {
         String kid = jsonStruct.getKeyIdHeaderValue();
         String tokenAlg = jsonStruct.getAlgorithmHeaderValue();
-        String[] configuredAlgorithms = clientConfig.getSignatureAlgorithm();
-        validateTokenAlgorithm(tokenAlg, configuredAlgorithms, clientConfig, oidcClientRequest);
+        String[] configuredSignatureAlgorithms = clientConfig.getSignatureAlgorithm();
+        validateTokenAlgorithm(tokenAlg, configuredSignatureAlgorithms, clientConfig, oidcClientRequest);
         // Support for 'x5t' header remains for interoperability purposes.
         // If FIPS 140-3 is enabled, usage of the 'x5t' header for signature verification is disabled
         String x5t = CryptoUtils.isFips140_3Enabled() ? null : jsonStruct.getX509CertSha1ThumbprintHeaderValue();
@@ -430,8 +439,8 @@ public class Jose4jUtil {
                 keyValue = retriever.getPublicKeyFromJwk(kid, x5t, x5tS256, "sig", clientConfig.getUseSystemPropertiesForHttpClientConnections());
             } else {
                 
-                String[] trustAliases = clientConfig.getTrustedAlias();
-                String selectedAlias = matchKidToAlias(kid, trustAliases);
+                String[] trustedAliases = clientConfig.getTrustedAlias();
+                String selectedAlias = selectAliasFromKeyId(kid, trustedAliases);
                 
                 keyValue = clientConfig.getPublicKey(selectedAlias);
             }
@@ -441,7 +450,7 @@ public class Jose4jUtil {
         return keyValue;
     }
 
-    String matchKidToAlias(String kid, String[] trustedAliases) throws KeyException{
+    String selectAliasFromKeyId(String kid, String[] trustedAliases) throws KeyException{
         // TODO: Handle case where option keyId header from token is null
         // Then we want to try the xtS256 and x5t headers
 
