@@ -624,6 +624,7 @@ public class Jose4jUtil {
     }
 
     public JwtClaims validateJwsSignature(JwtContext jwtContext, ConvergedClientConfig clientConfig, OidcClientRequest oidcClientRequest) throws Exception {
+        // TODO - update to use io.openliberty.security.common.jwt.jws.JwsVerificationKeyHelper and io.openliberty.security.common.jwt.jws.JwsSignatureVerifier
         JsonWebStructure jwStructure = JwtParsingUtils.getJsonWebStructureFromJwtContext(jwtContext);
         Key key = getSignatureVerificationKeyFromJsonWebStructure(jwStructure, clientConfig, oidcClientRequest);
 

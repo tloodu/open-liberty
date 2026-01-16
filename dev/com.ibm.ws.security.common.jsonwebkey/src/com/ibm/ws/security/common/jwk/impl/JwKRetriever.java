@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.kerberos.KeyTab;
 
 // import java.util.Base64; // or could use
 import org.apache.commons.codec.binary.Base64;
@@ -500,8 +501,10 @@ public class JwKRetriever {
     protected boolean parseKeyText(@Sensitive String keyText, String location, JWKSet jwkset, String signatureAlgorithm) {
         Set<JWK> jwks = new HashSet<JWK>();
         JWK jwk = null;
+        KeyType keyType = PemKeyUtil.getKeyType(keyText);
 
-        if (isPEM(keyText) && isPemSupportedAlgorithm(signatureAlgorithm)) {
+        // If of type private, proceed with PEM parsing as signatureAlgorithm should not be used to get the private key
+        if (isPEM(keyText) && (isPemSupportedAlgorithm(signatureAlgorithm) || keyType==KeyType.PRIVATE)) {
             jwk = parsePEMFormat(keyText, signatureAlgorithm);
         } else {
             JSONObject jsonObject = parseJsonObject(keyText);
@@ -533,8 +536,6 @@ public class JwKRetriever {
     }
 
     boolean isPemSupportedAlgorithm(String signatureAlgorithm) {
-        if (signatureAlgorithm == null)
-            return true;
 
         return KeyAlgorithmChecker.isRSAlgorithm(signatureAlgorithm) || KeyAlgorithmChecker.isESAlgorithm(signatureAlgorithm);
     }
@@ -548,7 +549,7 @@ public class JwKRetriever {
             if (isPublicKeyJwk(keyType)) {
                 return parsePublicKeyJwk(keyText, signatureAlgorithm);
             } else if (keyType == KeyType.PRIVATE) {
-                return parsePrivateKeyJwk(keyText, signatureAlgorithm);
+                return parsePrivateKeyJwk(keyText);
             }
         } catch (Exception e) {
             if (tc.isDebugEnabled()) {
@@ -572,12 +573,12 @@ public class JwKRetriever {
     }
 
     @Sensitive
-    JWK parsePrivateKeyJwk(@Sensitive String keyText, String signatureAlgorithm) throws Exception {
+    JWK parsePrivateKeyJwk(@Sensitive String keyText) throws Exception {
         PrivateKey privateKey = PemKeyUtil.getPrivateKey(keyText);
         if (privateKey instanceof ECPrivateKey) {
-            return getEcJwkPrivateKey(privateKey, signatureAlgorithm);
+            return getEcJwkPrivateKey(privateKey);
         } else if (privateKey instanceof RSAPrivateKey) {
-            return getRsaJwkPrivateKey(privateKey, signatureAlgorithm);
+            return getRsaJwkPrivateKey(privateKey);
         }
         return null;
     }
@@ -603,7 +604,7 @@ public class JwKRetriever {
 
     @Sensitive
     @FFDCIgnore(Exception.class)
-    private Jose4jEllipticCurveJWK getEcJwkPrivateKey(@Sensitive PrivateKey privateKey, String signatureAlgorithm) {
+    private Jose4jEllipticCurveJWK getEcJwkPrivateKey(@Sensitive PrivateKey privateKey) {
         if (!(privateKey instanceof ECPrivateKey)) {
             if (tc.isDebugEnabled()) {
                 Tr.debug(tc, "Provided private key was not of type ECPrivateKey");
@@ -636,7 +637,7 @@ public class JwKRetriever {
 
     @Sensitive
     @FFDCIgnore(Exception.class)
-    private Jose4jRsaJWK getRsaJwkPrivateKey(@Sensitive PrivateKey privateKey, String signatureAlgorithm) {
+    private Jose4jRsaJWK getRsaJwkPrivateKey(@Sensitive PrivateKey privateKey) {
         Jose4jRsaJWK jwk = null;
         try {
             jwk = Jose4jRsaJWK.getInstance(null, null, null, privateKey, null);

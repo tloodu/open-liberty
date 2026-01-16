@@ -420,7 +420,7 @@ public class Jose4jValidator {
         rpAndJwtSpecifiedNoneAlgorithm = !rpSpecifiedSigningAlgorithm && Constants.SIG_ALG_NONE.equals(algHeader);
         
         if (!rpAndJwtSpecifiedNoneAlgorithm) {
-            // JWT's algorithm is not "none", so check the signature
+            // JWT's header algorithm and rp configured signature algorithm is not "none", so check the signature
             if (signature.getEncodedSignature().isEmpty()) {
                 Object[] objects = new Object[] { this.clientId, Arrays.toString(this.signingAlgorithm) };
                 if (oidcClientRequest != null) {
