@@ -1,4 +1,4 @@
-<server description="Server for testing the check interval attribute">
+<server description="Dummy server">
 
     <include location="../fatTestPorts.xml"/>
 
@@ -8,10 +8,8 @@
         <feature>mpConfig-3.0</feature>
         <feature>servlet-4.0</feature>
     </featureManager>
-    
-    <mpHealth startupCheckInterval="1s" checkInterval="30s" />
     	
-	<logging traceSpecification="*=info:HEALTH=all"/>
+	<logging traceSpecification="*=info:HEALTH=all" isoDateFormat="true"/>
 	
     <webContainer deferServletLoad="false"/>
 
