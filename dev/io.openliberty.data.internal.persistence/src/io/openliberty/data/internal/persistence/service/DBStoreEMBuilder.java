@@ -398,6 +398,7 @@ public class DBStoreEMBuilder extends EntityManagerBuilder implements DDLGenerat
      *                                    the application is unavailable.
      * @throws InvalidSyntaxException should never occur.
      */
+    @Trivial
     private void abortIfStopping(String application,
                                  Set<Class<?>> repositoryInterfaces) //
                     throws InvalidSyntaxException {
