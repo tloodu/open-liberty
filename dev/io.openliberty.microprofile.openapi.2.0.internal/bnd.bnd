@@ -18,6 +18,9 @@ bVersion=1.0
 
 src: src, resources
 
+# This bnd produces two archives. *.jar is used by the mpOpenAPI-2.0 feature. *.jakarta is used by both mpOpenAPI-3.0, and mpOpenAPI-3.1
+# mpOpenAPI-3.0 uses jandex 2.x. mpOpenAPI-3.1 uses jandex 3.x. So the import statement must tolerate both. 
+
 Import-Package: \
     org.eclipse.microprofile.config.*;version="[1.0,3)",\
     org.eclipse.microprofile.openapi.models.media;version="[2,4)",\
