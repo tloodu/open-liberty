@@ -7,7 +7,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="test-applications/ham/src"/>
-	<classpathentry kind="src" output="bin/main" path="test-applications/inmemory/src">
+	<classpathentry kind="src" path="test-applications/inmemory/src">
 		<attributes>
 			<attribute name="gradle_scope" value="main"/>
 			<attribute name="gradle_used_by_scope" value="main,test"/>
