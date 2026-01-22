@@ -22,6 +22,8 @@ import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.ws.ffdc.annotation.FFDCIgnore;
 import com.ibm.ws.kernel.service.util.ServiceCaller;
 
+import io.openliberty.mcp.content.Content;
+import io.openliberty.mcp.content.TextContent;
 import io.openliberty.mcp.internal.Capabilities.ServerCapabilities;
 import io.openliberty.mcp.internal.config.McpConfiguration;
 import io.openliberty.mcp.internal.encoders.EncoderRegistry;
@@ -224,7 +226,8 @@ public class McpServlet extends HttpServlet {
             var handler = params.getMetadata().handler();
 
             ToolResponse response = handler.apply(toolArgs);
-            transport.sendResponse(response);
+            ToolResponse finalResponse = removeStructuredContentIfNotSupported(response, transport);
+            transport.sendResponse(finalResponse);
         } finally {
             cleanup(requestId);
         }
@@ -243,9 +246,24 @@ public class McpServlet extends HttpServlet {
 
         var handler = params.getMetadata().asyncHandler();
 
-        CompletionStage<ToolResponse> response = handler.apply(toolArgs);
+        CompletionStage<ToolResponse> response = handler.apply(toolArgs)
+                                                        .thenApply(r -> removeStructuredContentIfNotSupported(r, transport));
         transport.sendResultAsync(response)
                  .whenComplete((result, throwable) -> cleanup(requestId));
+    }
+
+    private ToolResponse removeStructuredContentIfNotSupported(ToolResponse response, McpTransport transport) {
+        if (transport.getProtocolVersion().supportsStructuredContent()) {
+            return response;
+        }
+
+        if (response.structuredContent() == null) {
+            return response;
+        }
+
+        List<? extends Content> responseContent = response.content() != null ? response.content() : List.of(new TextContent(jsonb.toJson(response.structuredContent())));
+
+        return new ToolResponse(response.isError(), responseContent, null, response._meta());
     }
 
     /**
@@ -284,6 +302,7 @@ public class McpServlet extends HttpServlet {
             return;
         }
 
+        boolean supportsStructuredContent = transport.getProtocolVersion().supportsStructuredContent();
         McpToolListParams params = transport.getParams(McpToolListParams.class);
         String cursor = params != null ? params.getCursor() : null;
 
@@ -302,7 +321,9 @@ public class McpServlet extends HttpServlet {
 
         List<ToolDescription> response = authorisedTools.stream()
                                                         .limit(PAGE_SIZE)
-                                                        .map(ToolDescription::new)
+                                                        .map(toolMetadata -> {
+                                                            return new ToolDescription(toolMetadata, supportsStructuredContent);
+                                                        })
                                                         .toList();
 
         String nextCursor = theresMore ? authorisedTools.get(PAGE_SIZE - 1).name() : null;

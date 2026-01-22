@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -41,6 +41,17 @@ public enum McpProtocolVersion {
             }
         }
         throw new NoSuchElementException();
+    }
+
+    /**
+     * Return true if this protocol version supports structured content in tool responses and outputSchema
+     * in tool descriptions. Structured content and outputSchema are only supported in protocol version
+     * 2025-06-18 and later
+     *
+     * @return true if structured content and output schema are supported
+     */
+    public boolean supportsStructuredContent() {
+        return this != V_2025_03_26;
     }
 
     public static class McpProtocolVersionAdapter implements JsonbAdapter<McpProtocolVersion, String> {
