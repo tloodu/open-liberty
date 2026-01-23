@@ -24,7 +24,8 @@ import java.security.AccessController; // Liberty Change
 import java.security.PrivilegedAction; // Liberty Change
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.cxf.Bus;
 import org.apache.cxf.buslifecycle.BusLifeCycleListener;
@@ -91,6 +92,7 @@ public class AsyncHTTPConduitFactory implements HTTPConduitFactory {
     //CXF specific
     public static final String USE_POLICY = "org.apache.cxf.transport.http.async.usePolicy";
 
+    private Logger LOG = Logger.getLogger(AsyncHTTPConduitFactory.class.getName());
 
     public enum UseAsyncPolicy {
         ALWAYS, ASYNC_ONLY, NEVER;
@@ -183,11 +185,16 @@ public class AsyncHTTPConduitFactory implements HTTPConduitFactory {
         }
         policy = UseAsyncPolicy.getPolicy(st);
 
-        maxConnections = getInt(s.get(MAX_CONNECTIONS), maxConnections);
+        maxConnections = getInt(getProperty(s, MAX_CONNECTIONS), maxConnections);
         connectionTTL = getInt(s.get(CONNECTION_TTL), connectionTTL);
         connectionMaxIdle = getInt(s.get(CONNECTION_MAX_IDLE), connectionMaxIdle);
-        maxPerRoute = getInt(s.get(MAX_PER_HOST_CONNECTIONS), maxPerRoute);
+        maxPerRoute = getInt(getProperty(s,MAX_PER_HOST_CONNECTIONS), maxPerRoute);
 
+        if(LOG.isLoggable(Level.FINE))      {
+            LOG.fine("SetProperties: " + MAX_CONNECTIONS + " is set to " + maxConnections);
+            LOG.fine("SetProperties: " + MAX_PER_HOST_CONNECTIONS + " is set to " + maxPerRoute);
+        }
+        
         if (connectionManager != null) {
             connectionManager.setMaxTotal(maxConnections);
             connectionManager.setDefaultMaxPerRoute(maxPerRoute);
@@ -225,6 +232,11 @@ public class AsyncHTTPConduitFactory implements HTTPConduitFactory {
         changed |= b != soKeepalive;
 
         return changed;
+    }
+    // When property can't be found in Map, return property value from system  
+    private Object getProperty(Map<String, Object> s, String key)    {
+        Object propertyValue = s.get(key);
+        return propertyValue == null ? SystemPropertyAction.getProperty(key) : propertyValue;
     }
     private int getInt(Object s, int defaultv) {
         int i = defaultv;
