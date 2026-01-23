@@ -2,7 +2,7 @@
 ###############################################################################
 # WebSphere Application Server liberty launch script
 #
-# Copyright (c) 2011, 2025 IBM Corporation and others.
+# Copyright (c) 2011, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -493,11 +493,29 @@ serverEnv()
   readServerEnv "${WLP_USER_DIR}/shared/server.env"
   readServerEnv "${SERVER_CONFIG_DIR}/server.env"
   serverEnvDefaults
+  
+  # Determine Java version and add z/OS native access flag for Java 24+ to avoid warnings
+  if [ "${uname}" = OS/390 ]; then
+    # Try to determine Java version if JAVA_HOME is set
+    if [ -n "${JAVA_HOME}" ] && [ -f "${JAVA_HOME}/release" ]; then
+      JAVA_VERSION_MAJOR=$(readNativeFile "${JAVA_HOME}/release" '[A-Za-z0-9]' | LC_ALL=C tr -d '\r' | grep ^JAVA_VERSION\s*= | tr -d '"' | awk -F= '{print $2}' | awk -F. '{if ($1 > 1) {print $1} else {print $2}}')
+      # Only add flag if version was successfully detected and is >= 24
+      if [ -n "${JAVA_VERSION_MAJOR}" ] && [ "${JAVA_VERSION_MAJOR}" -ge 24 ] 2>/dev/null; then
+        case "${JVM_OPTIONS_QUOTED}" in
+          *--enable-native-access=ALL-UNNAMED*) ;;
+          *)
+            JVM_OPTIONS_QUOTED="${JVM_OPTIONS_QUOTED} '--enable-native-access=ALL-UNNAMED'"
+            ;;
+        esac
+      fi
+    fi
+  fi
 }
 
 ##
 ## serverEnvAndJVMOptions: Read server.env files and set environment variables.
 ##                         Read jvm.options file into ${JVM_OPTIONS_QUOTED}
+##                         Set JAVA_VERSION_MAJOR from ${JPMS_MODULE_FILE_LOCATION}/../../release file, if found
 serverEnvAndJVMOptions()
 {
   serverEnv
@@ -505,6 +523,7 @@ serverEnvAndJVMOptions()
   # Avoids HeadlessException on all platforms and Liberty JVMs appearing as applications and stealing focus on Mac.
   # Declare allowAttachSelf=true so that the VM will permit a late self attach if localConnector-1.0 is enabled
   # need -Dcom.ibm.tools.attach.enable=yes for java 11 on z/OS
+  # Note: z/OS native access flag will be added later after Java version is determined
   if [ "${uname}" = OS/390 ]; then
     JVM_OPTIONS_QUOTED="-Djava.awt.headless=true -Djdk.attach.allowAttachSelf=true -Dcom.ibm.tools.attach.enable=yes"
   else
@@ -583,12 +602,45 @@ serverEnvAndJVMOptions()
     fi  # if JAVA_HOME is not set and java is not in the PATH, then we cannot find Java.
   fi
 
-  # If there is a lib/modules directory under JAVA_HOME, then it is at least Java 9.   Ensure java9.options gets loaded.
+  # If there is a lib/modules directory under JAVA_HOME, then it is at least Java 9.   Ensure a java options file gets loaded.
   if [ -n "${JAVA_HOME}" ]; then
     JPMS_MODULE_FILE_LOCATION=${JAVA_HOME}/lib/modules
-
+  
+  # If there is a 'release' file under JAVA_HOME, examine it to see if JAVA_VERSION is set.  If so, determine which version of Java we will be using.
+    if [ -f "${JAVA_HOME}/release" ]; then
+        JAVA_VERSION_MAJOR=$(readNativeFile "${JAVA_HOME}/release" '[A-Za-z0-9]' | LC_ALL=C tr -d '\r' | grep ^JAVA_VERSION\s*= | tr -d '"' | awk -F= '{print $2}' | awk -F. '{if ($1 > 1) {print $1} else {print $2}}')
+    fi
+  
     if [ -f "${JPMS_MODULE_FILE_LOCATION}" ]; then
-       mergeJVMOptions "${WLP_INSTALL_DIR}/lib/platform/java/java9.options"
+        if [ -n "${JAVA_VERSION_MAJOR}" ]; then
+            if [ ${JAVA_VERSION_MAJOR} -ge 24 ] 2>/dev/null; then
+                mergeJVMOptions "${WLP_INSTALL_DIR}/lib/platform/java/java24.options"
+            else
+                mergeJVMOptions "${WLP_INSTALL_DIR}/lib/platform/java/java9.options"
+            fi
+        else
+                mergeJVMOptions "${WLP_INSTALL_DIR}/lib/platform/java/java9.options"
+        fi
+    fi
+    
+    # In Java 24+, JNI usage must be explicitly granted when starting the JVM - https://openjdk.org/jeps/472 (needed for z/OS)
+    if [ -n "${JAVA_VERSION_MAJOR}" ] && [ "${uname}" = "OS/390" ]; then
+        # Only add flag if version comparison succeeds (suppress errors for invalid values)
+        if [ "${JAVA_VERSION_MAJOR}" -ge 24 ] 2>/dev/null; then
+            # Check if the flag is not already present in SERVER_JVM_OPTIONS_QUOTED or JVM_OPTIONS_QUOTED
+            case "${SERVER_JVM_OPTIONS_QUOTED}" in
+                *--enable-native-access=ALL-UNNAMED*) ;;
+                *)
+                    SERVER_JVM_OPTIONS_QUOTED="${SERVER_JVM_OPTIONS_QUOTED} '--enable-native-access=ALL-UNNAMED'"
+                    ;;
+            esac
+            case "${JVM_OPTIONS_QUOTED}" in
+                *--enable-native-access=ALL-UNNAMED*) ;;
+                *)
+                    JVM_OPTIONS_QUOTED="${JVM_OPTIONS_QUOTED} '--enable-native-access=ALL-UNNAMED'"
+                    ;;
+            esac
+        fi
     fi
   fi
 
@@ -727,7 +779,7 @@ mergeJVMOptions()
         case $option in
           \#*)
               ;;
-          *)
+            *)
               escapeForEval "${option}"
               option="${escapeForEvalResult}"
               SERVER_JVM_OPTIONS_QUOTED="${SERVER_JVM_OPTIONS_QUOTED} ${option}"
@@ -735,6 +787,7 @@ mergeJVMOptions()
         esac
       fi
     done
+
     IFS=$saveIFS
   fi
 }
