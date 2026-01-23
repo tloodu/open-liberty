@@ -12,7 +12,6 @@ package io.openliberty.mcp.internal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,7 +57,7 @@ public class McpCdiExtension implements Extension {
 
     private static final List<Bean<?>> encoderBeans = new ArrayList<>();
     private EncoderRegistry encoderRegistry;
-    private ConcurrentHashMap<String, LinkedList<String>> duplicateToolsMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, ArrayList<String>> duplicateToolsMap = new ConcurrentHashMap<>();
 
     private SchemaRegistry schemas = new SchemaRegistry();
     private Jsonb jsonb = createJsonb();
@@ -175,7 +174,7 @@ public class McpCdiExtension implements Extension {
         duplicateToolsMap.entrySet().removeIf(e -> e.getValue().size() == 1);
         for (String toolName : duplicateToolsMap.keySet()) {
             error = true;
-            LinkedList<String> qualifiedNames = duplicateToolsMap.get(toolName);
+            List<String> qualifiedNames = duplicateToolsMap.get(toolName);
             Tr.error(tc, "CWMCM0004E.duplicate.tools", toolName, String.join(",", qualifiedNames));
         }
         return error;
@@ -246,13 +245,16 @@ public class McpCdiExtension implements Extension {
     private void registerTool(Tool tool, Bean<?> bean, AnnotatedMethod<?> method, BeanManager beanManager) {
         try {
             ToolMetadata toolmd = ToolMetadata.createFrom(tool, bean, method, beanManager, jsonb);
-            duplicateToolsMap.computeIfAbsent(toolmd.name(), key -> new LinkedList<>()).add(toolmd.getToolQualifiedName());
-            tools.addTool(toolmd);
-            if (TraceComponent.isAnyTracingEnabled()) {
-                if (tc.isDebugEnabled()) {
-                    Tr.debug(this, tc, "Registered tool: " + toolmd.name(), toolmd);
-                } else if (tc.isEventEnabled()) {
-                    Tr.event(this, tc, "Registered tool: " + toolmd.name(), method);
+            List<String> duplicatesList = duplicateToolsMap.computeIfAbsent(toolmd.name(), key -> new ArrayList<>());
+            duplicatesList.add(toolmd.getToolQualifiedName());
+            if (duplicatesList.size() <= 1) {
+                tools.addTool(toolmd);
+                if (TraceComponent.isAnyTracingEnabled()) {
+                    if (tc.isDebugEnabled()) {
+                        Tr.debug(this, tc, "Registered tool: " + toolmd.name(), toolmd);
+                    } else if (tc.isEventEnabled()) {
+                        Tr.event(this, tc, "Registered tool: " + toolmd.name(), method);
+                    }
                 }
             }
         } catch (GenericArgumentException e) {
