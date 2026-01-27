@@ -63,12 +63,12 @@ public class RequestTimingMetricsTest {
 
     @ClassRule
     public static RepeatTests r = MicroProfileActions.repeat(FeatureReplacementAction.ALL_SERVERS,
-                                                            //  MicroProfileActions.MP61,
-                                                            //  MicroProfileActions.MP50,
-                                                             MicroProfileActions.MP41
-                                                            //  MicroProfileActions.MP33,
-                                                            //  MicroProfileActions.MP32,
-                                                            //  MicroProfileActions.MP30
+                                                             MicroProfileActions.MP61,
+                                                             MicroProfileActions.MP50,
+                                                             MicroProfileActions.MP41,
+                                                             MicroProfileActions.MP33,
+                                                             MicroProfileActions.MP32,
+                                                             MicroProfileActions.MP30
                                                              );
 
     private static final Class<RequestTimingMetricsTest> c = RequestTimingMetricsTest.class;
