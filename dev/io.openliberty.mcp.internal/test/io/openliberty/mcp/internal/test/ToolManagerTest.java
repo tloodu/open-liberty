@@ -10,7 +10,10 @@
 package io.openliberty.mcp.internal.test;
 
 import static io.openliberty.mcp.internal.security.SecurityRequirement.SecurityAnnotation.NONE;
+import static io.openliberty.mcp.internal.test.exception.ExceptionAssertions.assertThrows;
+import static io.openliberty.mcp.internal.test.exception.ExceptionAssertions.exception;
 import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.joining;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -27,6 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.junit.Before;
@@ -41,6 +45,7 @@ import io.openliberty.mcp.internal.security.SecurityRequirement;
 import io.openliberty.mcp.tools.ToolManager;
 import io.openliberty.mcp.tools.ToolManager.ToolArgument;
 import io.openliberty.mcp.tools.ToolManager.ToolArguments;
+import io.openliberty.mcp.tools.ToolManager.ToolDefinition;
 import io.openliberty.mcp.tools.ToolManager.ToolInfo;
 import io.openliberty.mcp.tools.ToolResponse;
 import jakarta.json.Json;
@@ -233,5 +238,116 @@ public class ToolManagerTest {
 
     private static void assertSchema(String expectedSchema, JsonObject schema) {
         JSONAssert.assertEquals(expectedSchema, schema.toString(), JSONCompareMode.NON_EXTENSIBLE);
+    }
+
+    @Test
+    public void testDuplicateToolName() {
+        // Test check on newTool
+        toolManager.newTool("foo").setHandler(a -> ToolResponse.success("ok")).register();
+
+        assertThrows(() -> toolManager.newTool("foo"),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0026E: An MCP tool with the foo name already exists."));
+
+        // Test check on register (tool is not a duplicate when newTool is called, but is a duplicate when register is called)
+        ToolDefinition def1 = toolManager.newTool("bar").setHandler(a -> ToolResponse.success("ok"));
+        ToolDefinition def2 = toolManager.newTool("bar").setHandler(a -> ToolResponse.success("ok"));
+
+        def1.register();
+        assertThrows(() -> def2.register(),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0026E: An MCP tool with the bar name already exists."));
+
+        // Test calling register twice
+        ToolDefinition def3 = toolManager.newTool("baz").setHandler(a -> ToolResponse.success("OK"));
+        def3.register();
+        assertThrows(() -> def3.register(),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0026E: An MCP tool with the baz name already exists."));
+    }
+
+    @Test
+    public void testNoHandler() {
+        var def = toolManager.newTool("foo");
+
+        assertThrows(() -> def.register(),
+                     exception().ofType(IllegalStateException.class)
+                                .messageIncludes("CWMCM0027E: Either the setHandler method or the setAsyncHandler method must be called for the foo MCP tool."));
+    }
+
+    @Test
+    public void testBothHandlers() {
+        var def = toolManager.newTool("foo")
+                             .setHandler(a -> ToolResponse.success("ok"))
+                             .setAsyncHandler(a -> CompletableFuture.completedFuture(ToolResponse.success("ok")));
+
+        assertThrows(() -> def.register(),
+                     exception().ofType(IllegalStateException.class)
+                                .messageIncludes("CWMCM0027E: Either the setHandler method or the setAsyncHandler method must be called for the foo MCP tool."));
+    }
+
+    @Test
+    public void testNullName() {
+        assertThrows(() -> toolManager.newTool(null),
+                     exception().ofType(NullPointerException.class));
+    }
+
+    @Test
+    public void testBlankName() {
+        assertThrows(() -> toolManager.newTool(""),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0029E: The  MCP tool name is not valid. Tool names must be between 1 and 128 characters in length, inclusive."));
+    }
+
+    @Test
+    public void testNameTooLong() {
+        String longName = Stream.generate(() -> "a").limit(129).collect(joining());
+        assertThrows(() -> toolManager.newTool(longName),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0029E: The " + longName
+                                                 + " MCP tool name is not valid. Tool names must be between 1 and 128 characters in length, inclusive."));
+    }
+
+    @Test
+    public void testBlankArgName() {
+        var def = toolManager.newTool("foo");
+        assertThrows(() -> def.addArgument("", null, false, String.class),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0030E: Cannot add an argument with a blank name to the foo MCP tool."));
+    }
+
+    @Test
+    public void testNoDefaultValueConverter() {
+        record MyBean(String value) {};
+        var def = toolManager.newTool("foo");
+
+        // Argument with no default value should not throw exception
+        def.addArgument("bar", null, false, MyBean.class);
+
+        assertThrows(() -> def.addArgument("baz", null, false, MyBean.class, "defaultValue"),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0031E: The baz argument of the foo MCP tool does not have a converter to change its default value into an object of type "
+                                                 + MyBean.class.getName() + "."));
+    }
+
+    @Test
+    public void testDefaultValueConversionError() {
+        var def = toolManager.newTool("foo");
+
+        assertThrows(() -> def.addArgument("bar", null, false, int.class, "abc"),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0020E: The default value of the bar argument of the foo MCP tool cannot be converted to the int type. The value is abc. The error is ")
+                                .messageIncludes(NumberFormatException.class.getName())
+                                .withCause(exception().ofType(NumberFormatException.class)));
+    }
+
+    @Test
+    public void testDuplicateArgName() {
+        var def = toolManager.newTool("foo")
+                             .addArgument("bar", null, false, String.class);
+
+        assertThrows(() -> def.addArgument("bar", null, false, String.class),
+                     exception().ofType(IllegalArgumentException.class)
+                                .messageIncludes("CWMCM0032E: Cannot add a second argument with the bar name to the foo MCP tool."));
     }
 }

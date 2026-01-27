@@ -18,11 +18,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import com.ibm.websphere.ras.Tr;
+import com.ibm.websphere.ras.TraceComponent;
 
 import io.openliberty.mcp.internal.schemas.SchemaRegistry;
 import io.openliberty.mcp.internal.security.SecurityRequirement;
@@ -34,6 +38,7 @@ import jakarta.json.JsonObject;
 import jakarta.json.bind.Jsonb;
 
 public class ToolRegistry implements ToolManager {
+    private static final TraceComponent tc = Tr.register(ToolRegistry.class);
 
     private static ToolRegistry staticInstance = null;
 
@@ -133,6 +138,22 @@ public class ToolRegistry implements ToolManager {
 
         public ToolDefinitionImpl(String name) {
             this.name = name;
+            validateName(name);
+        }
+
+        private void validateName(String name) throws NullPointerException, IllegalArgumentException {
+            Objects.requireNonNull(name, "name");
+            if (toolStore.getTool(name) != null) {
+                // Note: this is also validated when the tool is actually added to the store
+                throw new IllegalArgumentException(Tr.formatMessage(tc, "CWMCM0026E.duplicate.tool.name", name));
+            }
+            for (var error : ToolValidation.validateToolName(name)) {
+                String message = switch (error) {
+                    case INVALID_CHARACTERS -> Tr.formatMessage(tc, "CWMCM0028E.invalid.character.tool.name", name);
+                    case INVALID_LENGTH -> Tr.formatMessage(tc, "CWMCM0029E.invalid.length.tool.name", name);
+                };
+                throw new IllegalArgumentException(message);
+            }
         }
 
         @Override
@@ -155,16 +176,42 @@ public class ToolRegistry implements ToolManager {
 
         @Override
         public ToolDefinition addArgument(String name, String description, boolean required, Type type) {
-            ToolArgument arg = new ToolArgument(name, description, required, type, null);
-            arguments.add(arg);
-            return this;
+            return this.addArgument(name, description, required, type, null);
         }
 
         @Override
         public ToolDefinition addArgument(String name, String description, boolean required, Type type, String defaultValue) {
+            Objects.requireNonNull(name, "name");
             ToolArgument arg = new ToolArgument(name, description, required, type, defaultValue);
+            validateArgument(arg);
             arguments.add(arg);
             return this;
+        }
+
+        private void validateArgument(ToolArgument arg) {
+            if (arguments.stream().anyMatch(a -> a.name().equals(arg.name()))) {
+                String message = Tr.formatMessage(tc, "CWMCM0032E.duplicate.argument.name", this.name, arg.name());
+                throw new IllegalArgumentException(message);
+            }
+            for (var error : ToolValidation.validateToolArgument(arg)) {
+                switch (error.type()) {
+                    case NAME_BLANK -> {
+                        String message = Tr.formatMessage(tc, "CWMCM0030E.blank.arguments", this.name);
+                        throw new IllegalArgumentException(message);
+                    }
+                    case NO_CONVERTER -> {
+                        String message = Tr.formatMessage(tc, "CWMCM0031E.missing.toolarg.defaultvalue.converter", this.name, arg.name(), arg.type().getTypeName());
+                        throw new IllegalArgumentException(message);
+                    }
+                    case CONVERSION_ERROR -> {
+                        String msg = Tr.formatMessage(tc, "CWMCM0020E.defaultvalue.conversion.error",
+                                                      this.name, arg.name(), arg.type().getTypeName(), arg.defaultValue(), error.exception());
+                        throw new IllegalArgumentException(msg, error.exception());
+                    }
+                    // This case should not occur here, but switch is required to cover all cases
+                    case NAME_MISSING -> throw new IllegalArgumentException("Name missing");
+                };
+            }
         }
 
         @Override
@@ -200,10 +247,9 @@ public class ToolRegistry implements ToolManager {
         @Override
         public ToolInfo register() {
             boolean isAsync = asyncHandler != null;
-            if (isAsync && handler != null) {
-                throw new RuntimeException("Cannot set both handler and asyncHandler");
-            } else if (!isAsync && handler == null) {
-                throw new RuntimeException("One of handler or asyncHandler must be set");
+            if ((asyncHandler != null && handler != null) || (asyncHandler == null && handler == null)) {
+                String message = Tr.formatMessage(tc, "CWMCM0027E.provide.one.handler", name);
+                throw new IllegalStateException(message);
             }
 
             JsonObject inputSchema = getInputSchema(this.inputSchema, arguments);

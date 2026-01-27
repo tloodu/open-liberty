@@ -13,6 +13,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.ibm.websphere.ras.Tr;
+import com.ibm.websphere.ras.TraceComponent;
+
 import io.openliberty.mcp.tools.ToolManager.ToolInfo;
 
 /**
@@ -21,6 +24,8 @@ import io.openliberty.mcp.tools.ToolManager.ToolInfo;
  * This class separates that parts of {@link ToolRegistry} that need synchronization to be thread-safe.
  */
 public class ToolStore {
+
+    private static final TraceComponent tc = Tr.register(ToolStore.class);
 
     /**
      * Must synchronize before write access. Must call {@link #refreshToolList()} after modifying.
@@ -57,7 +62,8 @@ public class ToolStore {
         synchronized (this) {
             ToolMetadata oldValue = tools.putIfAbsent(tool.name(), tool);
             if (oldValue != null) {
-                throw new IllegalArgumentException("A tool with name " + tool.name() + " already exists");
+                String message = Tr.formatMessage(tc, "CWMCM0026E.duplicate.tool.name", tool.name());
+                throw new IllegalArgumentException(message);
             } else {
                 refreshToolList();
             }

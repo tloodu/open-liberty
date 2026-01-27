@@ -9,7 +9,6 @@
  *******************************************************************************/
 package io.openliberty.mcp.internal;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
@@ -30,12 +28,9 @@ import io.openliberty.mcp.internal.ToolMetadata.SpecialArgumentMetadata;
 import io.openliberty.mcp.internal.encoders.EncoderRegistry;
 import io.openliberty.mcp.internal.exceptions.GenericArgumentException;
 import io.openliberty.mcp.internal.exceptions.UnsupportedTypeException;
-import io.openliberty.mcp.internal.requests.BuiltinDefaultValueConverters;
-import io.openliberty.mcp.internal.requests.DefaultValueConverter;
 import io.openliberty.mcp.internal.requests.McpRequestIdDeserializer;
 import io.openliberty.mcp.internal.requests.McpRequestIdSerializer;
 import io.openliberty.mcp.internal.schemas.SchemaRegistry;
-import io.openliberty.mcp.internal.schemas.TypeUtility;
 import io.openliberty.mcp.internal.tools.BeanMethodHandler.MethodMetadata;
 import io.openliberty.mcp.messaging.Encoder;
 import io.openliberty.mcp.tools.ToolManager.ToolArgument;
@@ -75,8 +70,6 @@ public class McpCdiExtension implements Extension {
 
         return JsonbBuilder.create(jsonbConfig);
     }
-
-    private static final Pattern TOOL_NAME_CHARACTER_PATTERN = Pattern.compile("[\\w.-]+");
 
     void registerTools(@Observes ProcessManagedBean<?> pmb, BeanManager beanManager) {
         AnnotatedType<?> type = pmb.getAnnotatedBeanClass();
@@ -149,49 +142,31 @@ public class McpCdiExtension implements Extension {
      * @param afterDeploymentValidation
      */
     private boolean reportOnToolArgEdgeCases(AfterDeploymentValidation afterDeploymentValidation) {
-        boolean blankArgumentsFound = false;
-        boolean duplicateArgumentsFound = false;
-        boolean missingArgumentName = false;
-        boolean unsupportedDefaultValueType = false;
-        boolean invalidDefaultValueForType = false;
+        boolean foundErrors = false;
 
         for (ToolMetadata tool : tools.getAllTools()) {
-
             Set<String> names = new HashSet<>();
-            for (ToolArgument argMetadata : tool.arguments()) {
 
-                // Check name
-                if (argMetadata.name().isBlank()) {
-                    Tr.error(tc, "CWMCM0001E.blank.arguments", tool.getToolQualifiedName());
-                    blankArgumentsFound = true;
-                } else if (argMetadata.name().equals(ToolMetadata.MISSING_TOOL_ARG_NAME)) {
-                    Tr.error(tc, "CWMCM0003E.missing.tool.argument.name", tool.getToolQualifiedName());
-                    missingArgumentName = true;
-                } else if (!names.add(argMetadata.name())) {
-                    Tr.error(tc, "CWMCM0002E.duplicate.arguments", tool.getToolQualifiedName(), argMetadata.name());
-                    duplicateArgumentsFound = true;
+            for (ToolArgument argMetadata : tool.arguments()) {
+                for (var error : ToolValidation.validateToolArgument(argMetadata)) {
+                    switch (error.type()) {
+                        case NAME_BLANK -> Tr.error(tc, "CWMCM0001E.blank.arguments", tool.getToolQualifiedName());
+                        case NAME_MISSING -> Tr.error(tc, "CWMCM0003E.missing.tool.argument.name", tool.getToolQualifiedName());
+                        case NO_CONVERTER -> Tr.error(tc, "CWMCM0017E.missing.toolarg.defaultvalue.converter", tool.getToolQualifiedName(), argMetadata.name(), argMetadata.type());
+                        case CONVERSION_ERROR -> Tr.error(tc, "CWMCM0020E.defaultvalue.conversion.error", tool.getToolQualifiedName(), argMetadata.name(), argMetadata.type(),
+                                                          argMetadata.defaultValue(), error.exception());
+                    }
+                    foundErrors = true;
                 }
 
-                // Check default value
-                if (!argMetadata.defaultValue().isEmpty()) {
-                    Type typeWrapperClass = TypeUtility.box(argMetadata.type());
-                    DefaultValueConverter<?> converter = BuiltinDefaultValueConverters.CONVERTERS.get(typeWrapperClass);
-                    if (converter != null) {
-                        try {
-                            converter.convert(argMetadata.defaultValue());
-                        } catch (Exception e) {
-                            Tr.error(tc, "CWMCM0020E.defaultvalue.conversion.error", tool.getToolQualifiedName(), argMetadata.name(), argMetadata.type(),
-                                     argMetadata.defaultValue(), e);
-                            invalidDefaultValueForType = true;
-                        }
-                    } else {
-                        Tr.error(tc, "CWMCM0017E.missing.toolarg.defaultvalue.converter", tool.getToolQualifiedName(), argMetadata.name(), argMetadata.type());
-                        unsupportedDefaultValueType = true;
-                    }
+                if (!names.add(argMetadata.name())) {
+                    Tr.error(tc, "CWMCM0002E.duplicate.arguments", tool.getToolQualifiedName(), argMetadata.name());
+                    foundErrors = true;
                 }
             }
         }
-        return blankArgumentsFound || duplicateArgumentsFound || missingArgumentName || unsupportedDefaultValueType || invalidDefaultValueForType;
+
+        return foundErrors;
     }
 
     private boolean reportOnDuplicateTools(AfterDeploymentValidation afterDeploymentValidation) {
@@ -208,24 +183,17 @@ public class McpCdiExtension implements Extension {
     }
 
     private boolean reportOnInvalidToolNames(AfterDeploymentValidation afterDeploymentValidation) {
-        boolean error = false;
+        boolean hasErrors = false;
         for (ToolMetadata tool : tools.getAllTools()) {
-            String toolName = tool.name();
-            if (toolName.length() == 0 || toolName.length() > 128) {
-                error = true;
-                Tr.error(tc, "CWMCM0023E.invalid.length.tool.name", toolName, tool.getToolQualifiedName());
-            }
-            if (!TOOL_NAME_CHARACTER_PATTERN.matcher(toolName).matches()) {
-                error = true;
-                Tr.error(tc, "CWMCM0024E.invalid.character.tool.name", toolName, tool.getToolQualifiedName());
+            for (var error : ToolValidation.validateToolName(tool.name())) {
+                hasErrors = true;
+                switch (error) {
+                    case INVALID_CHARACTERS -> Tr.error(tc, "CWMCM0024E.invalid.character.tool.name", tool.name(), tool.getToolQualifiedName());
+                    case INVALID_LENGTH -> Tr.error(tc, "CWMCM0023E.invalid.length.tool.name", tool.name(), tool.getToolQualifiedName());
+                }
             }
         }
-        return error;
-
-    }
-
-    public static Pattern getRegexMatcher() {
-        return TOOL_NAME_CHARACTER_PATTERN;
+        return hasErrors;
     }
 
     private boolean reportOnDuplicateSpecialArguments(AfterDeploymentValidation afterDeploymentValidation) {
