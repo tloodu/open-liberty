@@ -461,7 +461,7 @@ public class ToolErrorHandlingTest extends FATServletClient {
                             "content": [
                               {
                                 "type": "text",
-                                "text": "The count argument could not be converted to the java.lang.Integer type."
+                                "text": "The count argument cannot be converted to the java.lang.Integer type."
                               }
                             ]
                           }

@@ -210,6 +210,6 @@ CWMCM0024E.invalid.character.tool.name.useraction=Make sure that tool names cont
 
 #Used as part of a response to a client
 # do not translate MCP
-argument.conversion.failed=The {0} argument could not be converted to the {1} type.
+argument.conversion.failed=The {0} argument cannot be converted to the {1} type.
 extra.arguments=The following arguments were passed but were not found in the method: {0}.
 missing.arguments=The following arguments were expected by the method but were not provided: {0}.
