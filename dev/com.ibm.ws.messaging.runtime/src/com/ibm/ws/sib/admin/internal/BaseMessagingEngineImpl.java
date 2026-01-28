@@ -1894,21 +1894,23 @@ public class BaseMessagingEngineImpl implements JsEngineComponent, LWMConfig, Co
             FileOutputStream fos = new FileOutputStream(dumpFilePath);
             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
             fw = new FormattedWriter(osw);
+            
+            dump(dumpSpec, fw, date);
+            fw.close();
         }
         catch(IOException e)
         {
             FFDCFilter.processException(e, "com.ibm.ws.sib.admin.impl.BaseMessagingEngineImpl.dump", "1:2837:1.79", this);
             SibTr.exception(tc, e);
         }
-        
-        dump(dumpSpec, fw, date, true);
+        try {
 
         if(TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
             SibTr.exit(tc, methodName);
         
     }
     
-    public void dump(String dumpSpec, FormattedWriter fw, Date date, boolean shouldClose) {
+    public void dump(String dumpSpec, FormattedWriter fw, Date date) {
         String methodName = "dump";
         if(TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
             SibTr.entry(tc, methodName, dumpSpec);
@@ -1949,15 +1951,18 @@ public class BaseMessagingEngineImpl implements JsEngineComponent, LWMConfig, Co
                 fw.nameSpace("xmi");
                 fw.endTag("XMI");
                 fw.newLine();
-                fw.flush();
-                if (shouldClose) {
-                    fw.close();
-                }
             }
             catch(IOException e)
             {
                 FFDCFilter.processException(e, "com.ibm.ws.sib.admin.impl.BaseMessagingEngineImpl.dump", "1:2897:1.79", this);
                 SibTr.exception(tc, e);
+            } finally {
+            	try {
+                   fw.flush();
+            	} catch(IOException e) {
+                    FFDCFilter.processException(e, "com.ibm.ws.sib.admin.impl.BaseMessagingEngineImpl.dump", "1:2897:1.79", this);
+                    SibTr.exception(tc, e);
+                }
             }
         if(TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
             SibTr.exit(tc, methodName);

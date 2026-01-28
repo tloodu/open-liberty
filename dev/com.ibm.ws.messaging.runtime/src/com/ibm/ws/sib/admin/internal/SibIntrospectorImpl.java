@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -67,99 +68,98 @@ public class SibIntrospectorImpl implements Introspector {
 
 	@Override
 	public void introspect(PrintWriter out) throws Exception {
-		FormattedWriter fw = new FormattedWriter(out);
-		try {
 
-			if (!(jsMain instanceof JsMainImpl)) {
-				out.println();
-				out.println("The JsMain class was not an instance of JsMainImpl");
-				return;
-			}
-
-			// This dump lists the message stores and their configuration.
-			JsMainImpl mainImpl = (JsMainImpl) jsMain;
-			Enumeration<JsMessagingEngine> engines = mainImpl.listMessagingEngines();
-
-			JsMessagingEngine engine = null; // The API returns a list but the impl is hardcoded to one.
-			while (engines.hasMoreElements()) {
-				engine = engines.nextElement();
-				
-
-				if (engine instanceof JsMessagingEngineImpl) {
-					JsMessagingEngineImpl jsEngine = (JsMessagingEngineImpl) engine;
-
-					out.println("Engine name: " + engine.getName());//hardcoded but why not
-					out.println("Engine UUID: " + engine.getUuid());
-					out.println("Engine state: " + jsEngine.getState());
-					out.println("Treshhold: " + jsEngine.getMEThreshold());
-
-					jsEngine.dump(DUMP_SPEC, fw, new Date(), false);
-
-					// Next lets add info about the prepared transactions.
-
-					out.println("=== prepared transactions ===");
-					Optional<String[]> preparedTransactions = Optional.ofNullable(((JsMessagingEngineImpl) engine).listPreparedTransactions());
-					preparedTransactions.ifPresent(s -> out.println(String.join(", ", s)));
-					out.println();
-
-
-				}
-			}
+		if (!(jsMain instanceof JsMainImpl)) {
 			out.println();
-			
-			JsEngineComponent messageProcessor = engine.getMessageProcessor(); //Note that there is one engine, and it has one MessageProcessor
-			if (messageProcessor != null && messageProcessor instanceof MessageProcessor) {
-
-				//As per comments on DM:
-				//* Cold start constructor. There should be only one destination
-				//* manager per ME.
-
-				DestinationManager destinationManager = ((MessageProcessor) messageProcessor).getDestinationManager();
-				HashMap<String, ConsumerDispatcher> durableSubscriptions = destinationManager.getDurableSubscriptionsTable();	
-				out.println("=== Durable Subscriptions ===");
-				durableSubscriptions.entrySet().stream().forEach(entry -> out.println(entry.getKey() + " : " + entry.getValue()));
-				
-				out.println("=== Nondurable Subscriptions ===");
-				ConcurrentHashMap<String, ConsumerDispatcher> nonDurableSubscirptions = destinationManager.getNondurableSharedSubscriptions();
-				nonDurableSubscirptions.entrySet().stream().forEach(entry -> out.println(entry.getKey() + " : " + entry.getValue()));
-				
-				out.println("=== Destinations ===");
-				DestinationIndex destinationIndex = destinationManager.getDestinationIndex();
-				SIMPIterator destinationIterator = destinationIndex.iterator();
-				while (destinationIterator.hasNext()) {
-					Object destiation = destinationIterator.next();
-					
-					if (destiation instanceof DestinationHandler) {
-						DestinationHandler destinationHandler = (DestinationHandler) destiation;
-						out.println("Destination. Name: " + destinationHandler.getName() + " description : "+ destinationHandler.getDescription() +  "alias? " + destinationHandler.isAlias());
-					}
-				}
-				
-				
-				//Connectivity
-				
-				//Not needed, part of jsEngine.dump
-				//HashMap<SICoreConnection, SICoreConnection> connections = ((MessageProcessor) messageProcessor).getConnections();
-				
-				out.println("=== Virtual Links ===");
-				ControlAdapter controlAdapter = ((MessageProcessor) messageProcessor).getControlAdapter();
-				if (controlAdapter instanceof MessageProcessorControl) {
-					SIMPIterator virtualLinkIterator = ((MessageProcessorControl) controlAdapter).getVirtualLinkIterator();
-					while (virtualLinkIterator.hasNext()) {
-						Object virtualLink = virtualLinkIterator.next();
-						if (virtualLink instanceof VirtualLinkControl) {
-							VirtualLinkControl virtualLinkControl = (VirtualLinkControl) virtualLink;
-							out.println(virtualLinkControl.getDebugInfo());
-						}
-					}
-				}
-				
-			}
-
-		} finally {
-			fw.flush();
-			fw.close();
+			out.println("The JsMain class was not an instance of JsMainImpl");
+			return;
 		}
 
+		// This dump lists the message stores and their configuration.
+		JsMainImpl mainImpl = (JsMainImpl) jsMain;
+		Enumeration<JsMessagingEngine> engines = mainImpl.listMessagingEngines();
+
+		JsMessagingEngine engine = null; // The API returns a list but the impl is hardcoded to one.
+		while (engines.hasMoreElements()) {
+			engine = engines.nextElement();
+
+
+			if (engine instanceof JsMessagingEngineImpl) {
+				dumpEngineContents(out, (JsMessagingEngineImpl) engine);
+			}
+			out.println();
+		}
+
+		JsEngineComponent messageProcessor = engine.getMessageProcessor(); //Note that there is one engine, and it has one MessageProcessor
+
+		if (messageProcessor != null && messageProcessor instanceof MessageProcessor) {
+			dumpMessageProcessor(out, (MessageProcessor) messageProcessor);
+		}
+	}
+
+	private void dumpEngineContents(PrintWriter out, JsMessagingEngineImpl engine ) {
+		JsMessagingEngineImpl jsEngine = (JsMessagingEngineImpl) engine;
+		FormattedWriter fw = new FormattedWriter(out);
+
+		out.println("Engine name: " + engine.getName());//hardcoded but why not
+		out.println("Engine UUID: " + engine.getUuid());
+		out.println("Engine state: " + jsEngine.getState());
+		out.println("Threshold: " + jsEngine.getMEThreshold());
+
+		jsEngine.dump(DUMP_SPEC, fw, new Date());
+
+		// Next lets add info about the prepared transactions.
+
+		out.println("=== prepared transactions ===");
+		Optional<String[]> preparedTransactions = Optional.ofNullable(((JsMessagingEngineImpl) engine).listPreparedTransactions());
+		preparedTransactions.ifPresent(s -> out.println(String.join(", ", s)));
+		out.println();
+	}
+
+	private void dumpMessageProcessor(PrintWriter out, MessageProcessor messageProcessor) {
+
+		//As per comments on DM:
+		//* Cold start constructor. There should be only one destination
+		//* manager per ME.
+
+		DestinationManager destinationManager = ((MessageProcessor) messageProcessor).getDestinationManager();
+		Map<String, ConsumerDispatcher> durableSubscriptions = destinationManager.getDurableSubscriptionsTable();	
+		out.println("=== Durable Subscriptions ===");
+		durableSubscriptions.entrySet().stream().forEach(entry -> out.println(entry.getKey() + " : " + entry.getValue()));
+
+		out.println("=== Nondurable Subscriptions ===");
+		ConcurrentHashMap<String, ConsumerDispatcher> nonDurableSubscirptions = destinationManager.getNondurableSharedSubscriptions();
+		nonDurableSubscirptions.entrySet().stream().forEach(entry -> out.println(entry.getKey() + " : " + entry.getValue()));
+
+		out.println("=== Destinations ===");
+		DestinationIndex destinationIndex = destinationManager.getDestinationIndex();
+		SIMPIterator destinationIterator = destinationIndex.iterator();
+		while (destinationIterator.hasNext()) {
+			Object destiation = destinationIterator.next();
+
+			if (destiation instanceof DestinationHandler) {
+				DestinationHandler destinationHandler = (DestinationHandler) destiation;
+				out.println("Destination. Name: " + destinationHandler.getName() + " description : "+ destinationHandler.getDescription() +  "alias? " + destinationHandler.isAlias());
+			}
+		}
+
+
+		//Connectivity
+
+		//Not needed, part of jsEngine.dump
+		//HashMap<SICoreConnection, SICoreConnection> connections = ((MessageProcessor) messageProcessor).getConnections();
+
+		out.println("=== Virtual Links ===");
+		ControlAdapter controlAdapter = ((MessageProcessor) messageProcessor).getControlAdapter();
+		if (controlAdapter instanceof MessageProcessorControl) {
+			SIMPIterator virtualLinkIterator = ((MessageProcessorControl) controlAdapter).getVirtualLinkIterator();
+			while (virtualLinkIterator.hasNext()) {
+				Object virtualLink = virtualLinkIterator.next();
+				if (virtualLink instanceof VirtualLinkControl) {
+					VirtualLinkControl virtualLinkControl = (VirtualLinkControl) virtualLink;
+					out.println(virtualLinkControl.getDebugInfo());
+				}
+			}
+		}
 	}
 }
