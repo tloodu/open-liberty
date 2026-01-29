@@ -14,13 +14,9 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Properties;
 import java.util.logging.Logger;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -33,6 +29,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.MountableFile;
 
 import com.ibm.websphere.simplicity.ShrinkHelper;
 
@@ -44,29 +41,34 @@ import componenttest.topology.utils.FATServletClient;
 import io.openliberty.mcp.internal.fat.tool.conformanceTestApp.ConformanceTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
 
-/**
- *
- */
 @RunWith(FATRunner.class)
 public class ConformanceTests extends FATServletClient {
 
-    private static final String INSTALL_MCP_CONFORMANCE_PACKAGE = "npm install -g @modelcontextprotocol/conformance@0.1.9";
+    // File locations (Source and destination)
+    private static final MountableFile SRC_PACKAGE_JSON = MountableFile.forClasspathResource("/conformance-tests/package.json");
+    private static final MountableFile SRC_PACKAGE_LOCK_JSON = MountableFile.forClasspathResource("/conformance-tests/package-lock.json");
+    private static final String CONTAINER_PACKAGE_JSON = "/tmp/package.json";
+    private static final String CONTAINER_PACKAGE_LOCK_JSON = "/tmp/package-lock.json";
 
-    // Artifactory Properties
-    private static Properties startupProps = new Properties();
-    private static final String ARTIFACTORY_TOKEN_KEY = "artifactory.download.token";
-    private static final String ARTIFACTORY_USER_KEY = "artifactory.download.user";
-    private static final String ARTIFACTORY_SERVER_KEY = "artifactory.download.server";
+    // Node specific
+    private static final String INSTALL_MCP_CONFORMANCE_PACKAGE = "npm ci --omit=dev";
+    private static final String CHECK_MCP_CONFORMANCE_PACKAGE_VERSION = "npx @modelcontextprotocol/conformance --version";
+    private static final String MCP_CONFORMANCE_TEST_VERSION = "0.1.9";
+
+    // Artifactory
+    private static final String PATH_TO_ARTIFACTORY_NPM_MIRROR = "/artifactory/api/npm/wasliberty-npm-remote/";
+    private static final String FAT_TEST_PREFIX = "fat.test.";
+    private static final String ARTIFACTORY_TOKEN_KEY = FAT_TEST_PREFIX + "artifactory.download.token";
+    private static final String ARTIFACTORY_USER_KEY = FAT_TEST_PREFIX + "artifactory.download.user";
+    private static final String ARTIFACTORY_SERVER_KEY = FAT_TEST_PREFIX + "artifactory.download.server";
+    private static final String ARTIFACTORY_FORCE_EXTERNAL_KEY = FAT_TEST_PREFIX + "artifactory.force.external.repo";
     private static String artToken;
     private static String artUser;
     private static String artServer;
 
-    private static final String PATH_TO_ARTIFACTORY_NPM_MIRROR = "/artifactory/api/npm/wasliberty-npm-remote/";
-    private static boolean ARTIFACTORY_IS_CONFIGURED = false;
-
     // Container config
     private static String MCP_SERVER_URL_FROM_CONTAINER = "http://host.docker.internal:";
-    private static final String DOCKER_REGISTRY = "public.ecr.aws/docker/library/node:18-alpine";
+    private static final String DOCKER_REGISTRY = "public.ecr.aws/docker/library/node:20-alpine";
 
     @Server("mcp-conformance-server")
     public static LibertyServer server;
@@ -78,80 +80,77 @@ public class ConformanceTests extends FATServletClient {
     @ClassRule
     public static GenericContainer<?> container = new GenericContainer<>(DOCKER_REGISTRY).withCommand("tail", "-f", "/dev/null")
                                                                                          .withAccessToHost(true)
+                                                                                         .withWorkingDirectory("/tmp")
+                                                                                         .withCopyFileToContainer(SRC_PACKAGE_JSON, CONTAINER_PACKAGE_JSON)
+                                                                                         .withCopyFileToContainer(SRC_PACKAGE_LOCK_JSON, CONTAINER_PACKAGE_LOCK_JSON)
                                                                                          .withLogConsumer(new SimpleLogConsumer(ConformanceTests.class, "nodejs-container"));
 
+    ////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////
+    // Check that the container is not logging any credentials
+    /////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////
+    ///
+    ///
+    ///
     @BeforeClass
     public static void setup() throws Exception {
         WebArchive war = ShrinkWrap.create(WebArchive.class, "conformanceTests.war").addPackage(ConformanceTools.class.getPackage());
         ShrinkHelper.exportDropinAppToServer(server, war, SERVER_ONLY);
         server.startServer();
         assertNotNull(server.waitForStringInLog("MCP server endpoint: .*/mcp$")); // regex matches string that ends with /mcp e.g. "MCP server endpoint: http://macbookpro.home:8010/toolTest/mcp"
-        loadArtifactoryConfigIfPresent();
-        containerSetup();
+        setupContainer();
     }
 
-    private static void loadArtifactoryConfigIfPresent() {
-        Path userHome = Paths.get(System.getProperty("user.home"));
-        Path propsPath = userHome.resolve("gradle.startup.properties");
-
-        if (!Files.exists(propsPath)) {
-            logger.info("No gradle.startup.properties found. Will use public npm registry.");
-            return;
-        }
-
-        try (InputStream inputStream = Files.newInputStream(propsPath)) {
-            startupProps.load(inputStream);
-            ARTIFACTORY_IS_CONFIGURED = artifactoryConfigIsPresent();
-        } catch (IOException e) {
-            logger.warning("Failed to load gradle.startup.properties: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Build MCP Server URL
-     * Force modelcontextprotocol/conformance to always be a specific version for build compatibility
-     *
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    private static void containerSetup() throws IOException, InterruptedException {
+    private static void setupContainer() throws IOException, InterruptedException {
         MCP_SERVER_URL_FROM_CONTAINER += server.getHttpDefaultPort() + "/conformanceTests/mcp";
 
-        if (ARTIFACTORY_IS_CONFIGURED) {
+        if (artifactoryConfigIsPresent()) {
             String credentials = artUser + ":" + artToken;
-            String credentialBase64 = java.util.Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String credentialsBase64 = java.util.Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String artifactoryServer = artServer + PATH_TO_ARTIFACTORY_NPM_MIRROR;
             String npmMirrorSetup = "npm config set registry https://" + artifactoryServer + " && " +
                                     "npm config set //" + artifactoryServer + ":_auth ";
 
-            runCommandInContainer(npmMirrorSetup + credentialBase64);
+            runCommandInContainer(npmMirrorSetup + credentialsBase64);
         }
 
         runCommandInContainer(INSTALL_MCP_CONFORMANCE_PACKAGE);
+        final String actualMcpConformanceVersion = runCommandInContainer(CHECK_MCP_CONFORMANCE_PACKAGE_VERSION).trim();
+        assertTrue("Incorrect @modelcontextprotocol/conformance version, expected " + MCP_CONFORMANCE_TEST_VERSION + " got " + actualMcpConformanceVersion,
+                   actualMcpConformanceVersion.equals(MCP_CONFORMANCE_TEST_VERSION));
     }
 
-    private static void runCommandInContainer(String command) throws IOException, InterruptedException {
+    private static String runCommandInContainer(String command) throws IOException, InterruptedException {
         Container.ExecResult result = container.execInContainer("sh", "-c", command);
         assertEquals(0, result.getExitCode());
+        return result.getStdout();
     }
 
     private static boolean artifactoryConfigIsPresent() {
-        artUser = startupProps.getProperty(ARTIFACTORY_USER_KEY);
-        artToken = startupProps.getProperty(ARTIFACTORY_TOKEN_KEY);
-        artServer = startupProps.getProperty(ARTIFACTORY_SERVER_KEY);
 
-        boolean validUser = (artUser != null && !artUser.isBlank());
-        boolean validToken = (artToken != null && !artToken.isBlank());
-        boolean validServer = (artServer != null && !artServer.isBlank());
+        String forceExternalRepo = System.getProperty(ARTIFACTORY_FORCE_EXTERNAL_KEY);
+        if (isValidProperty(forceExternalRepo) && Boolean.parseBoolean(forceExternalRepo)) {
+            return false;
+        }
 
-        return validUser && validToken && validServer;
+        artUser = System.getProperty(ARTIFACTORY_USER_KEY);
+        artToken = System.getProperty(ARTIFACTORY_TOKEN_KEY);
+        artServer = System.getProperty(ARTIFACTORY_SERVER_KEY);
+
+        return isValidProperty(artUser) && isValidProperty(artToken) && isValidProperty(artServer);
+    }
+
+    private static boolean isValidProperty(String property) {
+        return property != null && !property.isBlank() && !property.startsWith("${");
     }
 
     @AfterClass
     public static void teardown() throws Exception {
-        server.stopServer(
-                          "CWMCM0014E", // An Internal Server Error occurred whilst processing the JSON-RPC request.
-                          "CWMCM0010E", //  Tool method threw an unexpected exception
+        server.stopServer("CWMCM0014E", // An Internal Server Error occurred whilst processing the JSON-RPC request.
+                          "CWMCM0010E", // Tool method threw an unexpected exception
                           "CWMCM0011E" // An internal server error occurred
         );
     }
