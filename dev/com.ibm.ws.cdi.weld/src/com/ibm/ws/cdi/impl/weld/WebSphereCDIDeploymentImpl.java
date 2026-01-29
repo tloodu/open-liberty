@@ -823,4 +823,8 @@ public class WebSphereCDIDeploymentImpl implements WebSphereCDIDeployment {
     public Set<WebSphereBeanDeploymentArchive> getRuntimeExtensionBDAs() {
         return this.runtimeExtensionBDAs;
     }
+
+    public List<WebSphereBeanDeploymentArchive> getOrderedBDAs() {
+        return this.orderedBDAs;
+    }
 }
