@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: N\u00e1vratov\u00fd typ {0} metody {1} ro
 CWWKD1004.general.rtrn.err.explanation=N\u00e1vratov\u00fd typ metody nen\u00ed jedn\u00edm z podporovan\u00fdch n\u00e1vratov\u00fdch typ\u016f pro typ metody \u00falo\u017ei\u0161t\u011b.
 CWWKD1004.general.rtrn.err.useraction=Seznam platn\u00fdch n\u00e1vratov\u00fdch typ\u016f pro typ metody \u00falo\u017ei\u0161t\u011b najdete v informac\u00edch Javadoc Jakarta Data.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: Metoda {0} rozhran\u00ed \u00falo\u017ei\u0161t\u011b {1} nen\u00ed platn\u00e1. Metoda ur\u010duje n\u00e1vratov\u00fd typ {2}, kter\u00fd nen\u00ed p\u0159evoditeln\u00fd z typu entity {3}. Typem v\u00fdsledku operace vyhled\u00e1v\u00e1n\u00ed mus\u00ed b\u00fdt typ entity, typ atributu entity, z\u00e1znam v jazyce Java slo\u017een\u00fd z atribut\u016f entity nebo typ vytvo\u0159en\u00fd dotazem, kter\u00fd je uveden v anotaci Query. N\u00e1vratov\u00fdm typem metody repository find m\u016f\u017ee b\u00fdt typ v\u00fdsledku, pole typu v\u00fdsledku nebo n\u011bkter\u00fd z n\u00e1sleduj\u00edc\u00edch typ\u016f parametrizovan\u00fdch typem v\u00fdsledku: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: Metoda ` {0} ` rozhran\u00ed ` {1} ` nen\u00ed platn\u00e1. Metoda specifikuje n\u00e1vratov\u00fd typ {2}, kter\u00fd nelze p\u0159ev\u00e9st z typu entity {3}. Typ v\u00fdsledku operace vyhled\u00e1v\u00e1n\u00ed mus\u00ed b\u00fdt typ entity, typ atributu entity vybran\u00fd anotac\u00ed Select, z\u00e1znam Java slo\u017een\u00fd z atribut\u016f entity nebo typ vybran\u00fd dotazem zadan\u00fdm v anotaci Query. N\u00e1vratov\u00fd typ metody find repozit\u00e1\u0159e m\u016f\u017ee b\u00fdt typ v\u00fdsledku, pole typu v\u00fdsledku nebo kter\u00fdkoli z n\u00e1sleduj\u00edc\u00edch typ\u016f parametrizovan\u00fdch typem v\u00fdsledku: {4}.
 CWWKD1005.find.rtrn.err.explanation=N\u00e1vratov\u00fd typ metody nen\u00ed jedn\u00edm z podporovan\u00fdch n\u00e1vratov\u00fdch typ\u016f pro metody hled\u00e1n\u00ed \u00falo\u017ei\u0161t\u011b.
 CWWKD1005.find.rtrn.err.useraction=Seznam platn\u00fdch typ\u016f n\u00e1vratu pro metody hled\u00e1n\u00ed \u00falo\u017ei\u0161t\u011b naleznete v informac\u00edch Javadoc Jakarta Data.
 

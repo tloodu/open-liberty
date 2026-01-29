@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=Metoda oczekiwa\u0142a nast\u0119puj\u0105cych argumen
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: Argument \u201e {1} \u201d metody narz\u0119dzia MCP \u201e {0} \u201d nie posiada konwertera, kt\u00f3ry zmienia jego warto\u015b\u0107 domy\u015bln\u0105 na obiekt typu \u201e {2} \u201d.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=Jeden lub wi\u0119cej argument\u00f3w ma warto\u015bci domy\u015blne bez pasuj\u0105cego konwertera, kt\u00f3ry konwertowa\u0142by warto\u015b\u0107 domy\u015bln\u0105 na typ argumentu.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=Utw\u00f3rz niestandardow\u0105 implementacj\u0119 konwertera dla typu argumentu narz\u0119dzia.
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: Argument \u201e {1} \u201d metody narz\u0119dzia MCP \u201e {0} \u201d zawiera nieobs\u0142ugiwane elementy, takie jak symbol wieloznaczny \u201e TypeVariable, \u201d oraz \u201e GenericArrayType \u201d.
 CWMCM0018E.generic.arguments.explanation=Podano argumenty narz\u0119dzia MCP, ale nie s\u0105 one obs\u0142ugiwane. 
 CWMCM0018E.generic.arguments.useraction=Podaj argumenty, kt\u00f3re nie zawieraj\u0105 element\u00f3w og\u00f3lnych.
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: Kodowanie za pomoc\u0105 modu\u0142u {0} spowodowa\u0142o wyst\u0105pienie wyj\u0105tku podczas kodowania wyniku narz\u0119dzia {1}. Wyj\u0105tek: {2}
+CWMCM0019E.error.encoding.element.explanation=Kodownik zg\u0142osi\u0142 b\u0142\u0105d podczas kodowania wyniku dzia\u0142ania narz\u0119dzia. Wyj\u0105tek mo\u017ce wynika\u0107 z problemu z enkoderem lub z tego, \u017ce narz\u0119dzie zwr\u00f3ci\u0142o nieoczekiwany wynik.
+CWMCM0019E.error.encoding.element.useraction=Przejrzyj dziennik serwera message.log oraz dzienniki FFDC, aby zidentyfikowa\u0107 problem.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: Warto\u015b\u0107 domy\u015blna argumentu \u201e {1} \u201d narz\u0119dzia MCP \u201e {0} \u201d nie mo\u017ce zosta\u0107 przekonwertowana na typ \u201e {2} \u201d. Warto\u015b\u0107 wynosi {3}. B\u0142\u0105d to \u201e {4} \u201d.
+CWMCM0020E.defaultvalue.conversion.error.explanation=Argument ma warto\u015b\u0107 domy\u015bln\u0105, kt\u00f3rej nie mo\u017cna przekonwertowa\u0107 na typ argumentu. Problem ten mo\u017ce wyst\u0105pi\u0107, je\u015bli warto\u015b\u0107 domy\u015blna jest null, ma nieprawid\u0142owy format lub wykracza poza zakres dla typu docelowego.
+CWMCM0020E.defaultvalue.conversion.error.useraction=Upewnij si\u0119, \u017ce warto\u015b\u0107 domy\u015blna jest prawid\u0142owa dla typu argumentu. Upewnij si\u0119, \u017ce warto\u015b\u0107 domy\u015blna nie jest null. W przypadku typ\u00f3w znak\u00f3w nale\u017cy poda\u0107 dok\u0142adnie jeden znak. W przypadku typ\u00f3w numerycznych nale\u017cy poda\u0107 prawid\u0142ow\u0105 liczb\u0119 mieszcz\u0105c\u0105 si\u0119 w zakresie danego typu.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: Warto\u015b\u0107 domy\u015blna znaku musi by\u0107 dok\u0142adnie jednym znakiem, ale by\u0142a {0}
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=Podano warto\u015b\u0107 domy\u015bln\u0105 dla argumentu typu znakowego, ale nie zawiera on dok\u0142adnie jednego znaku. Argumenty znakowe musz\u0105 zawiera\u0107 pojedynczy ci\u0105g znak\u00f3w.
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=Upewnij si\u0119, \u017ce domy\u015bln\u0105 warto\u015bci\u0105 argumentu typu znakowego jest ci\u0105g znak\u00f3w zawieraj\u0105cy dok\u0142adnie jeden znak.

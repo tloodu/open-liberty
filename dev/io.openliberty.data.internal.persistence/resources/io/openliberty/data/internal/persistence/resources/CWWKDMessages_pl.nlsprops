@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: Typ zwracany {0} metody {1} interfejsu re
 CWWKD1004.general.rtrn.err.explanation=Zwracany typ metody nie jest jednym z obs\u0142ugiwanych typ\u00f3w zwracanych dla typu metody repozytorium.
 CWWKD1004.general.rtrn.err.useraction=List\u0119 prawid\u0142owych typ\u00f3w zwracanych dla danego typu metody repozytorium mo\u017cna znale\u017a\u0107 w informacjach Javadoc Jakarta Data.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: Metoda {0} interfejsu repozytorium {1} jest nieprawid\u0142owa. Metoda okre\u015bla typ zwracany {2}, kt\u00f3ry nie jest konwertowalny z typu podmiotu {3}. Typ wyniku operacji wyszukiwania musi by\u0107 typem encji, typem atrybutu encji, rekordem Java z\u0142o\u017conym z atrybut\u00f3w encji lub typem skonstruowanym przez zapytanie, kt\u00f3re jest dostarczane do adnotacji Query. Typem zwracanym metody find repozytorium mo\u017ce by\u0107 typ wyniku, tablica typu wyniku lub dowolny z nast\u0119puj\u0105cych typ\u00f3w sparametryzowanych typem wyniku: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: Metoda ` {0} ` interfejsu repozytorium ` {1} ` jest nieprawid\u0142owa. Metoda okre\u015bla typ zwracany {2}, kt\u00f3ry nie jest konwertowalny z typu encji {3}. Typ wyniku operacji wyszukiwania musi by\u0107 typem encji, typem atrybutu encji wybranym przez adnotacj\u0119 Select, rekordem Java z\u0142o\u017conym z atrybut\u00f3w encji lub typem wybranym przez zapytanie dostarczone do adnotacji Query. Typ zwracany przez metod\u0119 find repozytorium mo\u017ce by\u0107 typem wyniku, tablic\u0105 typu wyniku lub dowolnym z poni\u017cszych typ\u00f3w sparametryzowanych wzgl\u0119dem typu wyniku: {4}.
 CWWKD1005.find.rtrn.err.explanation=Typ zwracany metody nie jest jednym z obs\u0142ugiwanych typ\u00f3w zwracanych przez metody wyszukiwania w repozytorium.
 CWWKD1005.find.rtrn.err.useraction=List\u0119 prawid\u0142owych typ\u00f3w zwracanych przez metody wyszukiwania w repozytorium mo\u017cna znale\u017a\u0107 w informacjach Javadoc Jakarta Data.
 

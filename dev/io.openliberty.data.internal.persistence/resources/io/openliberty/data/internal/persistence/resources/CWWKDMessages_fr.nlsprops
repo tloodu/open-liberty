@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: Le type de retour {0} de la m\u00e9thode 
 CWWKD1004.general.rtrn.err.explanation=Le type de retour de la m\u00e9thode ne fait pas partie des types de retour pris en charge pour le type de m\u00e9thode du r\u00e9f\u00e9rentiel.
 CWWKD1004.general.rtrn.err.useraction=Reportez-vous aux informations Javadoc de Jakarta Data pour obtenir une liste des types de retour valides pour le type de m\u00e9thode de r\u00e9f\u00e9rentiel.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: La m\u00e9thode {0} de l''interface de d\u00e9p\u00f4t {1} n''est pas valide. La m\u00e9thode sp\u00e9cifie un type de retour {2} qui n''est pas convertible \u00e0 partir du type d''entit\u00e9 {3}. Le type de r\u00e9sultat d''une op\u00e9ration de recherche doit \u00eatre le type d''entit\u00e9, un type d''attribut d''entit\u00e9, un enregistrement Java compos\u00e9 d''attributs d''entit\u00e9 ou un type construit par la requ\u00eate qui est fournie \u00e0 l''annotation Query. Le type de retour de la m\u00e9thode de recherche du r\u00e9f\u00e9rentiel peut \u00eatre le type de r\u00e9sultat, un tableau du type de r\u00e9sultat ou l''un des types suivants param\u00e9tr\u00e9s avec le type de r\u00e9sultat : {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: La m\u00e9thode {0} de l''interface du r\u00e9f\u00e9rentiel {1} n''est pas valide. La m\u00e9thode sp\u00e9cifie un type de retour d'' {2} s qui n''est pas convertible \u00e0 partir du type d''entit\u00e9 d'' {3} s. Le type de r\u00e9sultat d''une op\u00e9ration de recherche doit \u00eatre le type d''entit\u00e9, un type d''attribut d''entit\u00e9 choisi par l''annotation Select, un enregistrement Java compos\u00e9 d''attributs d''entit\u00e9 ou un type s\u00e9lectionn\u00e9 par la requ\u00eate fournie \u00e0 l''annotation Query. Le type de retour de la m\u00e9thode find du r\u00e9f\u00e9rentiel peut \u00eatre le type de r\u00e9sultat, un tableau du type de r\u00e9sultat ou l''un des types suivants param\u00e9tr\u00e9s avec le type de r\u00e9sultat : {4}.
 CWWKD1005.find.rtrn.err.explanation=Le type de retour de la m\u00e9thode ne fait pas partie des types de retour pris en charge pour les m\u00e9thodes de recherche de r\u00e9f\u00e9rentiel.
 CWWKD1005.find.rtrn.err.useraction=Reportez-vous aux informations Javadoc de Jakarta Data pour obtenir une liste des types de retour valides pour les m\u00e9thodes de recherche de r\u00e9f\u00e9rentiel.
 

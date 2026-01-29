@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: Der {0} R\u00fcckgabetyp der {1} Methode 
 CWWKD1004.general.rtrn.err.explanation=Der R\u00fcckgabetyp der Methode geh\u00f6rt nicht zu den unterst\u00fctzten R\u00fcckgabetypen f\u00fcr den Typ der Repository-Methode.
 CWWKD1004.general.rtrn.err.useraction=Eine Liste der g\u00fcltigen R\u00fcckgabetypen f\u00fcr den Typ der Repository-Methode finden Sie in der Javadoc-Information zu Jakarta Data.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: Die {0} -Methode der {1} -Repository-Schnittstelle ist ung\u00fcltig. Die Methode gibt einen R\u00fcckgabetyp {2} an, der nicht vom Entit\u00e4tstyp {3} konvertierbar ist. Der Ergebnistyp einer Suchoperation muss der Entit\u00e4tstyp, ein Typ eines Entit\u00e4tsattributs, ein Java-Datensatz, der aus Entit\u00e4tsattributen besteht, oder ein Typ sein, der durch die Abfrage erstellt wurde, die der Abfrageanmerkung bereitgestellt wird. Der R\u00fcckgabetyp der Repository-Suchmethode kann der Ergebnistyp, ein Array des Ergebnistyps oder einer der folgenden Typen sein, die mit dem Ergebnistyp parametrisiert sind: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: Die Methode \u201e {0} \u201c der Schnittstelle \u201e {1} \u201c ist ung\u00fcltig. Die Methode gibt einen R\u00fcckgabetyp \u201e {2} \u201c an, der nicht aus dem Entit\u00e4tstyp \u201e {3} \u201c konvertierbar ist. Der Ergebnistyp einer Suchoperation muss der Entit\u00e4tstyp, ein durch die Select-Annotation ausgew\u00e4hlter Typ eines Entit\u00e4tsattributs, ein Java-Datensatz, der aus Entit\u00e4tsattributen besteht, oder ein durch die an die Query-Annotation \u00fcbergebene Abfrage ausgew\u00e4hlter Typ sein. Der R\u00fcckgabetyp der Repository-Find-Methode kann der Ergebnistyp, ein Array des Ergebnistyps oder einer der folgenden Typen sein, die mit dem Ergebnistyp parametrisiert sind: {4}.
 CWWKD1005.find.rtrn.err.explanation=Der R\u00fcckgabetyp der Methode geh\u00f6rt nicht zu den unterst\u00fctzten R\u00fcckgabetypen f\u00fcr Repository-Findmethoden.
 CWWKD1005.find.rtrn.err.useraction=Eine Liste der g\u00fcltigen R\u00fcckgabetypen f\u00fcr Repository-Suchmethoden finden Sie in der Javadoc-Information zu Jakarta Data.
 

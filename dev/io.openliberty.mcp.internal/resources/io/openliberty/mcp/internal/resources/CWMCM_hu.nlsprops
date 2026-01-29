@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=A m\u00f3dszer a k\u00f6vetkez\u0151 argumentumokat v\
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: Az {0} MCP eszk\u00f6z {1} argumentum\u00e1nak nincs konvertere, amely az alap\u00e9rtelmezett \u00e9rt\u00e9ket {2} t\u00edpus\u00fa objektumm\u00e1 alak\u00edtan\u00e1.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=Egy vagy t\u00f6bb argumentumnak vannak alap\u00e9rtelmezett \u00e9rt\u00e9kei, amelyekhez nincs megfelel\u0151 konverter, amely az alap\u00e9rtelmezett \u00e9rt\u00e9ket az argumentum t\u00edpus\u00e1ra konvert\u00e1ln\u00e1.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=Hozzon l\u00e9tre egy egy\u00e9ni konverter implement\u00e1ci\u00f3t a szersz\u00e1m argumentum t\u00edpus\u00e1hoz.
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: Az {0} MCP eszk\u00f6z m\u00f3dszer\u00e9nek {1} argumentuma nem t\u00e1mogatott \u00f6sszetev\u0151ket tartalmaz, p\u00e9ld\u00e1ul TypeVariable, Wildcard, GenericArrayType.
 CWMCM0018E.generic.arguments.explanation=Az MCP eszk\u00f6z argumentumai megadva vannak, de nem t\u00e1mogatottak. 
 CWMCM0018E.generic.arguments.useraction=Adjon meg olyan argumentumokat, amelyek nem tartalmaznak \u00e1ltal\u00e1nos komponenseket.
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: Az {0} k\u00f3dol\u00f3 kiv\u00e9telt dobott az {1} eszk\u00f6z eredm\u00e9ny\u00e9nek k\u00f3dol\u00e1sa k\u00f6zben. A kiv\u00e9tel: {2}
+CWMCM0019E.error.encoding.element.explanation=Az enk\u00f3der kiv\u00e9telt dobott a szersz\u00e1m eredm\u00e9ny\u00e9nek k\u00f3dol\u00e1sa k\u00f6zben. A kiv\u00e9tel oka lehet az enk\u00f3der meghib\u00e1sod\u00e1sa, vagy az, hogy a szersz\u00e1m v\u00e1ratlan eredm\u00e9nyt adott vissza.
+CWMCM0019E.error.encoding.element.useraction=A kiszolg\u00e1l\u00f3 message.log f\u00e1jlj\u00e1t \u00e9s FFDC napl\u00f3it \u00e1ttekintve azonos\u00edtsa be a probl\u00e9m\u00e1t.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: Az {0} MCP eszk\u00f6z {1} argumentum\u00e1nak alap\u00e9rtelmezett \u00e9rt\u00e9ke nem konvert\u00e1lhat\u00f3 {2} t\u00edpusra. Az \u00e9rt\u00e9k {3}. A hiba: \u201e {4} \u201d (A hiba\u00fczenet nem tal\u00e1lhat\u00f3).
+CWMCM0020E.defaultvalue.conversion.error.explanation=Az argumentumnak van egy alap\u00e9rtelmezett \u00e9rt\u00e9ke, amely nem konvert\u00e1lhat\u00f3 az argumentum t\u00edpus\u00e1ra. Ez a probl\u00e9ma akkor fordulhat el\u0151, ha az alap\u00e9rtelmezett \u00e9rt\u00e9k null, \u00e9rv\u00e9nytelen form\u00e1tum\u00fa vagy a c\u00e9l t\u00edpus tartom\u00e1ny\u00e1n k\u00edv\u00fcl esik.
+CWMCM0020E.defaultvalue.conversion.error.useraction=Gy\u0151z\u0151dj\u00f6n meg arr\u00f3l, hogy az alap\u00e9rtelmezett \u00e9rt\u00e9k \u00e9rv\u00e9nyes az argumentum t\u00edpus\u00e1ra. Gy\u0151z\u0151dj\u00f6n meg arr\u00f3l, hogy az alap\u00e9rtelmezett \u00e9rt\u00e9k nem null. Karaktert\u00edpusok eset\u00e9n pontosan egy karaktert adjon meg. Numerikus t\u00edpusok eset\u00e9n adjon meg egy \u00e9rv\u00e9nyes sz\u00e1mot a t\u00edpus tartom\u00e1ny\u00e1n bel\u00fcl.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: A karakter alap\u00e9rtelmezett \u00e9rt\u00e9k\u00e9nek pontosan egy karakternek kell lennie, de {0} volt
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=A Character t\u00edpus\u00fa argumentum alap\u00e9rtelmezett \u00e9rt\u00e9ke megadva van, de nem tartalmaz pontosan egy karaktert. A karakterargumentumoknak egyetlen karakterl\u00e1ncot kell tartalmazniuk.
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=Gy\u0151z\u0151dj\u00f6n meg arr\u00f3l, hogy a Character t\u00edpus\u00fa argumentum alap\u00e9rtelmezett \u00e9rt\u00e9ke pontosan egy karakterb\u0151l \u00e1ll\u00f3 karakterl\u00e1nc.

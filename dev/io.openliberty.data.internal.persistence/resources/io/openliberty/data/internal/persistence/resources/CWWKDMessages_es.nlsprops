@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: El tipo de retorno {0} del m\u00e9todo {1
 CWWKD1004.general.rtrn.err.explanation=El tipo de retorno del m\u00e9todo no es uno de los tipos de retorno admitidos para el tipo de m\u00e9todo del repositorio.
 CWWKD1004.general.rtrn.err.useraction=Consulte la informaci\u00f3n de Jakarta Data Javadoc para obtener una lista de tipos de retorno v\u00e1lidos para el tipo de m\u00e9todo de repositorio.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: El m\u00e9todo {0} de la interfaz del repositorio {1} no es v\u00e1lido. El m\u00e9todo especifica un tipo de retorno e {2}, que no es convertible desde el tipo de entidad e {3}. El tipo de resultado de una operaci\u00f3n de b\u00fasqueda debe ser el tipo de entidad, un tipo de atributo de entidad, un registro Java compuesto por atributos de entidad o un tipo construido por la consulta que se suministra a la anotaci\u00f3n Query. El tipo de retorno del m\u00e9todo find del repositorio puede ser el tipo de resultado, una matriz del tipo de resultado o cualquiera de los siguientes tipos parametrizados con el tipo de resultado: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: El m\u00e9todo ` {0} ` de la interfaz del repositorio ` {1} ` no es v\u00e1lido. El m\u00e9todo especifica un tipo de retorno \u00ab {2} \u00bb que no es convertible desde el tipo de entidad \u00ab {3} \u00bb. El tipo de resultado de una operaci\u00f3n de b\u00fasqueda debe ser el tipo de entidad, un tipo de atributo de entidad seleccionado por la anotaci\u00f3n Select, un registro Java compuesto por atributos de entidad o un tipo seleccionado por la consulta proporcionada a la anotaci\u00f3n Query. El tipo de retorno del m\u00e9todo find del repositorio puede ser el tipo de resultado, una matriz del tipo de resultado o cualquiera de los siguientes tipos parametrizados con el tipo de resultado: {4}.
 CWWKD1005.find.rtrn.err.explanation=El tipo de retorno del m\u00e9todo no es uno de los tipos de retorno soportados para los m\u00e9todos de b\u00fasqueda de repositorios.
 CWWKD1005.find.rtrn.err.useraction=Consulte la informaci\u00f3n de Jakarta Data Javadoc para obtener una lista de tipos de retorno v\u00e1lidos para los m\u00e9todos de b\u00fasqueda de repositorios.
 
