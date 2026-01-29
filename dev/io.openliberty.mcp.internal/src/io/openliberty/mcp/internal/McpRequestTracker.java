@@ -53,7 +53,7 @@ public class McpRequestTracker {
         CancellationImpl previous = ongoingRequests.putIfAbsent(requestId, cancellation);
         if (previous != null) {
             throw new JSONRPCException(JSONRPCErrorCode.INVALID_PARAMS,
-                                       Tr.formatMessage(tc, "CWMCM0008E.invalid.request.params", requestId.id()));
+                                       Tr.formatMessage(tc, "invalid.request.params", requestId.id()));
         }
     }
 

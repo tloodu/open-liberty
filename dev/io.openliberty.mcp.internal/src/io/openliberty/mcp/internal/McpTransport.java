@@ -89,7 +89,7 @@ public class McpTransport {
             String supportedValues = Arrays.stream(McpProtocolVersion.values())
                                            .map(McpProtocolVersion::getVersion)
                                            .collect(Collectors.joining(", "));
-            String excpetionMesaage = Tr.formatMessage(tc, "CWMCM0013E.unsupported.mcp.http.version", supportedValues);
+            String excpetionMesaage = Tr.formatMessage(tc, "unsupported.mcp.http.version", supportedValues);
             throw new HttpResponseException(HttpServletResponse.SC_BAD_REQUEST, excpetionMesaage);
         }
         this.mcpRequest = toRequest();
@@ -236,7 +236,7 @@ public class McpTransport {
      * @throws IOException
      */
     public void sendError(Throwable e) throws IOException {
-        String excpetionMessage = Tr.formatMessage(tc, "CWMCM0014E.unexpected.server.error", new Object[] { req.getMethod(), req.getRequestURI(), req.getQueryString() });
+        String excpetionMessage = Tr.formatMessage(tc, "unexpected.server.error", new Object[] { req.getMethod(), req.getRequestURI(), req.getQueryString() });
         Tr.error(tc, "CWMCM0015E.unexpected.server.error.exception", req.getMethod(), req.getRequestURI(), req.getQueryString(), e.getMessage());
         res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, excpetionMessage);
     }
@@ -298,7 +298,7 @@ public class McpTransport {
                 }
             } catch (Exception e) {
                 Tr.error(tc, "CWMCM0016E.error.sending.response.exception", e);
-                sendResponse(ToolResponse.error(Tr.formatMessage(tc, "CWMCM0011E.internal.server.error")));
+                sendResponse(ToolResponse.error(Tr.formatMessage(tc, "internal.server.error")));
             } finally {
                 asyncContext.complete();
             }

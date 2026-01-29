@@ -195,7 +195,7 @@ public abstract class BeanMethodHandler<RESPONSE> implements Function<ToolArgume
                  "CWMCM0010E.internal.server.error.detailed",
                  method.name(),
                  t);
-        return ToolResponse.error(Tr.formatMessage(tc, "CWMCM0011E.internal.server.error"));
+        return ToolResponse.error(Tr.formatMessage(tc, "internal.server.error"));
     }
 
     protected boolean isBusinessException(Throwable t) {

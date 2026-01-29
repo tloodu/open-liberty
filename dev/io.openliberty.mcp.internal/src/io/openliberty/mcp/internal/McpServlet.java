@@ -95,7 +95,7 @@ public class McpServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         McpTransport transport = new McpTransport(req, resp, jsonb);
-        String excpetionMessage = Tr.formatMessage(tc, "CWMCM0009I.get.disallowed");
+        String excpetionMessage = Tr.formatMessage(tc, "get.disallowed");
         HttpResponseException e = new HttpResponseException(
                                                             HttpServletResponse.SC_METHOD_NOT_ALLOWED,
                                                             excpetionMessage).withHeader("Allow", "POST");
@@ -187,7 +187,7 @@ public class McpServlet extends HttpServlet {
 
         if (requestId != null && requestTracker.isOngoingRequest(requestId)) {
             throw new JSONRPCException(JSONRPCErrorCode.INVALID_PARAMS,
-                                       Tr.formatMessage(tc, "CWMCM0008E.invalid.request.params", requestId.id()));
+                                       Tr.formatMessage(tc, "invalid.request.params", requestId.id()));
         }
 
         try {

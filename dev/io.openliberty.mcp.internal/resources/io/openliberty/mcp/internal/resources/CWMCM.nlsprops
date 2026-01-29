@@ -67,15 +67,15 @@ CWMCM0007E.invalid.arguments.useraction=Check whether you have the correct class
 
 # Used as part of a response to a client
 # {0} = Request id
-CWMCM0008E.invalid.request.params=CWMCM0008E: A request with the {0} ID is in progress.
-CWMCM0008E.invalid.request.params.explanation=A request with the same ID is in progress. Requests from the same client must have unique IDs.
-CWMCM0008E.invalid.request.params.useraction=Use a unique ID for every request.
+invalid.request.params=A request with the {0} ID is in progress.
+invalid.request.params.explanation=A request with the same ID is in progress. Requests from the same client must have unique IDs.
+invalid.request.params.useraction=Use a unique ID for every request.
 
 # Used as part of a response to a client
 # do not translate GET, POST
-CWMCM0009I.get.disallowed=CWMCM0009I: GET requests are not supported.
-CWMCM0009I.get.disallowed.explanation=A GET request was sent but this functionality is not supported.
-CWMCM0009I.get.disallowed.useraction=No action is required.
+get.disallowed=GET requests are not supported.
+get.disallowed.explanation=A GET request was sent but this functionality is not supported.
+get.disallowed.useraction=No action is required.
 
 # Used for server logging
 # {0} = tool name
@@ -85,9 +85,9 @@ CWMCM0010E.internal.server.error.detailed.explanation=The tool method threw an u
 CWMCM0010E.internal.server.error.detailed.useraction=Review the server message.log and FFDC logs to identify the problem.
 
 # Used as part of a response to a client
-CWMCM0011E.internal.server.error=CWMCM0011E: An internal server error occurred while running the tool.
-CWMCM0011E.internal.server.error.explanation=The server was not able to complete the tool call request.
-CWMCM0011E.internal.server.error.useraction=Check that the request is correct. More information about the failure might be in the server messages.log.
+internal.server.error=An internal server error occurred while running the tool.
+internal.server.error.explanation=The server was not able to complete the tool call request.
+internal.server.error.useraction=Check that the request is correct. More information about the failure might be in the server messages.log.
 
 # Used for server logging
 # do not translate bean
@@ -100,17 +100,17 @@ CWMCM0012E.bean.release.fail.useraction=Review the server message.log and FFDC l
 # Used for server logging and client response
 # do not translate MCP-Protocol-Version, MCP
 # {0} = List of supported MCP-Protocol-Version values
-CWMCM0013E.unsupported.mcp.http.version=CWMCM0013E: An unsupported MCP-Protocol-Version header was provided. Supported values: {0}
-CWMCM0013E.unsupported.mcp.http.version.explanation=The protocol version in the MCP-Protocol-Version header is not supported by the server.
-CWMCM0013E.unsupported.mcp.http.version.useraction=Use a supported protocol version.
+unsupported.mcp.http.version=An unsupported MCP-Protocol-Version header was provided. Supported values: {0}
+unsupported.mcp.http.version.explanation=The protocol version in the MCP-Protocol-Version header is not supported by the server.
+unsupported.mcp.http.version.useraction=Use a supported protocol version.
 
 # Used as part of a response to a client
 # {0} = Method
 # {1} = RequestURI
 # {2} = RequestQuery
-CWMCM0014E.unexpected.server.error=CWMCM0014E: Unexpected Server Error. Method={0} RequestURI={1} RequestQuery={2}
-CWMCM0014E.unexpected.server.error.explanation=An unexpected server error occurred while processing the request. The request cannot be completed.
-CWMCM0014E.unexpected.server.error.useraction=No action is required.
+unexpected.server.error=Unexpected Server Error. Method={0} RequestURI={1} RequestQuery={2}
+unexpected.server.error.explanation=An unexpected server error occurred while processing the request. The request cannot be completed.
+unexpected.server.error.useraction=No action is required.
 
 # Used for server logging
 # {0} = Method
