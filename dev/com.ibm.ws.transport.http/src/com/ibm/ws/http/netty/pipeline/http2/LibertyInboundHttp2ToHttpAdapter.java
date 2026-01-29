@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2023, 2025 IBM Corporation and others.
+ * Copyright (c) 2023, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -9,7 +9,11 @@
  *******************************************************************************/
 package com.ibm.ws.http.netty.pipeline.http2;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.ibm.ws.ffdc.annotation.FFDCIgnore;
 
@@ -22,6 +26,7 @@ import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Stream;
+import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 
 /**
@@ -33,6 +38,10 @@ import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 public class LibertyInboundHttp2ToHttpAdapter extends InboundHttp2ToHttpAdapter {
 
     private final Channel channel;
+    private HttpToHttp2ConnectionHandler h2Handler;
+    private AtomicInteger streamsActive = new AtomicInteger(0);
+    private AtomicBoolean goAwayReceived = new AtomicBoolean(false);
+    private AtomicBoolean goAwaySent = new AtomicBoolean(false);
 
     protected LibertyInboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength, boolean validateHttpHeaders, boolean propagateSettings, Channel channel) {
         super(connection, maxContentLength, validateHttpHeaders, propagateSettings);
@@ -66,9 +75,10 @@ public class LibertyInboundHttp2ToHttpAdapter extends InboundHttp2ToHttpAdapter 
     }
 
     @Override
-    public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
-        super.onGoAwayReceived(lastStreamId, errorCode, debugData);
-        channel.close();
+    public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) throws Http2Exception {
+        goAwayReceived.getAndSet(true);
+        super.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+        sendGoAwayIfClosing();
     }
 
     @Override
@@ -84,6 +94,41 @@ public class LibertyInboundHttp2ToHttpAdapter extends InboundHttp2ToHttpAdapter 
         }
         ctx.fireExceptionCaught(Http2Exception.streamError(streamId, code,
                                                            "HTTP/2 to HTTP layer caught stream reset"));
+    }
+
+    @Override
+    public void onStreamActive(Http2Stream stream) {
+        // Accumulate active streams
+        streamsActive.incrementAndGet();
+        super.onStreamActive(stream);
+    }
+
+    @Override
+    public void onStreamClosed(Http2Stream stream) {
+        // Remove inactive streams
+        streamsActive.decrementAndGet();
+        super.onStreamClosed(stream);
+        sendGoAwayIfClosing();
+    }
+
+    protected void setHandler(HttpToHttp2ConnectionHandler h2Handler) {
+        Objects.requireNonNull(h2Handler, "HttpToHttp2ConnectionHandler must not be null!");
+        this.h2Handler = h2Handler;
+    }
+
+    private void sendGoAwayIfClosing() {
+        Objects.requireNonNull(this.h2Handler, "HttpToHttp2ConnectionHandler must not be null for sending Go Away frame!");
+        // We received a go away and need to check if we have finished the streams to close
+        // the connection and send a go away back if we haven't sent one already
+        if(goAwayReceived.get() && streamsActive.get() == 0 && goAwaySent.compareAndSet(false, true)) {
+            h2Handler.encoder().writeGoAway(
+                    channel.pipeline().lastContext(),
+                    connection.remote().lastStreamCreated(),
+                    Http2Error.NO_ERROR.code(),
+                    EMPTY_BUFFER,
+                    channel.newPromise());
+            channel.flush();
+        }
     }
 
 }
