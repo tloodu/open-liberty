@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 IBM Corporation and others.
+ * Copyright (c) 2018, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,8 @@
 package test.server.transport.http2;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -24,6 +26,8 @@ import org.jboss.shrinkwrap.api.spec.WebArchive;
 import com.ibm.websphere.simplicity.ShrinkHelper;
 
 import componenttest.topology.impl.LibertyServer;
+import componenttest.topology.utils.FATServletClient;
+
 
 /**
  * ShrinkWrap helper methods, modified from WCApplicationHelper.
@@ -122,4 +126,28 @@ public class H2FATApplicationHelper {
         }
 
     }
+
+    public static void preTestNettyCheck(LibertyServer runtimeServer, LibertyServer server) throws Exception {
+        // Go through Logs and check if Netty is being used
+        boolean runningNetty = false;
+        // Wait for endpoints to finish loading and get the endpoint started messages
+        server.waitForStringInLog("CWWKO0219I.*");
+        runtimeServer.waitForStringInLog("CWWKO0219I.*");
+        List<String> test = server.findStringsInLogs("CWWKO0219I.*");
+        LOG.info("preTestNettyCheck : Got port list...... " + Arrays.toString(test.toArray()));
+        LOG.info("preTestNettyCheck : Looking for port: " + server.getHttpSecondaryPort());
+        for (String endpoint : test) {
+            LOG.info("preTestNettyCheck : Endpoint: " + endpoint);
+            if (!endpoint.contains("port " + Integer.toString(server.getHttpSecondaryPort())))
+                continue;
+            LOG.info("preTestNettyCheck : Netty? " + endpoint.contains("io.openliberty.netty.internal.tcp.TCPUtils"));
+            runningNetty = endpoint.contains("io.openliberty.netty.internal.tcp.TCPUtils");
+            break;
+        }
+        if (runningNetty)
+            FATServletClient.runTest(runtimeServer,
+                                     Http2FullModeTests.defaultServletPath + server.getHostname() + "&port=" + server.getHttpSecondaryPort() + "&testdir=" + Utils.TEST_DIR,
+                                     "setUsingNetty");
+    }
+
 }
