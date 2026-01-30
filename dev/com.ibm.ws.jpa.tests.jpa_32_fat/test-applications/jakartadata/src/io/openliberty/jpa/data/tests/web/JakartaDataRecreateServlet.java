@@ -935,7 +935,7 @@ public class JakartaDataRecreateServlet extends FATServlet {
     }
 
     @Test
-    @Ignore("Reference issue: https://github.com/OpenLiberty/open-liberty/issues/29073")
+   //@Ignore("Reference issue: https://github.com/OpenLiberty/open-liberty/issues/29073")
     public void testOLGH29073_WHERECLAUSE() throws Exception {
         deleteAllEntities(City.class);
 
@@ -960,9 +960,7 @@ public class JakartaDataRecreateServlet extends FATServlet {
             long version2 = em.createQuery("SELECT VERSION(THIS) FROM City  WHERE ID(THIS) = ?1", Long.class)
                             .setParameter(1, new CityId("Rochester", "Minnesota"))
                             .getSingleResult();
-            //This one passed
-            long rochesters = em.createQuery("SELECT VERSION(THIS) FROM City", Long.class)
-                            .getSingleResult();
+
         } catch (Exception e) {
             tx.rollback();
             throw e;
