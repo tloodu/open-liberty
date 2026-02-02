@@ -5745,45 +5745,6 @@ public class QueryInfo {
                                                    targetx.getMessage());
                 throw (IllegalArgumentException) iax.initCause(x);
             }
-        // TODO entire else block can be removed once temporary workaround is no longer needed
-        else if (entityInfo.attributeSetters != null
-                 && (type == QueryType.SAVE ||
-                     type == QueryType.LC_UPDATE_MERGE)
-                 && oClass == entityInfo.getType()
-                 && em != null && !em.contains(o))
-            // Work around Hibernate issue merging detached entities by copying
-            // the entity to a new instance
-            try {
-                entity = oClass.getDeclaredConstructor().newInstance();
-                for (Entry<String, List<Member>> entry : entityInfo //
-                                .attributeAccessors.entrySet()) {
-                    String attributeName = entry.getKey();
-                    List<Member> accessors = entry.getValue();
-                    if (accessors.size() == 1) { // only top level attributes
-                        Member accessor = accessors.get(0);
-                        if (accessor instanceof Field f) {
-                            f.set(entity, f.get(o));
-                        } else {
-                            Method getter = (Method) accessor;
-                            Method setter = entityInfo.attributeSetters //
-                                            .get(attributeName);
-                            Object value = getter.invoke(o);
-                            setter.invoke(entity, value);
-                        }
-                    }
-                }
-            } catch (InstantiationException | //
-                            IllegalAccessException | //
-                            IllegalArgumentException | //
-                            InvocationTargetException | //
-                            NoSuchMethodException x) {
-                throw (IllegalArgumentException) exc(IllegalArgumentException.class,
-                                                     "CWWKD1081.entity.general.err",
-                                                     entityInfo.getType(),
-                                                     repositoryInterface,
-                                                     "",
-                                                     x.getMessage()).initCause(x);
-            }
 
         if (entity != o &&
             TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled())
