@@ -22,9 +22,13 @@ import componenttest.rules.repeater.JakartaEE10Action;
 import componenttest.rules.repeater.RepeatTests;
 
 @RunWith(Suite.class)
-@SuiteClasses(JCAClassLoadingTest.class)
+@SuiteClasses({
+                JCAClassLoadingTest.class,
+                JCACDITest.class
+})
 public class FATSuite {
     @ClassRule
-    public static RepeatTests r = RepeatTests.with(new EmptyAction().conditionalFullFATOnly(EmptyAction.GREATER_THAN_OR_EQUAL_JAVA_11))
+    public static RepeatTests r = RepeatTests //
+                    .with(new EmptyAction().conditionalFullFATOnly(EmptyAction.GREATER_THAN_OR_EQUAL_JAVA_11)) //
                     .andWith(new JakartaEE10Action().setSkipTransformation(true));
 }

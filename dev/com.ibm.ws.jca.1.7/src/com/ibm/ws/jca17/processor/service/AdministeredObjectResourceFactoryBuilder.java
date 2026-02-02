@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -266,6 +266,9 @@ public class AdministeredObjectResourceFactoryBuilder implements ResourceFactory
     }
 
     private Dictionary<String, Object> getDefaultProperties(String resourceAdapter, String interfaceName, String className) throws ConfigEvaluatorException, ResourceException {
+        System.out.println("KJA1017 bundleContext: " + bundleContext);
+        System.out.println("KJA1017 bundle lookup: " + BUNDLE_LOCATION + resourceAdapter);
+        System.out.println("KJA1017 bundle object: " + bundleContext.getBundle(BUNDLE_LOCATION + resourceAdapter));
         MetaTypeInformation metaTypeInformation = metaTypeServiceRef.getService().getMetaTypeInformation(bundleContext.getBundle(BUNDLE_LOCATION + resourceAdapter));
         String[] factoryPids = metaTypeInformation.getFactoryPids();
 
