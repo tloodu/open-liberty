@@ -13,7 +13,9 @@
 package com.ibm.ws.springboot.support.fat;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,10 +24,11 @@ import org.junit.runner.RunWith;
 
 import componenttest.annotation.MinimumJavaLevel;
 import componenttest.custom.junit.runner.FATRunner;
+import componenttest.topology.utils.HttpUtils;
 
 @RunWith(FATRunner.class)
 @MinimumJavaLevel(javaLevel = 17)
-public class CommonWebFluxTests40 extends CommonWebFluxTests {
+public class CommonWebFluxTests40War extends CommonWebFluxTests {
 
     @Override
     public Map<String, String> getBootStrapProperties() {
@@ -38,7 +41,17 @@ public class CommonWebFluxTests40 extends CommonWebFluxTests {
 
     @Override
     public Set<String> getFeatures() {
-        return getWebFeatures();
+        return new HashSet<>(Arrays.asList("servlet-6.1"));
+    }
+
+    @Override
+    public AppConfigType getApplicationConfigType() {
+        return AppConfigType.WEB_APP_TAG;
+    }
+
+    @Override
+    public String getContextRoot() {
+        return "/testName/";
     }
 
     @Override
@@ -46,14 +59,9 @@ public class CommonWebFluxTests40 extends CommonWebFluxTests {
         return SPRING_BOOT_40_APP_WEBFLUX;
     }
 
-    @Override
-    public AppConfigType getApplicationConfigType() {
-        return AppConfigType.SPRING_BOOT_APP_TAG;
-    }
-
     @Test
     public void testBasicWebFluxtAppServlet61() throws Exception {
-        testBasicSpringBootApplication();
+        HttpUtils.findStringInUrl(server, "/testName/", "HELLO SPRING BOOT!!");
     }
 
     @Test
