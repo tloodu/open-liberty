@@ -1255,6 +1255,7 @@ serverCmd()
   fi
 
   if $os400lib; then
+    # Start the server
     serverCmdOS400 "${SERVER_CMD_BACKGROUND_LOG}" "${SERVER_NAME}" "$@"
     rc=$?
 
@@ -1265,13 +1266,13 @@ serverCmd()
     if [ -n "${SERVER_CMD_BACKGROUND_LOG}" ]; then
       PID=`cat "${X_PID_FILE}"`
 
-      # Verify/wait for the process to start
+      # Verify/wait for the server process to start
       javaCmd '' "${SERVER_NAME}" --pid="${PID}" --status:start "$@"
       rc=$?
     fi
 
   elif [ "${uname}" = OS/390 ] && [ -n "${WLP_ZOS_PROCEDURE}" ] && [ -e "${WLP_INSTALL_DIR}/lib/native/zos/s390x/bbgzcsl" ]; then
-      # Start the STC procedure
+      # Start the STC procedure. (Start the server)
       if [ -n "${WLP_ZOS_JOBNAME}" ]; then
         "${WLP_INSTALL_DIR}/lib/native/zos/s390x/bbgzcsl" "${WLP_ZOS_PROCEDURE}" "${SERVER_NAME}" "${X_PID_FILE}" "${WLP_ZOS_JOBNAME}" "$@"
       else
@@ -1285,8 +1286,8 @@ serverCmd()
       OPENJ9_JAVA_OPTIONS=${SAVE_OPENJ9_JAVA_OPTIONS}
 
       if [ $rc = 0 ]; then
-        # Verify/wait for the process to start
-        PID=`cat "${X_PID_FILE}"`
+        # Verify/wait for the server process to start
+        PID=$(cat "${X_PID_FILE}")
         javaCmd '' "${SERVER_NAME}" --pid="${PID}" --status:start "$@"
         rc=$?
 
@@ -1336,6 +1337,7 @@ serverCmd()
     X_CMD="${JAVA_CMD} ${ARGS}"
     export X_CMD
 
+    # Start the server
     javaCmd "${SERVER_CMD_BACKGROUND_LOG}" "${SERVER_NAME}" "$@"
     rc=$?
 
@@ -1346,7 +1348,7 @@ serverCmd()
     OPENJ9_JAVA_OPTIONS=${SAVE_OPENJ9_JAVA_OPTIONS}
 
     if [ -n "${SERVER_CMD_BACKGROUND_LOG}" ]; then
-      # Verify/wait for the process to start
+      # Verify/wait for the server process to start
       javaCmd '' "${SERVER_NAME}" --pid="${PID}" --status:start "$@"
       rc=$?
       # write the pid file if return is OK or UNKNOWN
@@ -1458,6 +1460,8 @@ criuRestore()
   then
     mkdirs "${X_PID_DIR}"
     rmIfExist "${X_PID_FILE}"
+
+    # start server (Restore server)
     $CRIU_RESTORE_PATH restore --skip-file-rwx-check --cpu-cap=none --file-locks --tcp-established --images-dir=${SERVER_OUTPUT_DIR}/workarea/checkpoint/image \
       --shell-job --verbosity=${CRIU_LOG_LEVEL} --log-file ${CUR_X_LOG_DIR}/checkpoint/restore.log ${CRIU_EXTRA_ARGS} \
       --pidfile ${X_PID_FILE} \
@@ -1470,7 +1474,7 @@ criuRestore()
       IBM_JAVA_OPTIONS=${SAVE_IBM_JAVA_OPTIONS}
       OPENJ9_JAVA_OPTIONS=${SAVE_OPENJ9_JAVA_OPTIONS}
 
-      # Verify/wait for the process to start
+      # Verify/wait for the server process to start
       javaCmd '' "${SERVER_NAME}" --pid="${PID}" --status:start
       rc=$?
       # write the pid file if return is OK or UNKNOWN
