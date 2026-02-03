@@ -162,9 +162,12 @@ public class GlobalClassloadingConfiguration {
         public JVMPackages(String parentProp, String parentPackagesProp, String bootPackages) {
             Set<String> extraPackages = null;
             if (parentPackagesProp != null) {
-                String[] extraPackagesArray = parentPackagesProp.split(",");
                 extraPackages = new HashSet<String>();
-                extraPackages.addAll(Arrays.asList(extraPackagesArray));
+                // an empty string means no extra packages; use an empty set.
+                if (!parentPackagesProp.isEmpty()) {
+                    String[] extraPackagesArray = parentPackagesProp.split(",");
+                    extraPackages.addAll(Arrays.asList(extraPackagesArray));
+                }
             }
             parentConfig = parentProp == null ? ParentConfig.SYSTEM : ParentConfig.valueOf(parentProp);
             parentCL = parentConfig == ParentConfig.PLATFORM ? GlobalClassloadingConfiguration.platformClassLoader : ClassLoader.getSystemClassLoader();
@@ -317,8 +320,14 @@ public class GlobalClassloadingConfiguration {
 
         private boolean filterPackageClass(String className) {
             if (parentPackages == null) {
+                // filter nothing
                 return false;
             }
+            if (parentPackages.isEmpty()) {
+                // filter everything
+                return true;
+            }
+            // filter any package not in the parentPackages set
             int lastDot = className.lastIndexOf('.');
             if (lastDot > 0) {
                 String packageName = className.substring(0, lastDot);
@@ -343,8 +352,14 @@ public class GlobalClassloadingConfiguration {
 
         private boolean filterPackageResource(String resName) {
             if (parentPackages == null) {
+                // filter nothing
                 return false;
             }
+            if (parentPackages.isEmpty()) {
+                // filter everything
+                return true;
+            }
+            // filter any package not in the parentPackages set
             int begin = ((resName.length() > 1) && (resName.charAt(0) == '/')) ? 1 : 0;
             int end = resName.lastIndexOf('/'); /* index of last slash */
             if (end > begin) {
