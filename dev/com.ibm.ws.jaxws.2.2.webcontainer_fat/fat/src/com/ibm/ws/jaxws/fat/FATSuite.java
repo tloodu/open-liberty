@@ -24,6 +24,7 @@ import componenttest.rules.repeater.RepeatTests;
 @RunWith(Suite.class)
 @SuiteClasses({
                 AttachmentPropertiesTest.class,
+                AsyncClientConnectionTest.class,
                 BindingTypeWsdlMismatchTest.class,
                 CatalogFacilityTest.class,
                 CXFJMXSupportTest.class,

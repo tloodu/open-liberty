@@ -15,6 +15,7 @@ src: \
   test-applications/addNumbersProvider/src,\
   test-applications/addNumbersClient/src,\
   test-applications/calculator/src,\
+  test-applications/calculatorAsync/src,\
   test-applications/converter/src,\
   test-applications/helloClient/src,\
   test-applications/helloClientDDMerge/src,\
@@ -105,5 +106,6 @@ tested.features: jaxws-2.3, \
 	io.openliberty.org.apache.commons.logging;version=latest,\
 	com.ibm.ws.org.slf4j.jdk14;version=latest,\
 	slf4j.api,\
-	org.apache.commons.logging
+	org.apache.commons.logging,\
+	com.ibm.ws.logging.core
   
