@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package multiple.ham.custom;
+package multiple.ham.common;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -20,7 +20,7 @@ import jakarta.ws.rs.core.SecurityContext;
  * Protected REST API resource serving /resource/test
  */
 @Path("/resource")
-public class ProtectedResource {
+public class MultipleHAMProtectedResource {
 
     @GET
     @Path("/test")

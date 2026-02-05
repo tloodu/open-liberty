@@ -33,6 +33,7 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
 import componenttest.topology.impl.LibertyServer;
+import multiple.ham.common.MultipleHAMProtectedResource;
 import multiple.ham.custom.hams.CustomHAMOne;
 import multiple.ham.custom.hams.CustomHAMThree;
 import multiple.ham.custom.hams.CustomHAMTwo;
@@ -57,7 +58,7 @@ public class MultipleHAMTests {
     @BeforeClass
     public static void setUp() throws Exception {
         WebArchive multipleHamApp = ShrinkWrap.create(WebArchive.class,
-                                                      APP_NAME + ".war").addPackage("multiple.ham.custom").addClass(CustomHAMOne.class).addClass(CustomHAMTwo.class).addClass(CustomHAMThree.class);
+                                                      APP_NAME + ".war").addPackage("multiple.ham.custom").addClass(MultipleHAMProtectedResource.class).addClass(CustomHAMOne.class).addClass(CustomHAMTwo.class).addClass(CustomHAMThree.class);
 
         // The URL is not expected to be modified during this test scope
         url = "http://localhost:" + server.getHttpDefaultPort() + CONTEXT_ROOT + RESOURCE_PATH;

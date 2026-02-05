@@ -28,7 +28,7 @@ import jakarta.ws.rs.core.SecurityContext;
  * - Users with incorrect credentials get rejected (401 Unauthorized)
  */
 @Path("/resource")
-public class ProtectedResource {
+public class InMemoryIdentityStoreProtectedResource {
 
     @GET
     @Path("/test")
