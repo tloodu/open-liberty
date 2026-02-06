@@ -12,6 +12,8 @@
  *******************************************************************************/
 package com.ibm.wsspi.kernel.embeddable;
 
+import static java.util.Arrays.asList;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -23,7 +25,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -194,46 +195,64 @@ public class EmbeddedServerDriver implements ServerEventListener {
     }
 
     public void testBootstrapAccessPlatform() {
-        PrintStream originalSysOut = System.out;
-        try {
-            System.setProperty("com.ibm.ws.beta.edition", "true");
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(baos, true, "UTF-8"));
-            coldStartServer(Collections.singletonMap("io.openliberty.classloading.app.parent", "PLATFORM"));
-            verifyServerEvent("\"STARTING\" ServerEvent should have fired", startingEventOccurred);
-            verifyServerEvent("\"STARTED\" ServerEvent should have fired", startedEventOccurred);
+        doGatewayParentAccess("PLATFORM", null,
+                              succeedClasses(String.class.getName()),
+                              failClasses("componenttest.topology.impl.LibertyServer", "junit.framework.Assert", "junit.runner.TestRunListener"),
 
-            String serverConsoleOutput = new String(baos.toByteArray(), "UTF-8");
-            Log.info(c, "testStartingAStoppedServer", "consoleOutput = " + serverConsoleOutput);
-            try {
-                Pattern p = Pattern.compile(".*CWWKZ0001I:.*simpleApp.*", Pattern.DOTALL);
-                Assert.assertTrue("No indication that application started", p.matcher(serverConsoleOutput).matches());
-            } catch (Throwable t) {
-                failures.add(new AssertionFailedError("Exception occurred while searching for app started message in logs - " + t));
-                Log.error(c, CURRENT_METHOD_NAME, t);
-            }
-
-            checkBootstrapAccess("com.ibm.wsspi.kernel.embeddable.ServerBuilder", true);
-            checkBootstrapAccess(String.class.getName(), false);
-
-            stopRunningServer();
-        } catch (IOException e) {
-            Assert.assertEquals("Unexpected exception", null, e);
-        } finally {
-            System.getProperties().remove("com.ibm.ws.beta.edition");
-            System.setOut(originalSysOut);
-        }
+                              succeedResources(),
+                              failResources("/componenttest/topology/impl/LibertyServer.class", "/junit/framework/Assert.class"));
     }
 
-    public void testBootstrapAccessSystem() {
+    public void testBootstrapAccessSystemNoPackages() {
+        doGatewayParentAccess("SYSTEM", "",
+                              succeedClasses(String.class.getName()),
+                              failClasses("componenttest.topology.impl.LibertyServer", "junit.framework.Assert", "junit.runner.TestRunListener"),
+
+                              succeedResources(),
+                              failResources("/componenttest/topology/impl/LibertyServer.class", "/junit/framework/Assert.class", "/junit/runner/TestRunListener.class"));
+    }
+
+    public void testBootstrapAccessSystemMultiPackage() {
+        doGatewayParentAccess("SYSTEM", "junit.framework,componenttest.topology.impl",
+                              succeedClasses(String.class.getName(), "componenttest.topology.impl.LibertyServer"),
+                              failClasses("junit.runner.TestRunListener"),
+
+                              succeedResources("/componenttest/topology/impl/LibertyServer.class", "/junit/framework/Assert.class"),
+                              failResources("/junit/runner/TestRunListener.class"));
+    }
+
+    private List<String> failClasses(String... classNames) {
+        return asList(classNames);
+    }
+
+    private List<String> succeedClasses(String... classNames) {
+        return asList(classNames);
+    }
+
+    private List<String> failResources(String... resourceNames) {
+        return asList(resourceNames);
+    }
+
+    private List<String> succeedResources(String... resourceNames) {
+        return asList(resourceNames);
+    }
+
+    private void doGatewayParentAccess(String parent, String parentPackages,
+                                       List<String> expectClassSuccess,
+                                       List<String> expectClassFailure,
+                                       List<String> expectResourceSuccess,
+                                       List<String> expectResourceFailure) {
         PrintStream originalSysOut = System.out;
         try {
             System.setProperty("com.ibm.ws.beta.edition", "true");
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             System.setOut(new PrintStream(baos, true, "UTF-8"));
             Map<String, String> bootProps = new HashMap<>();
-            bootProps.put("io.openliberty.classloading.app.parent", "SYSTEM");
-            bootProps.put("io.openliberty.classloading.app.parent.packages", "");
+            bootProps.put("io.openliberty.classloading.app.parent", parent);
+            if (parentPackages != null) {
+                bootProps.put("io.openliberty.classloading.app.parent.packages", parentPackages);
+            }
+
             coldStartServer(bootProps);
             verifyServerEvent("\"STARTING\" ServerEvent should have fired", startingEventOccurred);
             verifyServerEvent("\"STARTED\" ServerEvent should have fired", startedEventOccurred);
@@ -248,8 +267,21 @@ public class EmbeddedServerDriver implements ServerEventListener {
                 Log.error(c, CURRENT_METHOD_NAME, t);
             }
 
-            checkBootstrapAccess("com.ibm.wsspi.kernel.embeddable.ServerBuilder", true);
-            checkBootstrapAccess(String.class.getName(), false);
+            for (String className : expectClassSuccess) {
+                checkBootstrapAccess("/simpleApp/bootstrapAccess?classname=" + className + "&expectFailure=" + false);
+            }
+
+            for (String className : expectClassFailure) {
+                checkBootstrapAccess("/simpleApp/bootstrapAccess?classname=" + className + "&expectFailure=" + true);
+            }
+
+            for (String resourceName : expectResourceSuccess) {
+                checkBootstrapAccess("/simpleApp/bootstrapAccess?resourcename=" + resourceName + "&expectFailure=" + false);
+            }
+
+            for (String resourceName : expectResourceFailure) {
+                checkBootstrapAccess("/simpleApp/bootstrapAccess?resosurcename=" + resourceName + "&expectFailure=" + true);
+            }
 
             stopRunningServer();
         } catch (IOException e) {
@@ -260,9 +292,9 @@ public class EmbeddedServerDriver implements ServerEventListener {
         }
     }
 
-    private void checkBootstrapAccess(String className, boolean expectFailure) throws IOException {
+    private void checkBootstrapAccess(String requestPath) throws IOException {
         final String m = "checkBootstrapAccess";
-        URL url = new URL("http://" + args[0] + ":" + args[1] + "/simpleApp/bootstrapAccess?classname=" + className + "&expectFailure=" + expectFailure);
+        URL url = new URL("http://" + args[0] + ":" + args[1] + requestPath);
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         Log.info(c, m, "HTTP response: " + con.getResponseCode());
 

@@ -74,19 +74,11 @@ public class EmbeddedServerTest {
                 public void evaluate() throws Throwable {
                     try {
                         testName = desc.getMethodName();
-                        Object[] args = getArgs(testName);
-                        embeddedServerTestHelper(testName, args);
+                        embeddedServerTestHelper(testName, ls.getHostname(), ls.getHttpDefaultPort());
                         stmt.evaluate();
                     } finally {
                         testName = null;
                     }
-                }
-
-                private Object[] getArgs(String testName) {
-                    if (testName.equals("testBootstrapAccessSystem") || testName.equals("testBootstrapAccessPlatform")) {
-                        return new Object[] { ls.getHostname(), ls.getHttpDefaultPort() };
-                    }
-                    return new Object[0];
                 }
             };
         }
@@ -224,7 +216,11 @@ public class EmbeddedServerTest {
     }
 
     @Test
-    public void testBootstrapAccessSystem() throws Throwable {
+    public void testBootstrapAccessSystemNoPackages() throws Throwable {
+    }
+
+    @Test
+    public void testBootstrapAccessSystemMultiPackage() throws Throwable {
     }
 
     private static void embeddedServerTestHelper(final String REMOTE_METHOD_NAME, Object... args) throws Throwable {
