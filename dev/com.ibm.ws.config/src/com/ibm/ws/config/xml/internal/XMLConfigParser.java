@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024, 2025 IBM Corporation and others.
+ * Copyright (c) 2024, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -355,6 +355,7 @@ public class XMLConfigParser {
                             Location l = parser.getLocation();
                             String preview = trimmed.length() > 60 ? trimmed.substring(0, 60) + "..." : trimmed;
                             logError(ThrowBehavior.SOMETIMES_THROW_EXCEPTION, "error.potential.malformed.element", preview, l.getLineNumber(), docLocation);
+                            Tr.warning(tc, "warning.potential.malformed.element", preview, l.getLineNumber(), docLocation);
                         }
                     }
                 } else if (event == XMLStreamConstants.START_ELEMENT) {
