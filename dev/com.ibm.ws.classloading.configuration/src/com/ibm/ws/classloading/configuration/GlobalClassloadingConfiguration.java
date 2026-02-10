@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -61,6 +60,15 @@ public class GlobalClassloadingConfiguration {
         // Note these bootstrap props could become proper metatype config attributes at some point.
         String parentProp = getPropAndIssueBetaMessages(context, CLASSLOADING_APP_PARENT_PROP, issuedClassLoaderParentBetaMessage);
         String parentPackagesProp = getPropAndIssueBetaMessages(context, CLASSLOADING_APP_PARENT_PACKAGES_PROP, issuedClassLoaderParentPackagesBetaMessage);
+        if (!java9Plus) {
+            // for Java 8 we will not support parent packages
+            if (parentPackagesProp != null) {
+                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                    Tr.debug(tc, "Ignoring the " + CLASSLOADING_APP_PARENT_PACKAGES_PROP + " value on Java 8: " + parentPackagesProp);
+                }
+                parentPackagesProp = null;
+            }
+        }
         jvmPackages = new JVMPackages(parentProp, parentPackagesProp, context.getProperty(BootstrapConstants.INITPROP_BOOT_PACKAGES));
 
         modified(properties);
@@ -166,10 +174,19 @@ public class GlobalClassloadingConfiguration {
                 // an empty string means no extra packages; use an empty set.
                 if (!parentPackagesProp.isEmpty()) {
                     String[] extraPackagesArray = parentPackagesProp.split(",");
-                    extraPackages.addAll(Arrays.asList(extraPackagesArray));
+                    for (String pkg : extraPackagesArray) {
+                        extraPackages.add(pkg.trim());
+                    }
                 }
             }
-            parentConfig = parentProp == null ? ParentConfig.SYSTEM : ParentConfig.valueOf(parentProp);
+            ParentConfig result = ParentConfig.SYSTEM;
+            try {
+                result = parentProp == null ? ParentConfig.SYSTEM : ParentConfig.valueOf(parentProp);
+            } catch (IllegalArgumentException e) {
+                // auto FFDC
+                result = ParentConfig.SYSTEM;
+            }
+            parentConfig = result;
             parentCL = parentConfig == ParentConfig.PLATFORM ? GlobalClassloadingConfiguration.platformClassLoader : ClassLoader.getSystemClassLoader();
             parentPackages = discoverParentPackages(parentConfig, bootPackages, extraPackages);
         }
@@ -304,11 +321,17 @@ public class GlobalClassloadingConfiguration {
         @FFDCIgnore(ClassNotFoundException.class)
         public Class<?> loadClass(String className, boolean throwException) throws ClassNotFoundException {
             if (filterPackageClass(className)) {
+                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                    Tr.debug(tc, "loadClass: filtered class load from gateway parent: " + className);
+                }
                 if (throwException) {
                     throw new ClassNotFoundException(className);
                 } else {
                     return null;
                 }
+            }
+            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                Tr.debug(tc, "loadClass: loading class from gateway parent: " + className);
             }
             try {
                 return parentCL.loadClass(className);
@@ -340,14 +363,26 @@ public class GlobalClassloadingConfiguration {
 
         public URL getResource(String resName) {
             if (filterPackageResource(resName)) {
+                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                    Tr.debug(tc, "getResource: filtered get resource from gateway parent: " + resName);
+                }
                 return null;
+            }
+            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                Tr.debug(tc, "getResource: getting resource from gateway parent: " + resName);
             }
             return parentCL.getResource(resName);
         }
 
         public Enumeration<URL> getResources(String resName) throws IOException {
             if (filterPackageResource(resName)) {
+                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                    Tr.debug(tc, "getResources: filtered get resources from gateway parent: " + resName);
+                }
                 return Collections.emptyEnumeration();
+            }
+            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                Tr.debug(tc, "getResources: getting resources from gateway parent: " + resName);
             }
             return parentCL.getResources(resName);
         }
