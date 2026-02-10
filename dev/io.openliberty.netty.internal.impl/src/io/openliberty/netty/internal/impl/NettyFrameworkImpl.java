@@ -87,7 +87,8 @@ import io.openliberty.netty.internal.udp.UDPUtils;
  * Liberty NettyFramework implementation bundle
  */
 @Component(immediate = true, service = { NettyFramework.class, ServerQuiesceListener.class },
-           configurationPolicy = ConfigurationPolicy.IGNORE,
+           configurationPolicy = ConfigurationPolicy.OPTIONAL,
+           configurationPid = "io.openliberty.netty.internal",
            property = { "service.vendor=IBM" })
 public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework {
 
