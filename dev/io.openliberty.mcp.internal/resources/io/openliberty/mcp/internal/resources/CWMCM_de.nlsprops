@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=Die folgenden Argumente wurden von der Methode erwarte
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: Das Argument \u201e {1} \u201c der MCP-Tool-Methode \u201e {0} \u201c verf\u00fcgt \u00fcber keinen Konverter, um seinen Standardwert in ein Objekt vom Typ \u201e {2} \u201c umzuwandeln.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=Ein oder mehrere Argumente haben Standardwerte ohne einen passenden Konverter, um den Standardwert in den Typ des Arguments zu konvertieren.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=Erstellen Sie eine benutzerdefinierte Konverterimplementierung f\u00fcr den Typ des Werkzeugarguments.
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: Das Argument \u201e {1} \u201c der Methode \u201e {0} \u201c des MCP-Tools enth\u00e4lt nicht unterst\u00fctzte Komponenten wie \u201e TypeVariable, Wildcard\u201c und \u201e GenericArrayType \u201c.
 CWMCM0018E.generic.arguments.explanation=MCP-Tool-Argumente wurden angegeben, werden jedoch nicht unterst\u00fctzt. 
 CWMCM0018E.generic.arguments.useraction=Geben Sie Argumente an, die keine generischen Komponenten enthalten.
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: Der Encoder \u201e {0} \u201c hat beim Kodieren des Ergebnisses des Tools \u201e {1} \u201c eine Ausnahme ausgel\u00f6st. Ausnahme: {2}
+CWMCM0019E.error.encoding.element.explanation=Der Encoder hat beim Kodieren des Ergebnisses des Tools eine Ausnahme ausgel\u00f6st. Die Ausnahme k\u00f6nnte auf ein Problem mit dem Encoder zur\u00fcckzuf\u00fchren sein oder darauf, dass das Tool ein unerwartetes Ergebnis zur\u00fcckgegeben hat.
+CWMCM0019E.error.encoding.element.useraction=Ermitteln Sie das Problem anhand der Protokolldatei f\u00fcr die Servernachrichten (message.log) und der FFDC-Protokolldateien.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: Der Standardwert des Arguments \u201e {1} \u201d des MCP-Tools \u201e {0} \u201d kann nicht in den Typ \u201e {2} \u201d konvertiert werden. Der Wert lautet \u201e {3} \u201c. Der Fehler lautet \u201e {4} \u201c.
+CWMCM0020E.defaultvalue.conversion.error.explanation=Ein Argument hat einen Standardwert, der nicht in den Typ des Arguments konvertiert werden kann. Dieses Problem kann auftreten, wenn der Standardwert null ist, ein ung\u00fcltiges Format hat oder au\u00dferhalb des Bereichs f\u00fcr den Zieltyp liegt.
+CWMCM0020E.defaultvalue.conversion.error.useraction=Stellen Sie sicher, dass der Standardwert f\u00fcr den Typ des Arguments g\u00fcltig ist. Stellen Sie sicher, dass der Standardwert nicht null ist. Geben Sie f\u00fcr Zeichentypen genau ein Zeichen an. Geben Sie f\u00fcr numerische Typen eine g\u00fcltige Zahl innerhalb des Bereichs des Typs an.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: Ein Zeichen-Standardwert muss genau ein Zeichen sein, war jedoch {0}
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=Es wurde ein Standardwert f\u00fcr ein Argument vom Typ \u201eZeichen\u201c angegeben, dieser enth\u00e4lt jedoch nicht genau ein Zeichen. Zeichenargumente m\u00fcssen eine einzelne Zeichenfolge enthalten.
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=Stellen Sie sicher, dass der Standardwert f\u00fcr ein Argument vom Typ \u201eZeichen\u201c eine Zeichenfolge mit genau einem Zeichen ist.

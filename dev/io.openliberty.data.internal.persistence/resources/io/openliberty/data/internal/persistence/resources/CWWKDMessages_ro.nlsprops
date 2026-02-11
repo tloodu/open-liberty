@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: Tipul de returnare {0} al metodei {1} a i
 CWWKD1004.general.rtrn.err.explanation=Tipul de returnare al metodei nu este unul dintre tipurile de returnare acceptate pentru tipul de metod\u0103 de depozit.
 CWWKD1004.general.rtrn.err.useraction=Consulta\u021bi informa\u021biile Jakarta Data Javadoc pentru o list\u0103 de tipuri de return\u0103ri valide pentru tipul de metod\u0103 de depozit.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: Metoda {0} a interfe\u021bei depozitului {1} nu este valabil\u0103. Metoda specific\u0103 un tip de retur {2} care nu este convertibil din tipul de entitate {3}. Tipul rezultat al unei opera\u021biuni de c\u0103utare trebuie s\u0103 fie tipul entit\u0103\u021bii, un tip de atribut al entit\u0103\u021bii, o \u00eenregistrare Java compus\u0103 din atribute ale entit\u0103\u021bii sau un tip construit de interogarea care este furnizat\u0103 adnot\u0103rii Query. Tipul de retur al metodei de c\u0103utare a depozitului poate fi tipul de rezultat, un array al tipului de rezultat sau oricare dintre urm\u0103toarele tipuri parametrizate cu tipul de rezultat: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: Metoda \u201e {0} \u201d a interfe\u021bei \u201e {1} \u201d nu este valid\u0103. Metoda specific\u0103 un tip de returnare \u201e {2} \u201d (nu poate fi convertit) care nu poate fi convertit din tipul de entitate \u201e {3} \u201d (nu poate fi convertit). Tipul rezultatului unei opera\u021biuni de c\u0103utare trebuie s\u0103 fie tipul entit\u0103\u021bii, un tip de atribut al entit\u0103\u021bii ales de adnotarea Select, un \u00eenregistrare Java compus\u0103 din atribute ale entit\u0103\u021bii sau un tip selectat de interogarea furnizat\u0103 adnot\u0103rii Query. Tipul de returnare al metodei de c\u0103utare din depozit poate fi tipul rezultatului, un \u0219ir de tipul rezultatului sau oricare dintre urm\u0103toarele tipuri parametrizate cu tipul rezultatului: {4}.
 CWWKD1005.find.rtrn.err.explanation=Tipul de returnare al metodei nu este unul dintre tipurile de returnare acceptate pentru metodele de g\u0103sire a depozitului.
 CWWKD1005.find.rtrn.err.useraction=Consulta\u021bi informa\u021biile Jakarta Data Javadoc pentru o list\u0103 de tipuri valide de returnare pentru metodele de g\u0103sire a depozitelor.
 

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=\u8be5\u65b9\u6cd5\u9884\u671f\u63a5\u6536\u4ee5\u4e0b
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: {0} MCP\u5de5\u5177\u65b9\u6cd5\u7684 {1} \u53c2\u6570\u6ca1\u6709\u8f6c\u6362\u5668\uff0c\u65e0\u6cd5\u5c06\u5176\u9ed8\u8ba4\u503c\u8f6c\u6362\u4e3a {2} \u7c7b\u578b\u7684\u5bf9\u8c61\u3002
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=\u4e00\u4e2a\u6216\u591a\u4e2a\u53c2\u6570\u5177\u6709\u9ed8\u8ba4\u503c\uff0c\u4f46\u7f3a\u5c11\u5339\u914d\u7684\u8f6c\u6362\u5668\u5c06\u9ed8\u8ba4\u503c\u8f6c\u6362\u4e3a\u53c2\u6570\u7c7b\u578b\u3002
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=\u4e3a\u5de5\u5177\u53c2\u6570\u7684\u7c7b\u578b\u521b\u5efa\u81ea\u5b9a\u4e49\u8f6c\u6362\u5668\u5b9e\u73b0\u3002
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: {0} MCP\u5de5\u5177\u65b9\u6cd5\u7684 {1} \u53c2\u6570\u5305\u542b\u4e0d\u53d7\u652f\u6301\u7684\u7ec4\u4ef6\uff0c\u4f8b\u5982 TypeVariable, \u901a\u914d\u7b26\u3001 GenericArrayType\u3002
 CWMCM0018E.generic.arguments.explanation=\u5df2\u63d0\u4f9b MCP \u5de5\u5177\u53c2\u6570\uff0c\u4f46\u8fd9\u4e9b\u53c2\u6570\u4e0d\u53d7\u652f\u6301\u3002 
 CWMCM0018E.generic.arguments.useraction=\u63d0\u4f9b\u4e0d\u5305\u542b\u901a\u7528\u7ec4\u4ef6\u7684\u53c2\u6570\u3002
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: \u5728\u5bf9 {1} \u5de5\u5177\u7684\u7ed3\u679c\u8fdb\u884c\u7f16\u7801\u65f6\uff0c {0} \u7f16\u7801\u5668\u629b\u51fa\u4e86\u5f02\u5e38\u3002 \u5f02\u5e38\u4e3a {2}}\u3002
+CWMCM0019E.error.encoding.element.explanation=\u7f16\u7801\u5668\u5728\u7f16\u7801\u5de5\u5177\u7ed3\u679c\u65f6\u629b\u51fa\u5f02\u5e38\u3002 \u8be5\u5f02\u5e38\u53ef\u80fd\u662f\u7531\u4e8e\u7f16\u7801\u5668\u51fa\u73b0\u95ee\u9898\uff0c\u6216\u662f\u5de5\u5177\u8fd4\u56de\u4e86\u610f\u5916\u7ed3\u679c\u6240\u81f4\u3002
+CWMCM0019E.error.encoding.element.useraction=\u67e5\u770b\u670d\u52a1\u5668 message.log \u548c FFDC \u65e5\u5fd7\u4ee5\u786e\u5b9a\u95ee\u9898\u3002
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: {0} MCP \u5de5\u5177\u4e2d {1} \u53c2\u6570\u7684\u9ed8\u8ba4\u503c\u65e0\u6cd5\u8f6c\u6362\u4e3a {2} \u7c7b\u578b\u3002 \u8be5\u503c\u4e3a {3}\u3002 \u9519\u8bef\u4ee3\u7801\u4e3a {4}\u3002
+CWMCM0020E.defaultvalue.conversion.error.explanation=\u53c2\u6570\u5177\u6709\u4e00\u4e2a\u9ed8\u8ba4\u503c\uff0c\u8be5\u503c\u65e0\u6cd5\u8f6c\u6362\u4e3a\u53c2\u6570\u7684\u7c7b\u578b\u3002 \u5982\u679c\u9ed8\u8ba4\u503c\u4e3a\u7a7a\u3001\u683c\u5f0f\u65e0\u6548\u6216\u8d85\u51fa\u76ee\u6807\u7c7b\u578b\u7684\u8303\u56f4\uff0c\u5219\u53ef\u80fd\u51fa\u73b0\u6b64\u95ee\u9898\u3002
+CWMCM0020E.defaultvalue.conversion.error.useraction=\u786e\u4fdd\u9ed8\u8ba4\u503c\u5bf9\u53c2\u6570\u7c7b\u578b\u6709\u6548\u3002 \u786e\u4fdd\u9ed8\u8ba4\u503c\u4e0d\u4e3a\u7a7a\u3002 \u5bf9\u4e8e\u5b57\u7b26\u7c7b\u578b\uff0c\u8bf7\u63d0\u4f9b\u6070\u597d\u4e00\u4e2a\u5b57\u7b26\u3002 \u5bf9\u4e8e\u6570\u503c\u7c7b\u578b\uff0c\u8bf7\u63d0\u4f9b\u8be5\u7c7b\u578b\u8303\u56f4\u5185\u6709\u6548\u7684\u6570\u5b57\u3002
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: \u5b57\u7b26\u9ed8\u8ba4\u503c\u5fc5\u987b\u7cbe\u786e\u4e3a\u4e00\u4e2a\u5b57\u7b26\uff0c\u4f46\u5b9e\u9645\u4e3a {0}
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=\u4e3a\u5b57\u7b26\u7c7b\u578b\u53c2\u6570\u63d0\u4f9b\u4e86\u9ed8\u8ba4\u503c\uff0c\u4f46\u8be5\u503c\u672a\u5305\u542b\u7cbe\u786e\u4e00\u4e2a\u5b57\u7b26\u3002 \u5b57\u7b26\u53c2\u6570\u5fc5\u987b\u4e3a\u5355\u4e2a\u5b57\u7b26\u4e32\u3002
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=\u786e\u4fdd\u5b57\u7b26\u7c7b\u578b\u7684\u53c2\u6570\u7684\u9ed8\u8ba4\u503c\u662f\u4e00\u4e2a\u4ec5\u5305\u542b\u4e00\u4e2a\u5b57\u7b26\u7684\u5b57\u7b26\u4e32\u3002

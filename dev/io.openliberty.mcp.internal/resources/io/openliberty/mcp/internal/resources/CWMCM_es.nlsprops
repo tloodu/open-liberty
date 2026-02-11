@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=El m\u00e9todo esperaba los siguientes argumentos, per
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: El argumento ` {1} ` del m\u00e9todo ` {0} ` de la herramienta MCP no tiene un convertidor para cambiar su valor predeterminado a un objeto de tipo ` {2} `.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=Uno o m\u00e1s argumentos tienen valores predeterminados sin un convertidor coincidente para convertir el valor predeterminado al tipo del argumento.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=Cree una implementaci\u00f3n de convertidor personalizada para el tipo del argumento de la herramienta.
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: El argumento {1} del m\u00e9todo de la herramienta MCP {0} contiene componentes no compatibles, como TypeVariable, Wildcard, GenericArrayType.
 CWMCM0018E.generic.arguments.explanation=Se proporcionaron argumentos de la herramienta MCP, pero no son compatibles. 
 CWMCM0018E.generic.arguments.useraction=Proporcione argumentos que no tengan componentes gen\u00e9ricos.
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: El codificador {0} gener\u00f3 una excepci\u00f3n al codificar el resultado de la herramienta {1}. La excepci\u00f3n es {2}
+CWMCM0019E.error.encoding.element.explanation=El codificador gener\u00f3 una excepci\u00f3n al codificar el resultado de la herramienta. La excepci\u00f3n puede deberse a un problema con el codificador o a que la herramienta ha devuelto un resultado inesperado.
+CWMCM0019E.error.encoding.element.useraction=Revise los registros FFDC y el archivo message.log del servidor para identificar el problema.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: El valor predeterminado del argumento \u00ab {1} \u00bb (Par\u00e1metro de control de la herramienta) de la herramienta MCP \u00ab {0} \u00bb (Control de la herramienta de control de la herramienta) no se puede convertir al tipo \u00ab {2} \u00bb (Par\u00e1metro de control de la herramienta). El valor es {3}. El error es \u00ab {4} \u00bb.
+CWMCM0020E.defaultvalue.conversion.error.explanation=Un argumento tiene un valor predeterminado que no se puede convertir al tipo del argumento. Este problema puede ocurrir si el valor predeterminado es nulo, tiene un formato no v\u00e1lido o est\u00e1 fuera del rango para el tipo de destino.
+CWMCM0020E.defaultvalue.conversion.error.useraction=Aseg\u00farate de que el valor predeterminado sea v\u00e1lido para el tipo del argumento. Aseg\u00farese de que el valor predeterminado no sea nulo. Para los tipos de caracteres, proporcione exactamente un car\u00e1cter. Para los tipos num\u00e9ricos, proporcione un n\u00famero v\u00e1lido dentro del rango del tipo.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: El valor predeterminado de un car\u00e1cter debe ser exactamente un car\u00e1cter, pero era {0}
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=Se proporcion\u00f3 un valor predeterminado para un argumento de tipo car\u00e1cter, pero no contiene exactamente un car\u00e1cter. Los argumentos de caracteres deben tener una sola cadena de caracteres.
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=Aseg\u00farate de que el valor predeterminado para un argumento con un tipo de car\u00e1cter sea una cadena con exactamente un car\u00e1cter.

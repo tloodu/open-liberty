@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=Les arguments suivants \u00e9taient attendus par la m\
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: L'argument {1} de la m\u00e9thode MCP tool de l' {0} ne dispose pas d'un convertisseur permettant de transformer sa valeur par d\u00e9faut en un objet de type {2}.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=Un ou plusieurs arguments ont des valeurs par d\u00e9faut sans convertisseur correspondant pour convertir la valeur par d\u00e9faut au type de l'argument.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=Cr\u00e9er une impl\u00e9mentation de convertisseur personnalis\u00e9e pour le type de l'argument de l'outil.
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: L'argument {1} de la m\u00e9thode MCP de l'outil {0} contient des composants non pris en charge, tels que TypeVariable, Wildcard, GenericArrayType.
 CWMCM0018E.generic.arguments.explanation=Les arguments de l'outil MCP ont \u00e9t\u00e9 fournis, mais ils ne sont pas pris en charge. 
 CWMCM0018E.generic.arguments.useraction=Fournissez des arguments qui ne contiennent pas de composants g\u00e9n\u00e9riques.
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: L'encodeur {0} a g\u00e9n\u00e9r\u00e9 une exception lors de l'encodage du r\u00e9sultat de l'outil {1}. Exception : {2}
+CWMCM0019E.error.encoding.element.explanation=L'encodeur a g\u00e9n\u00e9r\u00e9 une exception lors de l'encodage du r\u00e9sultat de l'outil. L'exception peut \u00eatre due \u00e0 un probl\u00e8me avec l'encodeur ou au fait que l'outil a renvoy\u00e9 un r\u00e9sultat inattendu.
+CWMCM0019E.error.encoding.element.useraction=Consultez le journal message.log du serveur et les journaux de l'outil de diagnostic de premier niveau (FFDC) pour identifier le probl\u00e8me.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: La valeur par d\u00e9faut de l'argument {1} de l'outil MCP {0} ne peut pas \u00eatre convertie en type {2}. La valeur est {3}. L'erreur est \u00ab {4} \u00bb.
+CWMCM0020E.defaultvalue.conversion.error.explanation=Un argument a une valeur par d\u00e9faut qui ne peut pas \u00eatre convertie au type de l'argument. Ce probl\u00e8me peut se produire si la valeur par d\u00e9faut est nulle, a un format non valide ou est hors de la plage pour le type cible.
+CWMCM0020E.defaultvalue.conversion.error.useraction=Assurez-vous que la valeur par d\u00e9faut est valide pour le type de l'argument. Assurez-vous que la valeur par d\u00e9faut n'est pas nulle. Pour les types de caract\u00e8res, indiquez exactement un caract\u00e8re. Pour les types num\u00e9riques, indiquez un nombre valide compris dans la plage du type.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: La valeur par d\u00e9faut d'un caract\u00e8re doit \u00eatre exactement un caract\u00e8re, mais \u00e9tait {0}
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=Une valeur par d\u00e9faut a \u00e9t\u00e9 fournie pour un argument de type caract\u00e8re, mais celle-ci ne contient pas exactement un caract\u00e8re. Les arguments de caract\u00e8re doivent \u00eatre constitu\u00e9s d'une seule cha\u00eene de caract\u00e8res.
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=Assurez-vous que la valeur par d\u00e9faut d'un argument de type caract\u00e8re est une cha\u00eene comportant exactement un caract\u00e8re.

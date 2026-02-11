@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: A {2} lerakatfel\u00fclet {1} met\u00f3du
 CWWKD1004.general.rtrn.err.explanation=A met\u00f3dus visszat\u00e9r\u00e9si t\u00edpusa nem tartozik a lerakatmet\u00f3dus t\u00edpus\u00e1hoz tartoz\u00f3 t\u00e1mogatott visszat\u00e9r\u00e9si t\u00edpusok k\u00f6z\u00e9.
 CWWKD1004.general.rtrn.err.useraction=Tekintse meg a Jakarta Data Javadoc inform\u00e1ci\u00f3it a lerakatm\u00f3dszer t\u00edpus\u00e1hoz tartoz\u00f3 \u00e9rv\u00e9nyes visszat\u00e9r\u00e9si t\u00edpusok list\u00e1j\u00e1\u00e9rt.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: A {1} t\u00e1rol\u00f3interf\u00e9sz {0} met\u00f3dusa nem \u00e9rv\u00e9nyes. A m\u00f3dszer a {2} visszat\u00e9r\u00e9si t\u00edpust adja meg, amely nem konvert\u00e1lhat\u00f3 a {3} entit\u00e1st\u00edpusb\u00f3l. A keres\u00e9si m\u0171velet eredm\u00e9nyt\u00edpusa az entit\u00e1s t\u00edpusa, egy entit\u00e1sattrib\u00fatum t\u00edpusa, egy entit\u00e1sattrib\u00fatumokb\u00f3l \u00e1ll\u00f3 Java rekord, vagy a lek\u00e9rdez\u00e9s \u00e1ltal l\u00e9trehozott t\u00edpus kell, hogy legyen, amelyet a Query annot\u00e1ci\u00f3hoz adunk meg. Az adatt\u00e1r keres\u00e9si met\u00f3dus\u00e1nak visszat\u00e9r\u00e9si t\u00edpusa lehet az eredm\u00e9nyt\u00edpus, az eredm\u00e9nyt\u00edpus t\u00f6mbje vagy az al\u00e1bbi t\u00edpusok b\u00e1rmelyike az eredm\u00e9nyt\u00edpussal param\u00e9terezve: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: Az {1} t\u00e1rol\u00f3 interf\u00e9sz {0} met\u00f3dusa nem \u00e9rv\u00e9nyes. A m\u00f3dszer egy {2} visszat\u00e9r\u00e9si t\u00edpust hat\u00e1roz meg, amely nem konvert\u00e1lhat\u00f3 a {3} entit\u00e1s t\u00edpusb\u00f3l. A keres\u00e9si m\u0171velet eredm\u00e9nyt\u00edpusa lehet entit\u00e1st\u00edpus, a Select annot\u00e1ci\u00f3val kiv\u00e1lasztott entit\u00e1sattrib\u00fatum-t\u00edpus, entit\u00e1sattrib\u00fatumokb\u00f3l \u00e1ll\u00f3 Java-rekord, vagy a Query annot\u00e1ci\u00f3hoz megadott lek\u00e9rdez\u00e9ssel kiv\u00e1lasztott t\u00edpus. A repository find met\u00f3dus visszat\u00e9r\u00e9si t\u00edpusa lehet az eredm\u00e9nyt\u00edpus, az eredm\u00e9nyt\u00edpus t\u00f6mbje, vagy az eredm\u00e9nyt\u00edpussal param\u00e9terezett k\u00f6vetkez\u0151 t\u00edpusok b\u00e1rmelyike: {4}.
 CWWKD1005.find.rtrn.err.explanation=A met\u00f3dus visszat\u00e9r\u00e9si t\u00edpusa nem tartozik a lerakatkeres\u0151 met\u00f3dusok t\u00e1mogatott visszat\u00e9r\u00e9si t\u00edpusai k\u00f6z\u00e9.
 CWWKD1005.find.rtrn.err.useraction=Tekintse meg a Jakarta Data Javadoc inform\u00e1ci\u00f3it a lerakatkeres\u0151 m\u00f3dszerek \u00e9rv\u00e9nyes visszat\u00e9r\u00e9si t\u00edpusainak list\u00e1j\u00e1\u00e9rt.
 

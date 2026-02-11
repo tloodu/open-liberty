@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2025 IBM Corporation and others.
+# Copyright (c) 2025, 2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -154,8 +154,43 @@ jsonrpc.missing.arguments=Metoda o\u010dek\u00e1vala n\u00e1sleduj\u00edc\u00ed 
 
 # Used for server logging
 # do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+CWMCM0017E.missing.toolarg.defaultvalue.converter=CWMCM0017E: Argument \u201e {1} \u201c metody n\u00e1stroje MCP \u201e {0} \u201c nem\u00e1 p\u0159evad\u011b\u010d, kter\u00fd by zm\u011bnil jeho v\u00fdchoz\u00ed hodnotu na objekt typu \u201e {2} \u201c.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.explanation=Jeden nebo v\u00edce argument\u016f m\u00e1 v\u00fdchoz\u00ed hodnoty bez odpov\u00eddaj\u00edc\u00edho p\u0159evad\u011b\u010de, kter\u00fd by p\u0159evedl v\u00fdchoz\u00ed hodnotu na typ argumentu.
+CWMCM0017E.missing.toolarg.defaultvalue.converter.useraction=Vytvo\u0159te vlastn\u00ed implementaci p\u0159evad\u011b\u010de pro typ argumentu n\u00e1stroje.
+
+# Used for server logging
+# do not translate MCP
 # {0} = The qualified name of the tool
 # {1} = Parameter name
 CWMCM0018E.generic.arguments=CWMCM0018E: Argument \u201e {1} \u201c metody n\u00e1stroje MCP \u201e {0} \u201c obsahuje nepodporovan\u00e9 komponenty, jako jsou \u201e TypeVariable, Wildcard\u201c a \u201e GenericArrayType \u201c.
 CWMCM0018E.generic.arguments.explanation=Byly poskytnuty argumenty n\u00e1stroje MCP, ale nejsou podporov\u00e1ny. 
 CWMCM0018E.generic.arguments.useraction=Poskytn\u011bte argumenty, kter\u00e9 neobsahuj\u00ed obecn\u00e9 komponenty.
+
+# Used for encoder logging
+# {0} = The encoder class name
+# {1} = The tool name
+# {2} = The exception
+CWMCM0019E.error.encoding.element=CWMCM0019E: Kod\u00e9r {0} vyhodil v\u00fdjimku p\u0159i k\u00f3dov\u00e1n\u00ed v\u00fdsledku n\u00e1stroje {1}. V\u00fdjimka: {2}
+CWMCM0019E.error.encoding.element.explanation=Kod\u00e9r vyhodil v\u00fdjimku p\u0159i k\u00f3dov\u00e1n\u00ed v\u00fdsledku n\u00e1stroje. V\u00fdjimka m\u016f\u017ee b\u00fdt zp\u016fsobena probl\u00e9mem s kod\u00e9rem nebo t\u00edm, \u017ee n\u00e1stroj vr\u00e1til neo\u010dek\u00e1van\u00fd v\u00fdsledek.
+CWMCM0019E.error.encoding.element.useraction=Zkontrolujte protokol zpr\u00e1v message.log a identifikujte probl\u00e9m.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The  qualified name of the tool
+# {1} = corresponding argument name
+# {2} = corresponding argument type
+# {3} = corresponding default value
+# {4} = ExceptionMessage
+CWMCM0020E.defaultvalue.conversion.error=CWMCM0020E: V\u00fdchoz\u00ed hodnota argumentu \u201e {1} \u201c n\u00e1stroje MCP \u201e {0} \u201c nelze p\u0159ev\u00e9st na typ \u201e {2} \u201c. Hodnota je {3}. Chyba je \u201e {4} \u201c (Chyba p\u0159i na\u010d\u00edt\u00e1n\u00ed souboru: Chyba p\u0159i na\u010d\u00edt\u00e1n\u00ed souboru: Chyba p\u0159i na\u010d\u00edt\u00e1n\u00ed souboru:
+CWMCM0020E.defaultvalue.conversion.error.explanation=Argument m\u00e1 v\u00fdchoz\u00ed hodnotu, kterou nelze p\u0159ev\u00e9st na typ argumentu. Tento probl\u00e9m m\u016f\u017ee nastat, pokud je v\u00fdchoz\u00ed hodnota nulov\u00e1, m\u00e1 neplatn\u00fd form\u00e1t nebo je mimo rozsah pro c\u00edlov\u00fd typ.
+CWMCM0020E.defaultvalue.conversion.error.useraction=Zajist\u011bte, aby v\u00fdchoz\u00ed hodnota byla platn\u00e1 pro typ argumentu. Zajist\u011bte, aby v\u00fdchoz\u00ed hodnota nebyla nulov\u00e1. Pro typy znak\u016f zadejte p\u0159esn\u011b jeden znak. U \u010d\u00edseln\u00fdch typ\u016f zadejte platn\u00e9 \u010d\u00edslo v rozsahu dan\u00e9ho typu.
+
+# Used for server logging
+# do not translate MCP
+# {0} = The default value string
+CWMCM0021E.defaultvalue.character.invalid.length=CWMCM0021E: V\u00fdchoz\u00ed hodnota znaku mus\u00ed b\u00fdt p\u0159esn\u011b jeden znak, ale byla {0}
+CWMCM0021E.defaultvalue.character.invalid.length.explanation=Byla zad\u00e1na v\u00fdchoz\u00ed hodnota pro argument typu Character, ale neobsahuje p\u0159esn\u011b jeden znak. Argumenty typu znak mus\u00ed m\u00edt jeden znakov\u00fd \u0159et\u011bzec.
+CWMCM0021E.defaultvalue.character.invalid.length.useraction=Zajist\u011bte, aby v\u00fdchoz\u00ed hodnota argumentu typu Character byla \u0159et\u011bzec s p\u0159esn\u011b jedn\u00edm znakem.
