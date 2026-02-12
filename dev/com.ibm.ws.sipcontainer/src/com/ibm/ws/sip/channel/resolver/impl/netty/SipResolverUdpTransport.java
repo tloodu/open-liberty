@@ -146,9 +146,9 @@ class SipResolverUdpTransport implements SipResolverTransport {
 
         if (c_logger.isTraceDebugEnabled()) {
             c_logger.traceDebug(
-                    "SipResolverTcpTransport: contructor: _ConnectFailuresAllowed: " + _ConnectFailuresAllowed);
+                    "SipResolverUdpTransport: contructor: _ConnectFailuresAllowed: " + _ConnectFailuresAllowed);
             c_logger.traceDebug(
-                    "SipResolverTcpTransport: contructor: _TransportErrorsAllowed: " + _TransportErrorsAllowed);
+                    "SipResolverUdpTransport: contructor: _TransportErrorsAllowed: " + _TransportErrorsAllowed);
         }
 
         if (c_logger.isTraceEntryExitEnabled())
