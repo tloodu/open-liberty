@@ -44,9 +44,42 @@ public class GlobalClassloadingConfiguration {
     private static final String CLASSLOADING_APP_PARENT_PROP = "io.openliberty.classloading.app.parent";
     private static final String CLASSLOADING_APP_PARENT_PACKAGES_PROP = "io.openliberty.classloading.app.parent.packages";
 
-    private static String USE_JAR_URLS_KEY = "useJarUrls";
-    private static String LIBRARY_PRECEDENCE_KEY = "libraryPrecedence";
+    private static final String USE_JAR_URLS_KEY = "useJarUrls";
+    private static final String LIBRARY_PRECEDENCE_KEY = "libraryPrecedence";
     static final TraceComponent tc = Tr.register(GlobalClassloadingConfiguration.class);
+
+    static final ClassLoader platformClassLoader = getPlatformClassLoader();
+    static final boolean java9Plus = JavaInfo.majorVersion() >= 9;
+
+    @FFDCIgnore(Throwable.class)
+    private static ClassLoader getPlatformClassLoader() {
+        ClassLoader result = null;
+        if (java9Plus) {
+            try {
+                Method getPlatformClassLoader = ClassLoader.class.getMethod("getPlatformClassLoader"); //$NON-NLS-1$
+                result = (ClassLoader) getPlatformClassLoader.invoke(null);
+            } catch (Throwable t) {
+                // auto FFDC here; it should never happen
+            }
+        }
+        if (result == null) {
+            // Try everything possible to not fail;
+
+            // Here we make the assumption that the system class loader parent is the platform loader.
+            // NOTE: On Java 8 the default system class loader has a parent called the extension loader.
+            // This is not identical to the Java 9+ platform loader but we decided to use it here
+            // instead of hiding it completely on Java 8 when PLATFORM is used.
+            // In the future we could introduce a BOOT option that bypasses the platform/ext loaders altogether.
+            ClassLoader systemParent = null;
+            ClassLoader system = ClassLoader.getSystemClassLoader();
+            if (system != null) {
+                systemParent = system.getParent();
+            }
+            result = systemParent != null ? systemParent : new ClassLoader(null) {
+            };
+        }
+        return result;
+    }
 
     private final AtomicBoolean issuedLibPrecedenceBetaMessage = new AtomicBoolean(false);
     private final AtomicBoolean issuedClassLoaderParentBetaMessage = new AtomicBoolean(false);
@@ -127,34 +160,6 @@ public class GlobalClassloadingConfiguration {
 
     public LibraryPrecedence libraryPrecedence() {
         return libraryPrecedence;
-    }
-
-    static final ClassLoader platformClassLoader = getPlatformClassLoader();
-    static final boolean java9Plus = JavaInfo.majorVersion() >= 9;
-
-    @FFDCIgnore(Throwable.class)
-    private static ClassLoader getPlatformClassLoader() {
-        ClassLoader result = null;
-        try {
-            Method getPlatformClassLoader = ClassLoader.class.getMethod("getPlatformClassLoader"); //$NON-NLS-1$
-            result = (ClassLoader) getPlatformClassLoader.invoke(null);
-        } catch (Throwable t) {
-            // Try everything possible to not fail;
-
-            // Here we make the assumption that the system class loader parent is the platform loader.
-            // NOTE: On Java 8 the default system class loader has a parent called the extension loader.
-            // This is not identical to the Java 9+ platform loader but we decided to use it here
-            // instead of hiding it completely on Java 8 when PLATFORM is used.
-            // In the future we could introduce a BOOT option that bypasses the platform/ext loaders altogether.
-            ClassLoader systemParent = null;
-            ClassLoader system = ClassLoader.getSystemClassLoader();
-            if (system != null) {
-                systemParent = system.getParent();
-            }
-            result = systemParent != null ? systemParent : new ClassLoader(null) {
-            };
-        }
-        return result;
     }
 
     public static class JVMPackages {
@@ -308,8 +313,10 @@ public class GlobalClassloadingConfiguration {
                 // auto FFDC; treat the class path as unknown
                 return packageSet;
             }
-            for (ManifestElement p : bootPackageElements) {
-                packageSet.add(p.getValue());
+            if (bootPackageElements != null) {
+                for (ManifestElement p : bootPackageElements) {
+                    packageSet.add(p.getValue());
+                }
             }
             return packageSet;
         }
