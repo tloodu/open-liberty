@@ -19,7 +19,14 @@ import org.junit.runners.Suite.SuiteClasses;
 
 import componenttest.rules.repeater.EERepeatActions;
 import componenttest.rules.repeater.RepeatTests;
+<<<<<<< HEAD
 import io.openliberty.mcp.internal.fat.introspector.IntrospectorMultiAppTest;
+||||||| parent of 21652a04cf5 (Reading gradle.startup.properties)
+import io.openliberty.mcp.internal.fat.introspector.IntrospectorTest;
+=======
+import io.openliberty.mcp.internal.fat.conformance.tests.ConformanceTests;
+import io.openliberty.mcp.internal.fat.introspector.IntrospectorTest;
+>>>>>>> 21652a04cf5 (Reading gradle.startup.properties)
 import io.openliberty.mcp.internal.fat.lifecycle.tests.AsyncToolLifecycleTest;
 import io.openliberty.mcp.internal.fat.lifecycle.tests.BeanLifecycleTest;
 import io.openliberty.mcp.internal.fat.lifecycle.tests.LifecycleTest;
@@ -101,7 +108,8 @@ import io.openliberty.mcp.internal.fat.tool.ToolTest;
                 DenyAllTestsStateless.class,
                 NoClassAnnotationTestsStateless.class,
                 AdminsRoleAllowedTestsStateless.class,
-
+                // Conformance Tests
+                ConformanceTests.class
 })
 
 public class FATSuite {
