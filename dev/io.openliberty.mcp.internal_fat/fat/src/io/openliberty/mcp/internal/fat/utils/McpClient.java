@@ -49,11 +49,13 @@ import componenttest.topology.utils.HttpRequest;
  * }</pre>
  */
 public class McpClient extends ExternalResource {
-
-    private final LibertyServer server;
+    
+	private final LibertyServer server;
     private final String path;
     private final StateMode mode;
-
+    private final String username;
+    private final String password;
+    
     private boolean sessionDeleted = false;
     private String sessionId;
 
@@ -69,7 +71,7 @@ public class McpClient extends ExternalResource {
      * @param path the base endpoint path for MCP. The full request path will be {@code path + "/mcp"}.
      */
     public McpClient(LibertyServer server, String path) {
-        this(server, path, StateMode.STATEFUL);
+        this(server, path, StateMode.STATEFUL, null, null);
     }
 
     /**
@@ -78,10 +80,24 @@ public class McpClient extends ExternalResource {
      * @param mode whether to expect the server to be in stateful or stateless mode
      */
     public McpClient(LibertyServer server, String path, StateMode mode) {
+        this(server, path, mode, null, null);
+
+    }
+
+    /**
+     * @param server the {@link LibertyServer} instance used to send requests
+     * @param path the base endpoint path for MCP. The full request path will be {@code path + "/mcp"}.
+     * @param mode whether to expect the server to be in stateful or stateless mode
+     * @param username for basic auth
+     * @param password for basic auth
+     */
+    public McpClient(LibertyServer server, String path, StateMode mode, String username, String password) {
         super();
         this.server = server;
         this.path = path.startsWith("/") ? path : "/" + path;
         this.mode = mode;
+        this.username = username;
+        this.password = password;
     }
 
     /** {@inheritDoc} */
@@ -115,6 +131,9 @@ public class McpClient extends ExternalResource {
                                                                         .requestProp(MCP_PROTOCOL_VERSION, VALUE_MCP_PROTOCOL_VERSION)
                                                                         .jsonBody(request)
                                                                         .method("POST");
+        if (username != null && password != null) {
+            httpRequest.basicAuth(username, password);
+        }
         String response = httpRequest.run(String.class);
 
         String expectedResponse = """
@@ -204,7 +223,6 @@ public class McpClient extends ExternalResource {
             }
             request.requestProp(MCP_SESSION_ID, sessionId);
         }
-
         return request.run(String.class);
     }
 
@@ -254,6 +272,29 @@ public class McpClient extends ExternalResource {
         final HttpRequest request = new HttpRequest(server, path + "/mcp").expectCode(202);
         String response = setupAndRunRequest(request, jsonRequestBody);
         assertNull("Notification request received a response", response);
+    }
+
+    public String callMCPNotificationWithBasicAuth(LibertyServer server,
+                                                   String path,
+                                                   String jsonRequestBody,
+                                                   String user, String password)
+                    throws Exception {
+
+        final HttpRequest request = new HttpRequest(server, path + "/mcp").expectCode(202).basicAuth(user, password);
+        String response = setupAndRunRequest(request, jsonRequestBody);
+        assertNull("Notification request received a response", response);
+        return response;
+    }
+
+    public String callMCPNotificationWithBasicAuthForbiddenErrorExpected(LibertyServer server,
+                                                                         String path,
+                                                                         String jsonRequestBody,
+                                                                         String user, String password)
+                    throws Exception {
+
+        final HttpRequest request = new HttpRequest(server, path + "/mcp").expectCode(403).basicAuth(user, password);;
+        String response = setupAndRunRequest(request, jsonRequestBody);
+        return response;
     }
 
     /**

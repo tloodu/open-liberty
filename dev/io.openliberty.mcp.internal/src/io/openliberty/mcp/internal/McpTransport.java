@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -94,6 +95,7 @@ public class McpTransport {
         }
         this.mcpRequest = toRequest();
         final String sessionIdHeader = req.getHeader(MCP_SESSION_ID_HEADER);
+
         if (sessionIdHeader == null) {
             this.sessionInfo = null;
             return;
@@ -230,15 +232,26 @@ public class McpTransport {
     }
 
     /**
-     * sends custom error message response back to client depending on the error
+     * sends custom error message response back to client depending on the error with 500 HTTPS error code
      *
      * @param e the exception that was caught
      * @throws IOException
      */
     public void sendError(Throwable e) throws IOException {
-        String excpetionMessage = Tr.formatMessage(tc, "unexpected.server.error", new Object[] { req.getMethod(), req.getRequestURI(), req.getQueryString() });
+        String exceptionMessage = Tr.formatMessage(tc, "unexpected.server.error", new Object[] { req.getMethod(), req.getRequestURI(), req.getQueryString() });
         Tr.error(tc, "CWMCM0015E.unexpected.server.error.exception", req.getMethod(), req.getRequestURI(), req.getQueryString(), e.getMessage());
-        res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, excpetionMessage);
+        res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, exceptionMessage);
+    }
+
+    /**
+     * sends custom error message response back to client depending on the error with 403 HTTPS error code
+     *
+     * @param e the exception that was caught
+     * @throws IOException
+     */
+    public void sendAuthError(Throwable e) throws IOException {
+        Tr.audit(tc, "CWMCM0033A.forbidden.error", req.getMethod(), req.getRequestURI(), req.getQueryString(), e.getMessage());
+        res.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
     }
 
     /**
@@ -323,5 +336,13 @@ public class McpTransport {
             }
         }
         return false;
+    }
+
+    /**
+     *
+     * @return the user principle injected after authorisation (can be null if authorisation failed)
+     */
+    public Principal getUser() {
+        return req.getUserPrincipal();
     }
 }

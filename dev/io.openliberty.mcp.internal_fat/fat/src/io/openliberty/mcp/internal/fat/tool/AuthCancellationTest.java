@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025, 2026 IBM Corporation and others.
+ * Copyright (c) 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -10,9 +10,9 @@
 package io.openliberty.mcp.internal.fat.tool;
 
 import static com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions.SERVER_ONLY;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -35,18 +35,19 @@ import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.utils.FATServletClient;
 import io.openliberty.mcp.internal.fat.tool.cancellationApp.CancellationTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
+import io.openliberty.mcp.internal.fat.utils.McpClient.StateMode;
 import io.openliberty.mcp.internal.fat.utils.ToolStatus;
 import io.openliberty.mcp.internal.fat.utils.ToolStatusClient;
 
 @RunWith(FATRunner.class)
-public class CancellationTest extends FATServletClient {
+public class AuthCancellationTest extends FATServletClient {
 
-    @Server("mcp-server")
+    @Server("mcp-server-auth")
     public static LibertyServer server;
     private static ExecutorService executor;
 
     @Rule
-    public McpClient client = new McpClient(server, "/cancellationTest");
+    public McpClient client = new McpClient(server, "/cancellationTest", StateMode.STATEFUL, "BobTheAdmin", "testpassword");
 
     @Rule
     public ToolStatusClient toolStatus = new ToolStatusClient(server, "/cancellationTest");
@@ -77,10 +78,10 @@ public class CancellationTest extends FATServletClient {
     }
 
     @Test
-    public void testCancellationToolWithCancellableParameterAndCancellationRequestWithStringId() throws Exception {
-        final String LATCH_NAME = "strId";
+    public void testCancellationToolFailWithMismatchUserWithSession() throws Exception {
+        final String LATCH_NAME = "numId1";
 
-        Callable<String> threadCallingTool = () -> {
+        Callable<String> threadCallingToolA = () -> {
             try {
                 String request = """
                                   {
@@ -90,19 +91,18 @@ public class CancellationTest extends FATServletClient {
                                   "params": {
                                     "name": "cancellationTool",
                                     "arguments": {
-                                      "latchName": "strId"
+                                      "latchName": "numId1"
                                     }
                                   }
                                 }
                                 """;
 
-                return client.callMCP(request);
+                return client.callMCPwithBasicAuth(request, "BobTheAdmin", "testpassword");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         };
-
-        Future<String> future = executor.submit(threadCallingTool);
+        Future<String> futureA = executor.submit(threadCallingToolA);
 
         String cancellationRequestNotification = """
                           {
@@ -114,95 +114,72 @@ public class CancellationTest extends FATServletClient {
                           }
                         }
                         """;
+
         toolStatus.awaitStarted(LATCH_NAME);
 
-        client.callMCPNotification(server, "/cancellationTest", cancellationRequestNotification);
-
-        String response = future.get(10, TimeUnit.SECONDS);
+        client.callMCPNotificationWithBasicAuthForbiddenErrorExpected(server, "/cancellationTest", cancellationRequestNotification, "testuser",
+                                                                      "testpassword");
 
         String expectedResponseString = """
-                        {"id":"2","jsonrpc":"2.0","result":{"content":[{"text":"An internal server error occurred while running the tool.", "type":"text"}],"isError":true}}
+                        {"id":"2","jsonrpc":"2.0","result":{"content":[{"text":"If this String is returned, then the tool was not cancelled","type":"text"}],"isError":false}}
                         """;
-        JSONAssert.assertEquals(expectedResponseString, response, true);
+
+        String responseA = futureA.get();
+        JSONAssert.assertEquals(expectedResponseString, responseA, true);
+
+        assertTrue(!server.findStringsInLogs("Exception: The tool cannot be cancelled as the calling user is not authorized.").isEmpty());
+
     }
 
     @Test
-    public void testCancellationToolWithCancellableParameterAndCancellationRequestWithNumbericId() throws Exception {
+    public void testCancellationToolWithAuthorizedUserWithSession() throws Exception {
+        final String LATCH_NAME = "numId2";
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        final String LATCH_NAME = "numId";
-
-        Callable<String> threadCallingTool = () -> {
+        Callable<String> threadCallingToolA = () -> {
             try {
                 String request = """
                                   {
                                   "jsonrpc": "2.0",
-                                  "id": 2,
+                                  "id": "2",
                                   "method": "tools/call",
                                   "params": {
                                     "name": "cancellationTool",
                                     "arguments": {
-                                      "latchName": "numId"
+                                      "latchName": "numId2"
                                     }
                                   }
                                 }
                                 """;
-                //make sure this tread executes first
-                latch.countDown();
-                return client.callMCP(request);
+
+                return client.callMCPwithBasicAuth(request, "BobTheAdmin", "testpassword");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         };
-
-        Future<String> future = executor.submit(threadCallingTool);
+        Future<String> futureA = executor.submit(threadCallingToolA);
 
         String cancellationRequestNotification = """
                           {
                           "jsonrpc": "2.0",
                           "method": "notifications/cancelled",
                           "params": {
-                            "requestId": 2,
+                            "requestId": "2",
                             "reason": "no longer needed"
                           }
                         }
                         """;
-
         // Call AwaitToolServlet to wait for the tool to start running. Adds path param "numId" to specify which countdown latch to use
-        latch.await();
         toolStatus.awaitStarted(LATCH_NAME);
 
-        client.callMCPNotification(server, "/cancellationTest", cancellationRequestNotification);
-
-        String response = future.get(10, TimeUnit.SECONDS);
+        client.callMCPNotificationWithBasicAuth(server, "/cancellationTest", cancellationRequestNotification, "BobTheAdmin", "testpassword");
 
         String expectedResponseString = """
-                        {"id":2,"jsonrpc":"2.0","result":{"content":[{"text":"An internal server error occurred while running the tool.", "type":"text"}],"isError":true}}
-                        """;
-        JSONAssert.assertEquals(expectedResponseString, response, true);
-    }
+                        {"id":"2","jsonrpc":"2.0","result":{"content":[{"text":"An internal server error occurred while running the tool.", "type":"text"}],"isError":true}}
+                                        """;
 
-    @Test
-    public void testCancellationToolDoesNotCancelIfCancellationIsNotRequested() throws Exception {
+        String responseA = futureA.get(10, TimeUnit.SECONDS);
+        JSONAssert.assertEquals(expectedResponseString, responseA, true);
 
-        String request = """
-                          {
-                          "jsonrpc": "2.0",
-                          "id": "3",
-                          "method": "tools/call",
-                          "params": {
-                            "name": "cancellationToolMinimalWait",
-                            "arguments": {}
-                          }
-                        }
-                        """;
-
-        String response = client.callMCP(request);
-
-        String expectedResponseString = """
-                        {"id":"3","jsonrpc":"2.0","result":{"content":[{"type":"text", "text": "If this String is returned, then the tool was not cancelled"}],"isError":false}}
-                        """;
-        JSONAssert.assertEquals(expectedResponseString, response, true);
     }
 
 }

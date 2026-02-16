@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -35,19 +35,20 @@ import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.utils.FATServletClient;
 import io.openliberty.mcp.internal.fat.tool.asyncToolApp.AsyncTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
+import io.openliberty.mcp.internal.fat.utils.McpClient.StateMode;
 import io.openliberty.mcp.internal.fat.utils.ToolStatus;
 import io.openliberty.mcp.internal.fat.utils.ToolStatusClient;
 
 @RunWith(FATRunner.class)
 public class AsyncToolCancellationTest extends FATServletClient {
 
-    @Server("mcp-server-async")
+    @Server("mcp-server-async-auth")
     public static LibertyServer server;
     private static ExecutorService executor;
     private static final String EXPECTED_ERROR = "OperationCancellationException";
 
     @Rule
-    public McpClient client = new McpClient(server, "/asyncToolCancellationTest");
+    public McpClient client = new McpClient(server, "/asyncToolCancellationTest", StateMode.STATEFUL, "BobTheAdmin", "testpassword");
 
     @Rule
     public ToolStatusClient toolStatus = new ToolStatusClient(server, "/asyncToolCancellationTest");
@@ -91,7 +92,7 @@ public class AsyncToolCancellationTest extends FATServletClient {
                                 }
                                 """;
 
-                return client.callMCP(request);
+                return client.callMCPwithBasicAuth(request, "BobTheAdmin", "testpassword");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -111,8 +112,7 @@ public class AsyncToolCancellationTest extends FATServletClient {
                         """;
 
         toolStatus.awaitStarted(latchName);
-
-        client.callMCPNotification(server, "/asyncToolCancellationTest", cancellationRequestNotification);
+        client.callMCPNotificationWithBasicAuth(server, "/asyncToolCancellationTest", cancellationRequestNotification, "BobTheAdmin", "testpassword");
 
         String response = future.get(10, TimeUnit.SECONDS);
 

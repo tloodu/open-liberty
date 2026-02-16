@@ -11,14 +11,18 @@ package io.openliberty.mcp.internal;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+
+import javax.security.sasl.AuthenticationException;
 
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
@@ -185,7 +189,6 @@ public class McpServlet extends HttpServlet {
 
     @FFDCIgnore(ToolCallException.class)
     private void callTool(McpTransport transport) {
-
         ExecutionRequestId requestId = createOngoingRequestId(transport);
         McpToolCallParams params = transport.getParams(McpToolCallParams.class);
         McpRequest request = transport.getMcpRequest();
@@ -408,8 +411,9 @@ public class McpServlet extends HttpServlet {
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             Tr.event(this, tc, "Client initializing: " + params.getClientInfo(), params.getCapabilities());
         }
+        Principal userId = transport.getUser();
 
-        String sessionId = sessionStore.createSession();
+        String sessionId = sessionStore.createSession(userId);
 
         ServerCapabilities caps = ServerCapabilities.of(new Capabilities.Tools(false));
 
@@ -432,16 +436,24 @@ public class McpServlet extends HttpServlet {
         transport.sendResponse(new Object());
     }
 
-    private void cancelRequest(McpTransport transport) {
+    private void cancelRequest(McpTransport transport) throws IOException {
         McpNotificationParams notificationParams = transport.getMcpRequest().getParams(McpNotificationParams.class, jsonb);
         RequestId mcpReqId = notificationParams.getRequestId();
         McpSessionId sessionId = transport.getSessionId();
+        Principal userId = transport.getUser();
+
         if (sessionId == null) {
             transport.sendEmptyResponse();
             return;
+        } else {
+            var session = sessionStore.getSession(sessionId.value());
+            if (session == null || !Objects.equals(session.getUserId(), userId)) {
+                transport.sendAuthError(new AuthenticationException(Tr.formatMessage(tc, "unauthorized.cancellation")));
+                return;
+            }
         }
 
-        ExecutionRequestId requestId = new ExecutionRequestId(mcpReqId, sessionId);
+        ExecutionRequestId requestId = new ExecutionRequestId(mcpReqId, sessionId, userId);
         Optional<String> reason = Optional.ofNullable(notificationParams.getReason());
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
@@ -460,10 +472,11 @@ public class McpServlet extends HttpServlet {
 
     private ExecutionRequestId createOngoingRequestId(McpTransport transport) {
         McpSessionId sessionId = transport.getSessionId();
+        Principal userId = transport.getUser();
         if (sessionId != null) {
             return new ExecutionRequestId(
                                           transport.getMcpRequest().id(),
-                                          sessionId);
+                                          sessionId, userId);
         } else {
             return null;
         }
