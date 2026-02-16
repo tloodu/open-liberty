@@ -44,13 +44,14 @@ import io.openliberty.mcp.internal.fat.utils.McpClient;
 @RunWith(FATRunner.class)
 public class ConformanceTests extends FATServletClient {
 
-    // File locations (Source and destination)
+    // File locations & names (Source file and Container files)
     private static final MountableFile SRC_PACKAGE_JSON = MountableFile.forClasspathResource("/conformance-tests/package.json");
     private static final MountableFile SRC_PACKAGE_LOCK_JSON = MountableFile.forClasspathResource("/conformance-tests/package-lock.json");
-    private static final String CONTAINER_PACKAGE_JSON = "/tmp/package.json";
-    private static final String CONTAINER_PACKAGE_LOCK_JSON = "/tmp/package-lock.json";
+    private static final String CONTAINER_WORKING_DIR = "/tmp";
+    private static final String CONTAINER_PACKAGE_JSON = CONTAINER_WORKING_DIR + "/package.json";
+    private static final String CONTAINER_PACKAGE_LOCK_JSON = CONTAINER_WORKING_DIR + "/package-lock.json";
 
-    // Node specific
+    // Node.js specific
     private static final String INSTALL_MCP_CONFORMANCE_PACKAGE = "npm ci --omit=dev";
     private static final String CHECK_MCP_CONFORMANCE_PACKAGE_VERSION = "npx @modelcontextprotocol/conformance --version";
     private static final String MCP_CONFORMANCE_TEST_VERSION = "0.1.9";
@@ -80,21 +81,11 @@ public class ConformanceTests extends FATServletClient {
     @ClassRule
     public static GenericContainer<?> container = new GenericContainer<>(DOCKER_REGISTRY).withCommand("tail", "-f", "/dev/null")
                                                                                          .withAccessToHost(true)
-                                                                                         .withWorkingDirectory("/tmp")
+                                                                                         .withWorkingDirectory(CONTAINER_WORKING_DIR)
                                                                                          .withCopyFileToContainer(SRC_PACKAGE_JSON, CONTAINER_PACKAGE_JSON)
                                                                                          .withCopyFileToContainer(SRC_PACKAGE_LOCK_JSON, CONTAINER_PACKAGE_LOCK_JSON)
                                                                                          .withLogConsumer(new SimpleLogConsumer(ConformanceTests.class, "nodejs-container"));
 
-    ////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////
-    // Check that the container is not logging any credentials
-    /////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////
-    ///
-    ///
-    ///
     @BeforeClass
     public static void setup() throws Exception {
         WebArchive war = ShrinkWrap.create(WebArchive.class, "conformanceTests.war").addPackage(ConformanceTools.class.getPackage());
@@ -130,7 +121,6 @@ public class ConformanceTests extends FATServletClient {
     }
 
     private static boolean artifactoryConfigIsPresent() {
-
         String forceExternalRepo = System.getProperty(ARTIFACTORY_FORCE_EXTERNAL_KEY);
         if (isValidProperty(forceExternalRepo) && Boolean.parseBoolean(forceExternalRepo)) {
             return false;
