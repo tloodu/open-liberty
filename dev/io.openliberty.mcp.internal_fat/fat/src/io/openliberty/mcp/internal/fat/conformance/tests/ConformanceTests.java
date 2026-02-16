@@ -44,6 +44,11 @@ import io.openliberty.mcp.internal.fat.tool.conformanceTestApp.ConformanceTools;
 import io.openliberty.mcp.internal.fat.utils.McpClient;
 
 @RunWith(FATRunner.class)
+/*
+ * This FAT test runs MCP conformance tests from https://github.com/modelcontextprotocol/conformance.
+ * This help ensure that the Liberty implementation of the MCP server is compliant with the MCP spec.
+ *
+ */
 public class ConformanceTests extends FATServletClient {
 
     // File locations & names (Source file and Container files)
