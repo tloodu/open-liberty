@@ -180,6 +180,10 @@ public class WebJaccServiceImpl implements WebJaccService {
             return;
         }
 
+        if (webPC == null) {
+            return;
+        }
+
         try {
             processRole(webPC, webAppConfig);
             List<SecurityConstraint> scList = scc.getSecurityConstraints();
@@ -788,6 +792,15 @@ public class WebJaccServiceImpl implements WebJaccService {
             uriName = uriName.substring(0, uriName.lastIndexOf("*")) + "|";
         }
         return uriName;
+    }
+
+    @Override
+    public void setPolicyContextID(String applicationName, String moduleName) {
+        JaccService jaccService = jaccServiceRef.getService();
+        if (jaccService != null) {
+            String contextID = jaccService.getContextId(applicationName, moduleName);
+            PolicyContext.setContextID(contextID);
+        }
     }
 
 }

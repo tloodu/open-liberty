@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 IBM Corporation and others.
+ * Copyright (c) 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -7,8 +7,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 /**
- * @version 20.0
+ * @version 1.0
  */
-@org.osgi.annotation.versioning.Version("20.0")
-package com.ibm.wsspi.security.authorization.jacc;
+@org.osgi.annotation.versioning.Version("1.0")
+package io.openliberty.security.authorization.spec;
