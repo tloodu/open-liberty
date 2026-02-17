@@ -35,8 +35,8 @@ app-resources= \
 -cdiannotations:
 
 -dsannotations: \
+  io.openliberty.org.jboss.resteasy.common.client.ResteasyServiceActivator,\
   io.openliberty.org.jboss.resteasy.common.client.JAXRSClientConfig,\
-  io.openliberty.org.jboss.resteasy.common.client.JAXRSAppSecurity,\
   io.openliberty.restfulWS.client.security.OAuthPropagationHelper,\
   io.openliberty.restfulWS.introspector.ResteasyEndpointIntrospector,\
   io.openliberty.restfulWS.client.internal.ClientAsyncTaskWrapperComponent

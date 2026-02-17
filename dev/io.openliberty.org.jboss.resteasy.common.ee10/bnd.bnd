@@ -12,6 +12,7 @@
 Bundle-Name: io.openliberty.org.jboss.resteasy.common.ee10
 Bundle-SymbolicName: io.openliberty.org.jboss.resteasy.common.ee10
 
+
 javac.source: 11
 javac.target: 11
 
@@ -39,11 +40,12 @@ app-resources= \
 -cdiannotations:
 
 -dsannotations: \
+  io.openliberty.org.jboss.resteasy.common.client.ResteasyServiceActivator,\
   io.openliberty.org.jboss.resteasy.common.client.JAXRSClientConfig,\
-  io.openliberty.org.jboss.resteasy.common.client.JAXRSAppSecurity,\
   io.openliberty.restfulWS.client.security.OAuthPropagationHelper,\
   io.openliberty.restfulWS.introspector.ResteasyEndpointIntrospector,\
   io.openliberty.restfulWS.client.internal.ClientAsyncTaskWrapperComponent
+
 
 Service-Component: \
   io.openliberty.org.jboss.resteasy.client.clientbuilder; \
@@ -56,6 +58,7 @@ Service-Component: \
     provide:=com.ibm.wsspi.classloading.ResourceProvider; \
     configuration-policy:=optional; \
     properties:="resources=${app-resources}"
+
 
 Export-Package: \
   com.ibm.websphere.jaxrs20.multipart;version=10.0;thread-context=true, \
