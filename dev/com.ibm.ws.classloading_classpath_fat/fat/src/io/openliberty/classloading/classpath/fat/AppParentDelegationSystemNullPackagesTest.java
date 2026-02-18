@@ -9,7 +9,7 @@
  *******************************************************************************/
 package io.openliberty.classloading.classpath.fat;
 
-import static io.openliberty.classloading.classpath.fat.AppParentDelegationDefaultTest.checkTestTraceDefault;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationDefaultTest.getCheckTraceDefault;
 import static io.openliberty.classloading.classpath.fat.FATSuite.APP_PARENT_TEST_SERVER;
 import static io.openliberty.classloading.classpath.fat.FATSuite.TEST_PLATFORM_DELEGATION_APP;
 
@@ -41,10 +41,9 @@ public class AppParentDelegationSystemNullPackagesTest extends AppParentDelegati
 
     @After
     public void checkTestTrace() throws Exception {
-        String testMethodName = testName.getMethodName();
-        testMethodName = testMethodName.substring(PlatformDelegationTestServlet.class.getSimpleName().length() + 1);
-
-        checkTestTraceDefault(testMethodName);
+        String testMethod = testName.getMethodName();
+        testMethod = testMethod.substring(PlatformDelegationTestServlet.class.getSimpleName().length() + 1);
+        getCheckTraceDefault(testMethod).test(server);
     }
 
     @AfterClass

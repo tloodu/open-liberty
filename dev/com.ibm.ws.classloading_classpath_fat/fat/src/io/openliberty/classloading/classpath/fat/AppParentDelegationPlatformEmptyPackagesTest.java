@@ -9,10 +9,11 @@
  *******************************************************************************/
 package io.openliberty.classloading.classpath.fat;
 
-import static io.openliberty.classloading.classpath.fat.AppParentDelegationPlatformNullPackagesTest.checkTestTracePlatformNullPackages;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationPlatformNullPackagesTest.getCheckTracePlatformNullPackages;
 import static io.openliberty.classloading.classpath.fat.FATSuite.APP_PARENT_TEST_SERVER;
 import static io.openliberty.classloading.classpath.fat.FATSuite.TEST_PLATFORM_DELEGATION_APP;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -39,10 +40,11 @@ public class AppParentDelegationPlatformEmptyPackagesTest extends AppParentDeleg
         setupTestServer(server);
     }
 
+    @After
     public void checkTestTrace() throws Exception {
         String testMethodName = testName.getMethodName();
         testMethodName = testMethodName.substring(PlatformDelegationTestServlet.class.getSimpleName().length() + 1);
-        checkTestTracePlatformNullPackages(testMethodName);
+        getCheckTracePlatformNullPackages(testMethodName).test(server);
     }
 
     @AfterClass

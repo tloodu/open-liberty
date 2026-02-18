@@ -9,6 +9,20 @@
  *******************************************************************************/
 package io.openliberty.classloading.classpath.fat;
 
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testGetCommonResource_NoFilter8_NoFilter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testGetCommonResourcesOrder_NoFilter8_NoFilter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testGetPlatformResourceDoesExist;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testGetPlatformResourceDoesNotExist_NoFilter8_Filter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testGetPlatformResourcesDoesExist_NoFilter8_Filter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testGetPlatformResourcesDoesNotExist_NoFilter8_Filter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadKernelClass_NotFound_NoFilter8_NoFilter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadLibrary6Class_NoFilter8_Filter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadLibrary7Class_NoFilter8_NoFilter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadLibrary8Class_NoFilter8_Filter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadLibrary9Class_NoFilter8_NoFilter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadPlatformClassDoesExist;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testLoadPlatformClassDoesNotExist_NoFilter8_Filter9;
+import static io.openliberty.classloading.classpath.fat.AppParentDelegationAbstractTest.CheckTrace.testPlatformService;
 import static io.openliberty.classloading.classpath.fat.FATSuite.APP_PARENT_TEST_SERVER;
 import static io.openliberty.classloading.classpath.fat.FATSuite.TEST_PLATFORM_DELEGATION_APP;
 import static org.junit.Assert.fail;
@@ -20,14 +34,10 @@ import org.junit.runner.RunWith;
 
 import componenttest.annotation.Server;
 import componenttest.annotation.TestServlet;
-import componenttest.app.JavaInfo;
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.topology.impl.LibertyServer;
-import io.openliberty.classloading.classpath.test.lib6.Lib6;
-import io.openliberty.classloading.classpath.test.lib7.Lib7;
-import io.openliberty.classloading.classpath.test.lib8.Lib8;
-import io.openliberty.classloading.classpath.test.lib9.Lib9;
 import io.openliberty.classloading.platform.delegation.test.app.PlatformDelegationTestServlet;
+import junit.framework.AssertionFailedError;
 
 /**
  *
@@ -47,68 +57,46 @@ public class AppParentDelegationPlatformConfigPackagesTest extends AppParentDele
 
     @After
     public void checkTestTrace() throws Exception {
-        String testMethodName = testName.getMethodName();
-        testMethodName = testMethodName.substring(PlatformDelegationTestServlet.class.getSimpleName().length() + 1);
+        getCheckTrace().test(server);
+    }
 
-        String targetName = null;
-        String traceMsg = null;
-        String secondaryName = null;
-        String secondaryMsg = null;
-        switch (testMethodName) {
+    private CheckTrace getCheckTrace() {
+        String testMethod = testName.getMethodName();
+        testMethod = testMethod.substring(PlatformDelegationTestServlet.class.getSimpleName().length() + 1);
+        switch (testMethod) {
             case "testLoadLibrary6Class":
-                targetName = Lib6.class.getName();
-                traceMsg = JavaInfo.JAVA_VERSION >= 9 ? LOAD_CLASS_FILTERED_MSG : LOAD_CLASS_NOT_FILTERED_MSG;
-                break;
+                return testLoadLibrary6Class_NoFilter8_Filter9;
             case "testLoadLibrary7Class":
-                targetName = Lib7.class.getName();
-                traceMsg = LOAD_CLASS_NOT_FILTERED_MSG;
-                break;
+                return testLoadLibrary7Class_NoFilter8_NoFilter9;
             case "testLoadLibrary8Class":
-                targetName = Lib8.class.getName();
-                traceMsg = JavaInfo.JAVA_VERSION >= 9 ? LOAD_CLASS_FILTERED_MSG : LOAD_CLASS_NOT_FILTERED_MSG;
-                break;
+                return testLoadLibrary8Class_NoFilter8_Filter9;
             case "testLoadLibrary9Class":
-                targetName = Lib9.class.getName();
-                traceMsg = LOAD_CLASS_NOT_FILTERED_MSG;
-                break;
+                return testLoadLibrary9Class_NoFilter8_NoFilter9;
             case "testGetCommonResource":
-                targetName = "io/openliberty/classloading/test/resources/common.properties";
-                traceMsg = FIND_RESOURCE_NOT_FILTERED_MSG;
-                break;
+                return testGetCommonResource_NoFilter8_NoFilter9;
             case "testGetCommonResourcesOrder":
-                targetName = "io/openliberty/classloading/test/resources/common.properties";
-                traceMsg = FIND_RESOURCES_NOT_FILTERED_MSG;
-                break;
-            case "testGetPlatformResource":
-                targetName = "java/lang/platform-delegation-test.txt";
-                traceMsg = JavaInfo.JAVA_VERSION >= 9 ? FIND_RESOURCE_FILTERED_MSG : FIND_RESOURCE_NOT_FILTERED_MSG;
-                break;
-            case "testGetPlatformResources":
-                targetName = "java/lang/platform-delegation-test.txt";
-                traceMsg = JavaInfo.JAVA_VERSION >= 9 ? FIND_RESOURCES_FILTERED_MSG : FIND_RESOURCES_NOT_FILTERED_MSG;
-                break;
-            case "testLoadPlatformClass":
-                targetName = "java.lang.PlatformDelegationTest";
-                traceMsg = JavaInfo.JAVA_VERSION >= 9 ? LOAD_CLASS_FILTERED_MSG : LOAD_CLASS_NOT_FILTERED_MSG;
-                break;
+                return testGetCommonResourcesOrder_NoFilter8_NoFilter9;
+            case "testGetPlatformResourceDoesExist" :
+                return testGetPlatformResourceDoesExist;
+            case "testGetPlatformResourceDoesNotExist":
+                return testGetPlatformResourceDoesNotExist_NoFilter8_Filter9;
+            case "testGetPlatformResourcesDoesExist":
+                return testGetPlatformResourcesDoesExist_NoFilter8_Filter9;
+            case "testGetPlatformResourcesDoesNotExist":
+                return testGetPlatformResourcesDoesNotExist_NoFilter8_Filter9;
+            case "testLoadPlatformClassDoesExist":
+                return testLoadPlatformClassDoesExist;
+            case "testLoadPlatformClassDoesNotExist":
+                return testLoadPlatformClassDoesNotExist_NoFilter8_Filter9;
             case "testLoadKernelClass":
-                targetName = "com.ibm.wsspi.kernel.embeddable.ServerBuilder";
-                traceMsg = LOAD_CLASS_NOT_FILTERED_MSG;
-                secondaryName = "CLASS NOT FOUND";
-                secondaryMsg = "testLoadKernelClass:";
-                break;
+                return testLoadKernelClass_NotFound_NoFilter8_NoFilter9;
             case "testPlatformService":
-                targetName = null;
-                break;
+                return testPlatformService;
             default:
-               fail("Unknown test method: " + testMethodName);
+               fail("Unknown test method: " + testMethod);
         }
-        if (targetName != null) {
-            checkTrace(server, traceMsg, targetName);
-        }
-        if (secondaryName != null) {
-            checkTrace(server, secondaryMsg, secondaryName);
-        }
+        // should not get here
+        throw new AssertionFailedError("Illegal state: " + testMethod);
     }
 
     @AfterClass

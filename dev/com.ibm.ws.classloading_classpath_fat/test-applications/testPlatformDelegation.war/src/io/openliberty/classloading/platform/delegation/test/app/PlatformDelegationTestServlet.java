@@ -16,10 +16,16 @@ import static io.openliberty.classloading.classpath.fat.FATSuite.TEST_LIB9;
 import static io.openliberty.classloading.classpath.util.TestUtils.assertCommonResourceFromArchive;
 import static io.openliberty.classloading.classpath.util.TestUtils.assertCommonResourceFromArchives;
 import static io.openliberty.classloading.classpath.util.TestUtils.TEST_LOAD_RESULT.success_fromLIBLoader;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.fail;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -84,7 +90,7 @@ public class PlatformDelegationTestServlet extends FATServlet{
         }
     }
     @Test
-    public void testLoadPlatformClass() {
+    public void testLoadPlatformClassDoesNotExist() {
         // try to load a java.lang class that doesn't exist
         try {
             Class.forName("java.lang.PlatformDelegationTest");
@@ -94,15 +100,42 @@ public class PlatformDelegationTestServlet extends FATServlet{
     }
 
     @Test
-    public void testGetPlatformResource() {
-        // look for a resource from java/lang that doesn't exist
-        getClass().getResource("/java/lang/platform-delegation-test.txt");
+    public void testLoadPlatformClassDoesExist() throws ClassNotFoundException {
+        // try to load a platform class that doesn't exist
+        Class.forName("java.util.concurrent.atomic.AtomicReferenceArray");
     }
 
     @Test
-    public void testGetPlatformResources() throws IOException {
+    public void testGetPlatformResourceDoesNotExist() {
         // look for a resource from java/lang that doesn't exist
-        getClass().getClassLoader().getResources("java/lang/platform-delegation-test.txt");
+        assertNull("/java/lang/platform-delegation-test.txt", getClass().getResource("/java/lang/platform-delegation-test.txt"));
+    }
+
+    @Test
+    public void testGetPlatformResourceDoesExist() {
+        // look for a resource from java/lang that should exist
+        assertNotNull("/java/lang/String.class", getClass().getResource("/java/lang/String.class"));
+    }
+
+    @Test
+    public void testGetPlatformResourcesDoesNotExist() throws IOException {
+        // look for a resource from java/lang that doesn't exist
+        Enumeration<URL> result = getClass().getClassLoader().getResources("java/lang/platform-delegation-test.txt");
+        if (result != null && result.hasMoreElements()) {
+            fail("Should not find reslurces: java/lang/platform-delegation-test.txt");
+        }
+    }
+
+    @Test
+    public void testGetPlatformResourcesDoesExist() throws IOException {
+        // look for a resource from java/lang that should exist
+        Enumeration<URL> result = getClass().getClassLoader().getResources("java/lang/String.class");
+        if (result == null || !result.hasMoreElements()) {
+            fail("Should find reslurces: java/lang/String.class");
+        }
+
+        int count = Collections.list(result).size();
+        System.out.println("testGetPlatformResourcesDoesExist: count=" + count);
     }
 
     @Test
