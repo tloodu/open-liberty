@@ -22,26 +22,23 @@ import org.junit.runner.RunWith;
 import com.ibm.websphere.simplicity.ShrinkHelper;
 import com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions;
 
-import componenttest.annotation.ExpectedFFDC;
 import componenttest.annotation.Server;
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
 import componenttest.topology.impl.LibertyServer;
+import io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants;
 import multiple.ham.common.MultipleHAMProtectedResource;
-import multiple.ham.custom.hams.CustomHAMOne;
-import multiple.ham.custom.hams.CustomHAMOneDuplicate;
 
 /**
  * Tests appSecurity-6.0
  */
 @RunWith(FATRunner.class)
 @Mode(TestMode.LITE)
-public class MultipleHAMDuplicateTests extends BaseJakartaSecurity40Test {
+public class MultipleHAMInbuiltTests extends BaseJakartaSecurity40Test {
+    private static final Class<?> c = MultipleHAMInbuiltTests.class;
 
-    private static final Class<?> c = MultipleHAMDuplicateTests.class;
-
-    public static final String APP_NAME = "CustomHAMApp";
+    public static final String APP_NAME = "MultipleHAMInbuiltApp";
     private static final String CONTEXT_ROOT = "/" + APP_NAME;
     private static final String RESOURCE_PATH = "/resource/test";
 
@@ -62,9 +59,9 @@ public class MultipleHAMDuplicateTests extends BaseJakartaSecurity40Test {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        MultipleHAMDuplicateTests instance = new MultipleHAMDuplicateTests();
+        MultipleHAMInbuiltTests instance = new MultipleHAMInbuiltTests();
         WebArchive multipleHamApp = ShrinkWrap.create(WebArchive.class,
-                                                      APP_NAME + ".war").addPackage("multiple.ham.custom").addClass(MultipleHAMProtectedResource.class).addClass(CustomHAMOne.class).addClass(CustomHAMOneDuplicate.class);
+                                                      APP_NAME + ".war").addPackage("multiple.ham.inbuilt").addClass(MultipleHAMProtectedResource.class);
 
         // The URL is not expected to be modified during this test scope
         url = "http://localhost:" + server.getHttpDefaultPort() + CONTEXT_ROOT + RESOURCE_PATH;
@@ -75,29 +72,31 @@ public class MultipleHAMDuplicateTests extends BaseJakartaSecurity40Test {
     }
 
     /*
-     * Assert that we find jakarta.enterprise.inject.AmbiguousResolutionException
+     * Assert that we find the following message in trace.log:
      *
-     * CustomHAMOne and CustomHAMOneDuplicate both have Priority = 100
+     * Order of HttpAuthenticationMechanisms found (the first one will be used if its prioritization is unique -
+     *
+     * @Priority for application HAMs and HAM type - Oidc/CustomForm/Form/Basic - for in-built HAMs):
+     * FormAuthenticationMechanism, BasicHttpAuthenticationMechanism
+     *
      */
     @Test
-    @ExpectedFFDC({ "jakarta.enterprise.inject.AmbiguousResolutionException" })
-    public void testAmbiguousResolutionException() throws Exception {
+    public void testMultipleHAMInbuiltPrioritization() throws Exception {
 
-        // Mark log to check for error message and execute request
-        executeGetRequestWithLogMark(url, 403);
+        // Mark the trace before making HTTP connection and execute request
+        executeGetRequestWithTraceMark(url, 200);
 
-        // Check that error messages appear
-        assertStringInLog("AmbiguousResolutionException error message should appear in log",
-                          "Unable to determine which HttpAuthenticationMechanism to handle request.");
-
-        assertStringInLog("AmbiguousResolutionException error message should appear in log",
-                          "The following HttpAuthenticationMechanisms have the same priority or Http Authentiation Mechanism Type CustomHAMOne Priority = 100, CustomHAMOneDuplicate Priority = 100");
+        // Check that messages appear in trace
+        assertStringInTrace("Warning message should appear in log",
+                            Jakartasec40TestConstants.HAM_ORDER_FOUND_MESSAGE);
+        assertStringInTrace("Warning message should appear in log",
+                            Jakartasec40TestConstants.INBUILT_HAM_PRIORITY_ORDER_MESSAGE);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
-        MultipleHAMDuplicateTests instance = new MultipleHAMDuplicateTests();
-        instance.stopServer("CWWKS2605E");
+        MultipleHAMInbuiltTests instance = new MultipleHAMInbuiltTests();
+        instance.stopServer();
     }
 
 }
