@@ -38,7 +38,7 @@ import multiple.ham.common.qualifiers.User;
 
 @Default
 @ApplicationScoped
-public class CustomHAMHandler implements HttpAuthenticationMechanismHandler {
+public class CustomHAMNoTesterHandler implements HttpAuthenticationMechanismHandler {
 
     @Inject
     @Admin
@@ -50,7 +50,7 @@ public class CustomHAMHandler implements HttpAuthenticationMechanismHandler {
     @Operator
     private HttpAuthenticationMechanism operatorHAM;
 
-    public CustomHAMHandler() {
+    public CustomHAMNoTesterHandler() {
     }
 
     @PostConstruct
