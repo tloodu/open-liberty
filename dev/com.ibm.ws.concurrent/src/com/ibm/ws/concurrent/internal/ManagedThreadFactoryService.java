@@ -49,6 +49,7 @@ import com.ibm.ws.concurrent.cdi.MTFBeanResourceInfo;
 import com.ibm.ws.container.service.metadata.extended.DeferredMetaDataFactory;
 import com.ibm.ws.container.service.metadata.extended.IdentifiableComponentMetaData;
 import com.ibm.ws.container.service.metadata.extended.MetaDataIdentifierService;
+import com.ibm.ws.kernel.service.util.JavaInfo;
 import com.ibm.ws.runtime.metadata.ComponentMetaData;
 import com.ibm.ws.runtime.metadata.MetaData;
 import com.ibm.ws.runtime.metadata.ModuleMetaData;
@@ -544,7 +545,7 @@ public class ManagedThreadFactoryService implements ResourceFactory, Application
                                            "ManagedThreadFactoryDefinition",
                                            "managed-thread-factory",
                                            name,
-                                           Runtime.version().feature()));
+                                           JavaInfo.majorVersion()));
         }
     }
 }
