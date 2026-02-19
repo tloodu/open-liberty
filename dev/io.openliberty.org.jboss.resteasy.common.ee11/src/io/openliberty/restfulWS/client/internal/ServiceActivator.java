@@ -20,7 +20,7 @@ import org.osgi.service.component.annotations.Deactivate;
 
 /**
  * ServiceActivator is used to initialize global configurations for RESTEasy.
- * This activator ensures early initialization of the RuntimeDelegate
+ * This activator ensures early initialization of the RuntimeDelegate.
  * 
  */
 @Component(immediate = true, property = { "service.vendor=IBM" }, configurationPolicy = ConfigurationPolicy.OPTIONAL)
