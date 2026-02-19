@@ -49,7 +49,7 @@ public class Java26Test extends FATServletClient {
     public static void tearDown() throws Exception {
         // Server is stopped in each test method's finally block
         if (server != null && server.isStarted()) {
-            server.stopServer("CWWKZ0002E.*", "WARNING.*illegal.*final.*field.*mutation.*");
+            server.stopServer();
         }
     }
 
@@ -74,8 +74,7 @@ public class Java26Test extends FATServletClient {
         assertContains(appResponse, "HTTP Client created with HTTP/3 support");
         assertContains(appResponse, "<<< EXIT SUCCESSFUL");
         } finally {
-            // No warnings expected in deny mode, only potential app errors
-            server.stopServer("CWWKZ0002E.*");
+            server.stopServer();
         }
         
     }
@@ -101,7 +100,7 @@ public class Java26Test extends FATServletClient {
                 assertTrue("Should contain WARN mode result",
                            appResponse.contains("RESULT: Mutation succeeded in WARN mode - field value changed to"));
         assertContains(appResponse, "Check server logs for JEP 500 warning messages");
-        assertContains(appResponse, "RESULT: Mutation completed in WARN mode");
+        assertContains(appResponse, "RESULT: Mutation succeeded in WARN mode");
         assertContains(appResponse, "JEP 500 Test Summary:");
         assertContains(appResponse, "Mode detected: WARN");
         assertContains(appResponse, "Mutation blocked: false");
@@ -116,7 +115,7 @@ public class Java26Test extends FATServletClient {
         
         // Now check for the specific detailed mutation warning using waitForStringInLog
         // This should match: "WARNING: Final field name in class ... has been mutated reflectively by class ..."
-        String detailedWarning = server.waitForStringInLog("WARNING.*Final field.*has been mutated", 5000, server.getConsoleLogFile());
+        String detailedWarning = server.waitForStringInLog("WARNING.*Final field.*has been mutated.*TestService", 5000, server.getConsoleLogFile());
         assertNotNull("Expected to find detailed JVM warning about final field mutation in console.log", detailedWarning);
         
         // Verify HTTP/3 test still works
@@ -124,8 +123,7 @@ public class Java26Test extends FATServletClient {
         assertContains(appResponse, "HTTP Client created with HTTP/3 support");
         assertContains(appResponse, "<<< EXIT SUCCESSFUL");
        }finally {
-           
-            server.stopServer("CWWKZ0002E.*", "WARNING.*illegal.*final.*field.*mutation.*");
+            server.stopServer();
              // Restore original JVM options for subsequent tests
             server.setJvmOptions(java.util.Arrays.asList("--enable-preview", "--illegal-final-field-mutation=deny"));
         }
