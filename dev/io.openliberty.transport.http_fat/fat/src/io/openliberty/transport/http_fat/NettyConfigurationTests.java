@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025, 2026 IBM Corporation and others.
+ * Copyright (c) 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -56,15 +56,6 @@ public class NettyConfigurationTests {
     public static void setup() throws Exception {
         // Start the server and use the class name so we can find logs easily.
         server.startServer(NettyConfigurationTests.class.getSimpleName() + ".log");
-
-        // Go through logs and check if Netty is being used.
-        // Wait for the TCP Channel to finish loading and get the TCP Channel started message.
-        // CWWKO0219I: TCP Channel defaultHttpEndpoint has been started and is now listening for requests on host *  (IPv6) port 8010.
-        String tcpChannelMessage = server.waitForStringInLog("CWWKO0219I: TCP Channel defaultHttpEndpoint");
-        LOG.info("Endpoint: " + tcpChannelMessage);
-
-        runningNetty = tcpChannelMessage.contains(NETTY_TCP_CLASS_NAME);
-        LOG.info("Running Netty? " + runningNetty);
     }
 
     @AfterClass
@@ -82,8 +73,6 @@ public class NettyConfigurationTests {
      */
     @Test
     public void testNettyConfigurationPickedUp() throws Exception {
-        if (runningNetty) {
-            // Verify all netty configuration properties are present in trace
             assertNotNull("scalerMinThreads not found",
                           server.waitForStringInTrace(".*scalerMinThreads=1.*"));
             assertNotNull("scalerMaxThreads not found",
@@ -104,11 +93,7 @@ public class NettyConfigurationTests {
                           server.waitForStringInTrace(".*scalerMetricsWindowSize=5000.*"));
             assertNotNull("useNativeIO not found",
                           server.waitForStringInTrace(".*useNativeIO=false.*"));
-
             server.resetLogMarks();
-        } else {
-            LOG.info("Test skipped since Netty is disabled");
-        }
     }
 
 }

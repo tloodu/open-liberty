@@ -173,7 +173,7 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
         if(systemProperty_useNativeIO.equalsIgnoreCase("false")) {
             useNativeIO = false;
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "io.openliberty.netty.internal.useNativeIO system property is set to false, enabling native transport.");
+                    Tr.debug(tc, "io.openliberty.netty.internal.useNativeIO system property is set to false, NOT enabling native transport.");
                 }
         }
 
@@ -183,10 +183,10 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
 
         IoHandlerFactory parentFactory;
         IoHandlerFactory childFactory;
-        if (Epoll.isAvailable() && useNativeIO) {
+        if (useNativeIO && Epoll.isAvailable()) {
             parentFactory = EpollIoHandler.newFactory();
             childFactory = EpollIoHandler.newFactory();
-        } else if (KQueue.isAvailable() && useNativeIO) {
+        } else if (useNativeIO && KQueue.isAvailable()) {
             parentFactory = KQueueIoHandler.newFactory();
             childFactory = KQueueIoHandler.newFactory();
         } else {
@@ -351,9 +351,9 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
      * Used for server sockets - based on platform.
      */
     public Class getServerSocketChannelClass() {
-        if(Epoll.isAvailable() && useNativeIO){
+        if(useNativeIO && Epoll.isAvailable()){
             return EpollServerSocketChannel.class;
-        } else if (KQueue.isAvailable() && useNativeIO){
+        } else if (useNativeIO && KQueue.isAvailable()){
             return KQueueServerSocketChannel.class;
         } else {
             return NioServerSocketChannel.class;
@@ -364,9 +364,9 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
      * Used for client sockets - based on platform.
      */
     public Class getSocketChannelClass() {
-        if(Epoll.isAvailable() && useNativeIO){
+        if(useNativeIO && Epoll.isAvailable()){
             return EpollSocketChannel.class;
-        } else if (KQueue.isAvailable() && useNativeIO){
+        } else if (useNativeIO && KQueue.isAvailable()){
             return KQueueSocketChannel.class;
         } else {
             return NioSocketChannel.class;
@@ -377,9 +377,9 @@ public class NettyFrameworkImpl implements ServerQuiesceListener, NettyFramework
      * Used in UDP channels - based on platform.
      */
     public Class getDatagramClass() {
-        if (Epoll.isAvailable() && useNativeIO) {
+        if (useNativeIO && Epoll.isAvailable()) {
             return EpollDatagramChannel.class;
-        } else if (KQueue.isAvailable() && useNativeIO) {
+        } else if (useNativeIO && KQueue.isAvailable()) {
             return KQueueDatagramChannel.class;
         } else {
             return NioDatagramChannel.class;
