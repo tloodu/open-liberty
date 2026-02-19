@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package io.openliberty.org.jboss.resteasy.common.client;
+package io.openliberty.restfulWS.client.internal;
 
 import jakarta.ws.rs.ext.RuntimeDelegate;
 
@@ -19,15 +19,15 @@ import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Deactivate;
 
 /**
- * ResteasyServiceActivator is used to initialize global configurations for RESTEasy.
+ * ServiceActivator is used to initialize global configurations for RESTEasy.
  * This activator ensures early initialization of the RuntimeDelegate
  * 
  */
 @Component(immediate = true, property = { "service.vendor=IBM" }, configurationPolicy = ConfigurationPolicy.OPTIONAL)
-public class ResteasyServiceActivator {
+public class ServiceActivator {
 
     /**
-     * Called by Declarative Services to activate service.
+     * Called by declarative services to activate service.
      */
     @Activate
     protected void activate(ComponentContext cc) {
@@ -35,7 +35,7 @@ public class ResteasyServiceActivator {
     }
 
     /**
-     * Called by Declarative Services to deactivate service.
+     * Called by declarative services to deactivate service.
      */
     @Deactivate
     protected void deactivate(ComponentContext cc) {
