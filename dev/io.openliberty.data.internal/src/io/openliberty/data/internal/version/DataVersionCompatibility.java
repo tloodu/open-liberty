@@ -45,12 +45,6 @@ public interface DataVersionCompatibility {
     final int PARAM_ANNOS_CONFLICT = -2;
 
     /**
-     * Return code for inspectMethodParam that indicates that the Constraint subtype
-     * is not determined until method invocation.
-     */
-    final int PARAM_CONSTRAINT_DEFERRED = -3;
-
-    /**
      * Append a constraint such as o.myAttribute < ?1 to the JPQL query.
      *
      * @param q            JPQL query to which to append.
@@ -82,6 +76,33 @@ public interface DataVersionCompatibility {
     boolean atLeast(int major, int minor);
 
     /**
+     * Appends JPQL to the partially built query to represent a Constraint.
+     *
+     * @param q              partially built query to which to append JPQL
+     *                           representing the Constraint.
+     * @param entityVar_     entity identifier variable name and . character.
+     * @param constraint     the Constraint for which to generate JPQL.
+     * @param jpqlParamCount number of named or positional parameters identified
+     *                           up to this point for the JPQL.
+     * @param jpqlParamNames names of named parameters in the partially built
+     *                           query. Empty if the query uses positional
+     *                           parameeters or has none. If using named parameters,
+     *                           this method should add any that are generated.
+     * @param jpqlParams     list for this method to populate with the name of
+     *                           named parameters or index of positional parameters,
+     *                           mapped to value, for each value obtained from the
+     *                           processed Restriction(s).
+     * @return the new count of named or positional parameters, including any that
+     *         were generated for the Constraint.
+     */
+    int generateConstraint(StringBuilder q,
+                           String entityVar_,
+                           Object constraint,
+                           int jpqlParamCount,
+                           Set<String> jpqlParamNames,
+                           Map<Object, Object> jpqlParams);
+
+    /**
      * Appends JPQL to the partially built query to implement a Restriction
      * parameter of a repository method.
      *
@@ -95,10 +116,10 @@ public interface DataVersionCompatibility {
      *                           parameeters or has none. If using named parameters,
      *                           this method should add any that are generated for
      *                           the restriction part of the query.
-     * @param qrParams       initially empty list for this method to populate
-     *                           with the name of named parameters or index of
-     *                           positional parameters, mapped to value, for each
-     *                           value obtained from the processed Restriction(s).
+     * @param jpqlParams     list for this method to populate with the name of
+     *                           named parameters or index of positional parameters,
+     *                           mapped to value, for each value obtained from the
+     *                           processed Restriction(s).
      * @return the new count of named or positional parameters, including any that
      *         were generated for the Restriction(s).
      */
@@ -107,7 +128,7 @@ public interface DataVersionCompatibility {
                              Object restriction,
                              int jpqlParamCount,
                              Set<String> jpqlParamNames,
-                             Map<Object, Object> qrParams);
+                             Map<Object, Object> jpqlParams);
 
     /**
      * Obtains the Count annotation if present on the method. Otherwise null.
@@ -116,6 +137,24 @@ public interface DataVersionCompatibility {
      * @return Count annotation if present, otherwise null.
      */
     Annotation getCountAnnotation(Method method);
+
+    /**
+     * Identify Constraint-typed repository method parameters for which
+     * processing is deferred. Constraints that operate on non-literal
+     * expressions are always deferred until the expression instance is
+     * available.
+     *
+     * @param alwaysDefer  indicates that processing of every Constraint-typed
+     *                         method parameter is always deferred.
+     * @param maxIndex     method parameters positioned up to this index are
+     *                         inspected.
+     * @param methodParams repository method parameters.
+     * @return map of method parameter index (0-based) to Constraint instance
+     *         at that position. The empty map indicates none.
+     */
+    Map<Integer, Object> getDeferredConstraints(boolean alwaysDefer,
+                                                int maxIndex,
+                                                Object[] methodParams);
 
     /**
      * Obtains the entity class from the Find annotation value, if present.
