@@ -3014,25 +3014,26 @@ public class QueryInfo {
         AttributeConstraint[] attrConstraints = //
                         new AttributeConstraint[numAttributeParams];
         char[] updateOps = new char[numAttributeParams];
-        int[] qpStarts = new int[numAttributeParams + 1];
+        int[] numPreviousJPQLParams = new int[numAttributeParams + 1];
         StringBuilder[] constraintJPQL = new StringBuilder[numAttributeParams];
 
         // p is the repository method parameter number (0-based)
         // qp is the JPQL query parameter number (1-based)
-        int qp = 1;
+        int numJPQLParams = 0;
         for (int p = 0; p < numAttributeParams; p++) {
-            qpStarts[p] = qp;
+            numPreviousJPQLParams[p] = numJPQLParams;
 
             Object constraint = constraints.get(p);
             if (constraint == null) {
-                qp = compat.inspectMethodParam(p,
-                                               paramTypes[p],
-                                               annosForAllParams[p],
-                                               attrNames,
-                                               attrConstraints,
-                                               updateOps,
-                                               qp);
-                if (qp == DataVersionCompatibility.PARAM_ANNO_CONFLICTS_WITH_CONSTRAINT)
+                numJPQLParams = compat.inspectMethodParam(p,
+                                                          paramTypes[p],
+                                                          annosForAllParams[p],
+                                                          attrNames,
+                                                          attrConstraints,
+                                                          updateOps,
+                                                          numJPQLParams);
+                if (numJPQLParams == DataVersionCompatibility //
+                                .PARAM_ANNO_CONFLICTS_WITH_CONSTRAINT)
                     throw exc(UnsupportedOperationException.class,
                               "CWWKD1117.anno.constraint.conflict",
                               p + 1,
@@ -3040,7 +3041,8 @@ public class QueryInfo {
                               repositoryInterface.getName(),
                               Arrays.toString(annosForAllParams[p]),
                               paramTypes[p].getClass().getName());
-                else if (qp == DataVersionCompatibility.PARAM_ANNOS_CONFLICT)
+                else if (numJPQLParams == DataVersionCompatibility //
+                                .PARAM_ANNOS_CONFLICT)
                     throw exc(UnsupportedOperationException.class,
                               "CWWKD1118.param.anno.conflict",
                               p + 1,
@@ -3050,14 +3052,12 @@ public class QueryInfo {
 
             } else {
                 constraintJPQL[p] = new StringBuilder(50);
-                int numJPQLParams = qp - 1;
                 numJPQLParams = compat.generateConstraint(constraintJPQL[p],
                                                           o_,
                                                           constraint,
                                                           numJPQLParams,
                                                           jpqlParamNames,
                                                           jpqlParams);
-                qp = numJPQLParams + 1;
             }
 
             // Determine the entity attribute name, first from @By or an assignment
@@ -3083,7 +3083,7 @@ public class QueryInfo {
             attrNames[p] = getAttributeName(name, true);
         }
 
-        qpStarts[numAttributeParams] = qp;
+        numPreviousJPQLParams[numAttributeParams] = numJPQLParams;
 
         // Write new JPQL, starting with SELECT or UPDATE
         if (q == null && type == FIND) { // SELECT
@@ -3151,7 +3151,7 @@ public class QueryInfo {
                         }
 
                         jpqlParamCount++;
-                        q.append('?').append(qpStarts[p]);
+                        q.append('?').append(numPreviousJPQLParams[p] + 1);
 
                         if (withFunction)
                             q.append(')');
@@ -3204,14 +3204,14 @@ public class QueryInfo {
                 boolean isCollection = entityInfo.collectionElementTypes //
                                 .containsKey(name);
 
-                jpqlParamCount += qpStarts[p + 1] - qpStarts[p];
+                jpqlParamCount += numPreviousJPQLParams[p + 1] - numPreviousJPQLParams[p];
 
                 if (constraintJPQL[p] == null) {
                     compat.appendConstraint(q,
                                             o_,
                                             name,
                                             attrConstraints[p],
-                                            qpStarts[p],
+                                            numPreviousJPQLParams[p],
                                             isCollection,
                                             annosForAllParams[p]);
                 } else {

@@ -47,20 +47,23 @@ public interface DataVersionCompatibility {
     /**
      * Append a constraint such as o.myAttribute < ?1 to the JPQL query.
      *
-     * @param q            JPQL query to which to append.
-     * @param o_           entity identifier variable.
-     * @param attrName     entity attribute name.
-     * @param constraint   type of constraint to apply to the entity attribute.
-     * @param qp           query parameter position (1-based).
-     * @param isCollection whether the entity attribute is a collection.
-     * @param annos        method parameter annotations.
+     * @param q                 JPQL query to which to append.
+     * @param o_                entity identifier variable.
+     * @param attrName          entity attribute name.
+     * @param constraint        type of constraint to apply to the entity attribute.
+     * @param prevNumJPQLParams count of JQPL query parameters required for repository
+     *                              method parameters up to, but not including, the
+     *                              repository method parameter for the constraint
+     *                              being appended.
+     * @param isCollection      whether the entity attribute is a collection.
+     * @param annos             method parameter annotations.
      * @return the updated JPQL query.
      */
     StringBuilder appendConstraint(StringBuilder q,
                                    String o_,
                                    String attrName,
                                    AttributeConstraint constraint,
-                                   int qp,
+                                   int prevNumJPQLParams,
                                    boolean isCollection,
                                    Annotation[] annos);
 
@@ -200,31 +203,33 @@ public interface DataVersionCompatibility {
      * Find/Delete/Update method to determine its meaning. Based on the meaning,
      * updates one or more of (attrNames, constraints, updateOps) at position p.
      *
-     * @param p           repository method parameter index (0-based).
-     * @param paramType   class of the repository method parameter at index p.
-     *                        When generating the query upfront, this comes from
-     *                        the repository method signature. When generating the
-     *                        query at invocation time and a Constraint subtype is
-     *                        supplied, this is the class of the supplied instance.
-     *                        The latter should be done in response to receiving a
-     *                        PARAM_CONSTRAINT_DEFERRED return code during the
-     *                        attempt at upfront query generation.
-     * @param paramAnnos  annotations on the repository method parameter at index p.
-     * @param attrNames   the implementer can update this at position p to supply
-     *                        the entity attribute name from the value of an
-     *                        assignment annotation.
-     * @param constraints the implementer can update this at position p to supply
-     *                        the constraint type indicated by the Is annotation or
-     *                        a constraint type method parameter.
-     * @param updateOps   the implementer can update this at position p to supply
-     *                        the update operation indicated by an assignment
-     *                        annotation.
-     * @param qpNext      the next JQPL query parameter index to use (1-based)
-     *                        for the current repository method parameter.
-     * @return the next JPQL query parameter index to use (1-based) for the
-     *         subsequent repository method parameter. Otherwise returns an
-     *         error code: PARAM_ANNO_CONFLICTS_WITH_CONSTRAINT or
-     *         PARAM_ANNOS_CONFLICT or PARAM_CONSTRAINT_DEFERRED.
+     * @param p                 repository method parameter index (0-based).
+     * @param paramType         class of the repository method parameter at index p.
+     *                              When generating the query upfront, this is from
+     *                              the repository method signature. When generating
+     *                              the query at invocation time and a Constraint
+     *                              subtype is supplied, this is the class of the
+     *                              supplied instance.
+     * @param paramAnnos        annotations on the repository method parameter at
+     *                              index p.
+     * @param attrNames         the implementer can update this at position p to
+     *                              supply the entity attribute name from the value
+     *                              of an assignment annotation.
+     * @param constraints       the implementer can update this at position p to
+     *                              supply the constraint type indicated by the
+     *                              Is annotation or by a Constraint-typed method
+     *                              parameter.
+     * @param updateOps         the implementer can update this at position p to
+     *                              supply the update operation indicated by an
+     *                              assignment annotation.
+     * @param prevNumJPQLParams count of JQPL query parameters required for
+     *                              repository method parameters up to, but not
+     *                              including, the current repository method
+     *                              parameter being inspected.
+     * @return count of JPQL query parameters required for repository method
+     *         parameters up to and including the current one. Otherwise returns
+     *         an error code: PARAM_ANNO_CONFLICTS_WITH_CONSTRAINT or
+     *         PARAM_ANNOS_CONFLICT.
      */
     int inspectMethodParam(int p,
                            Class<?> paramType,
@@ -232,7 +237,7 @@ public interface DataVersionCompatibility {
                            String[] attrNames,
                            AttributeConstraint[] constraints,
                            char[] updateOps,
-                           int qpNext);
+                           int prevNumJPQLParams);
 
     /**
      * Determines if the special parameter value is a Restriction.

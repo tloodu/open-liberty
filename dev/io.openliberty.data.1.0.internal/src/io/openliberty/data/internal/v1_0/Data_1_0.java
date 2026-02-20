@@ -120,12 +120,12 @@ public class Data_1_0 implements DataVersionCompatibility {
                                           String o_,
                                           String attrName,
                                           AttributeConstraint constraint,
-                                          int qp,
+                                          int prevNumJPQLParams,
                                           boolean isCollection,
                                           Annotation[] annos) {
         if (attrName.charAt(attrName.length() - 1) != ')')
             q.append(o_);
-        return q.append(attrName).append("=?").append(qp);
+        return q.append(attrName).append("=?").append(prevNumJPQLParams + 1);
     }
 
     @Override
@@ -200,10 +200,10 @@ public class Data_1_0 implements DataVersionCompatibility {
                                   String[] attrNames,
                                   AttributeConstraint[] constraints,
                                   char[] updateOps,
-                                  int qpNext) {
+                                  int prevNumJPQLParams) {
         // In Data 1.0, all constraints are the equality condition
         constraints[p] = AttributeConstraint.Equal;
-        return qpNext + 1;
+        return prevNumJPQLParams + 1;
     }
 
     @Override

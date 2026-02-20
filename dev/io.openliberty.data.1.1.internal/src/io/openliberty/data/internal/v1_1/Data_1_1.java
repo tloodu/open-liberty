@@ -216,7 +216,7 @@ public class Data_1_1 implements DataVersionCompatibility {
                                           String o_,
                                           String attrName,
                                           AttributeConstraint constraint,
-                                          int qp,
+                                          int prevNumJPQLParams,
                                           boolean isCollection,
                                           Annotation[] annos) {
         StringBuilder attributeExpr = new StringBuilder();
@@ -279,30 +279,30 @@ public class Data_1_1 implements DataVersionCompatibility {
             case LessThan:
             case LessThanEqual:
                 q.append(attributeExpr).append(constraint.operator());
-                appendParam(q, ignoreCase, qp);
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1);
                 break;
             case Between:
                 q.append(attributeExpr).append(constraint.operator());
-                appendParam(q, ignoreCase, qp);
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1);
                 q.append(" AND ");
-                appendParam(q, ignoreCase, qp + 1);
+                appendParam(q, ignoreCase, prevNumJPQLParams + 2);
                 break;
             case In:
                 if (ignoreCase)
                     throw new UnsupportedOperationException(); // should be unreachable
                 q.append(attributeExpr).append(constraint.operator());
-                appendParam(q, ignoreCase, qp);
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1);
                 break;
             // TODO 1.1: escape characters and custom wildcards
             case Like:
                 q.append(attributeExpr).append(constraint.operator());
-                appendParam(q, ignoreCase, qp);
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1);
                 break;
             case LikeEscaped:
                 q.append(attributeExpr).append(constraint.operator());
-                appendParam(q, ignoreCase, qp);
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1);
                 q.append(" ESCAPE ");
-                appendParam(q, false, qp + 1);
+                appendParam(q, false, prevNumJPQLParams + 2);
                 break;
             case Null:
                 q.append(attributeExpr).append(constraint.operator());
@@ -310,20 +310,20 @@ public class Data_1_1 implements DataVersionCompatibility {
             case Contains:
                 q.append(attributeExpr) //
                                 .append(negated ? " NOT" : "") //
-                                .append(" LIKE CONCAT('%', ");
-                appendParam(q, ignoreCase, qp).append(", '%')");
+                                .append(" LIKE ('%' || ");
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1).append(" || '%')");
                 break;
             case EndsWith:
                 q.append(attributeExpr) //
                                 .append(negated ? " NOT" : "") //
-                                .append(" LIKE CONCAT('%', ");
-                appendParam(q, ignoreCase, qp).append(')');
+                                .append(" LIKE ('%' || ");
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1).append(')');
                 break;
             case StartsWith:
                 q.append(attributeExpr) //
                                 .append(negated ? " NOT" : "") //
-                                .append(" LIKE CONCAT(");
-                appendParam(q, ignoreCase, qp).append(", '%')");
+                                .append(" LIKE (");
+                appendParam(q, ignoreCase, prevNumJPQLParams + 1).append(" || '%')");
                 break;
             // TODO operation for collection containing?
             //case ???:
@@ -861,8 +861,8 @@ public class Data_1_1 implements DataVersionCompatibility {
                                   String[] attrNames,
                                   AttributeConstraint[] constraints,
                                   char[] updateOps,
-                                  int qpNext) {
-        int qpOriginal = qpNext;
+                                  int prevNumJPQLParams) {
+        int numJPQLParams = prevNumJPQLParams;
 
         for (Annotation anno : paramAnnos)
             if (anno instanceof Is) {
@@ -870,43 +870,43 @@ public class Data_1_1 implements DataVersionCompatibility {
             } else if (anno instanceof Assign) {
                 attrNames[p] = ((Assign) anno).value();
                 updateOps[p] = '=';
-                qpNext++;
+                numJPQLParams++;
             } else if (anno instanceof Add) {
                 attrNames[p] = ((Add) anno).value();
                 updateOps[p] = '+';
-                qpNext++;
+                numJPQLParams++;
             } else if (anno instanceof Multiply) {
                 attrNames[p] = ((Multiply) anno).value();
                 updateOps[p] = '*';
-                qpNext++;
+                numJPQLParams++;
             } else if (anno instanceof Divide) {
                 attrNames[p] = ((Divide) anno).value();
                 updateOps[p] = '/';
-                qpNext++;
+                numJPQLParams++;
             } else if (anno instanceof SubtractFrom) {
                 attrNames[p] = ((SubtractFrom) anno).value();
                 updateOps[p] = '-';
-                qpNext++;
+                numJPQLParams++;
             }
 
         if (constraints[p] == null && Constraint.class.isAssignableFrom(paramType)) {
             constraints[p] = toAttributeConstraint(null, paramType);
         }
 
-        if (qpNext == qpOriginal) {
+        if (numJPQLParams == prevNumJPQLParams) {
             if (constraints[p] == null)
                 constraints[p] = AttributeConstraint.Equal;
 
             // no annotation indicating a constraint or update
-            qpNext += constraints[p].numMethodParams();
-        } else if (qpNext - qpOriginal > 1) {
+            numJPQLParams += constraints[p].numMethodParams();
+        } else if (numJPQLParams - prevNumJPQLParams > 1) {
             // TODO possibly allow a redundant Constraint that matches the Is annotation.
-            qpNext = PARAM_ANNOS_CONFLICT;
+            numJPQLParams = PARAM_ANNOS_CONFLICT;
         } else if (false) { // TODO 1.1 check if paramType is a Constraint
-            qpNext = PARAM_ANNO_CONFLICTS_WITH_CONSTRAINT;
+            numJPQLParams = PARAM_ANNO_CONFLICTS_WITH_CONSTRAINT;
         }
 
-        return qpNext;
+        return numJPQLParams;
     }
 
     @Override
