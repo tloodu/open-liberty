@@ -9,6 +9,8 @@
  *******************************************************************************/
 package io.openliberty.netty.internal.tcp;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 
 import com.ibm.websphere.ras.Tr;
@@ -74,9 +76,19 @@ public class TCPChannelInitializerImpl extends ChannelInitializerWrapper {
         }
         Channel parent = channel.parent();
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(tc, "Initializing channel: processing connection: remote host address [" + channel.remoteAddress() + "] local host address [" + channel.localAddress()
-                         + "] id [" + channel.id() + "] parent " + parent);
-        }
+            SocketAddress remote = channel.remoteAddress();
+            SocketAddress local = channel.localAddress();
+            String remoteHost = "unknown";
+            String localHost = "unknown";
+
+            if (remote instanceof InetSocketAddress) {
+                remoteHost = ((InetSocketAddress) remote).getHostName();
+                localHost = ((InetSocketAddress) local).getHostName();
+            }
+            Tr.debug(tc, "initChannel. Processing Connection: remote host name: " + remoteHost + " , remote host address: " + remote
+                         + " , local host name: " + localHost + " , local host address: " + local
+                         + " , id: [" + channel.id() + " , parent: " + parent);
+        } 
         // Add channel to endpoint ChannelGroup if known
         if (parent != null) {
             ChannelGroup group = bundle.getActiveChannelsMap().get(parent);
