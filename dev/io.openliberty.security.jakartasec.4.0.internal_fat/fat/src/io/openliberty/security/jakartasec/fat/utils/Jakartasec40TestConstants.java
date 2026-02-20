@@ -51,6 +51,7 @@ public class Jakartasec40TestConstants {
     public static final String HAM_ORDER_FOUND_MESSAGE = "Order of HttpAuthenticationMechanisms found";
     public static final String INBUILT_HAM_PRIORITY_ORDER_MESSAGE = "FormAuthenticationMechanism, BasicHttpAuthenticationMechanism";
     public static final String CUSTOM_HAM_PRIORITY_ORDER_MESSAGE = "CustomHAMThree Priority = 300, CustomHAMTwo Priority = 200, CustomHAMOne Priority = 100";
+    public static final String CUSTOM_WITH_INBUILT_PRIORITY_ORDER_MESSAGE = "CustomHAMOne Priority = 100, BasicHttpAuthenticationMechanism";
 
     /**
      * Multiple HAMs with qualifiers
