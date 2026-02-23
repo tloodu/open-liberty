@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -13,6 +13,7 @@
 package com.ibm.ws.jaxws.fat;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.StringReader;
@@ -80,6 +81,7 @@ public class LoggingTest {
 
     /**
      * Test if LoggingFeature works with a basic JAX-WS web service
+     * added negative testing afterwards to test dynamic configuration
      *
      * @throws Exception
      */
@@ -88,8 +90,14 @@ public class LoggingTest {
         PeopleService service = new PeopleService(WSDL_URL);
         People bill = service.getBillPort();
         String result = bill.hello("World");
-        assertTrue(result.contains("Hello World"));
-        assertNotNull(server.waitForStringInLog("<return>Hello World</return>"));
+        assertTrue("Response is not received", result.contains("Hello World"));
+        assertNotNull("Logging enablement is failed!", server.waitForStringInLog("<return>Hello World</return>"));
+
+        server.reconfigureServer("LoggingServer/NegativeFeatureLogging.xml");
+
+        result = bill.hello("World");
+        assertTrue("Response is not received testing dynamic logging", result.contains("Hello World"));
+        assertNull("Dynamic config failed!", server.waitForStringInLog("<return>Hello World</return>"));
     }
 
     /**
@@ -99,6 +107,8 @@ public class LoggingTest {
      */
     @Test
     public void testFeatureLogDispatch() throws Exception {
+        server.reconfigureServer("LoggingServer/PositiveFeatureLogging.xml");
+
         //dispatch client --no need stubs
         QName qs = new QName("http://server.wsr.test.jaxws.ws.ibm.com", "PeopleService");
         QName qp = new QName("http://server.wsr.test.jaxws.ws.ibm.com", "BillPort");
