@@ -31,10 +31,6 @@ public interface ComparableLiteral<V extends Comparable<?>> extends //
                 ComparableExpression<Object, V>, //
                 Literal<V> {
 
-    static ComparableLiteral<Boolean> of(boolean value) {
-        return new ComparableLiteralRecord<>(Boolean.class, value);
-    }
-
     static ComparableLiteral<Character> of(char value) {
         return new ComparableLiteralRecord<>(Character.class, value);
     }
@@ -63,6 +59,8 @@ public interface ComparableLiteral<V extends Comparable<?>> extends //
             return (ComparableLiteral<V>) NumericLiteral.of(n);
         else if (value instanceof Short n)
             return (ComparableLiteral<V>) NumericLiteral.of(n);
+        else if (value instanceof Boolean b)
+            return (ComparableLiteral<V>) BooleanLiteral.of(b);
         else if (value instanceof Year y)
             return (ComparableLiteral<V>) TemporalLiteral.of(y);
         else if (value instanceof LocalDate l)
