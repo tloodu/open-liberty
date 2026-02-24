@@ -30,14 +30,14 @@ tested.features: \
 	cdi-2.0, \
 	cdi-3.0, \
 	cdi-4.0, \
-	cdi-4.1 , \
+	cdi-4.1, \
 	connectors-2.1, \
 	enterpriseBeans-4.0, \
 	enterpriseBeansRemote-4.0, \
 	servlet-4.0, \
 	servlet-5.0, \
-	servlet-6.0 , \
-	servlet-6.0
+	servlet-6.0, \
+	servlet-6.1
 
 -buildpath: \
 	com.ibm.websphere.javaee.annotation.1.1;version=latest,\
