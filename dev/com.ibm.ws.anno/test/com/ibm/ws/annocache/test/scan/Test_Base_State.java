@@ -132,6 +132,7 @@ public class Test_Base_State {
     }
 
     public void setUpCore() throws Exception {
+        System.setProperty("com.ibm.ws.beta.edition", "true");
         setUpFactories(); // throws Exception
         setUpSpecification();
         setUpClassSource(); // throws Exception
