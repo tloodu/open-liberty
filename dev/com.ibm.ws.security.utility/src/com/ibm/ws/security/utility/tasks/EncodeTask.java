@@ -136,7 +136,7 @@ public class EncodeTask extends BaseCommandTask {
             Map<String, String> props = BaseCommandTask.convertToProperties(argMap, stdout);
             
             // 26.0.0.3+ - Require a key be specified for AES encryption
-            if (encoding != null && encoding.trim().equalsIgnoreCase("aes")) {
+            if (encoding != null && encoding.contains("aes")) {
                 boolean hasKey = argMap.containsKey(BaseCommandTask.ARG_KEY) ||
                                 argMap.containsKey(BaseCommandTask.ARG_BASE64_KEY) ||
                                 argMap.containsKey(BaseCommandTask.ARG_AES_CONFIG_FILE);
