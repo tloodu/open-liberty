@@ -56,6 +56,26 @@ public abstract class AbstractLoggingInterceptor extends AbstractPhaseIntercepto
 
     protected Set<String> sensitiveProtocolHeaderNames = new HashSet();
 
+    // Liberty change begin
+    // from LibertyApplicationBusFactory disableLogging is set to false always
+    // from LibertyServiceImpl disableLogging toggles true and false depending on
+    // trace enablement and EnableLoggingInOutInterceptor configuration settings 
+    private static Boolean disableLogging = false;
+
+    /**
+     * @return the disableLogging
+     */
+    public static Boolean getDisableLogging() {
+        return disableLogging;
+    } 
+
+    /**
+     * @param disableLogging the disableLogging to set
+     */
+    public static void setDisableLogging(Boolean disable) {
+        disableLogging = disable;
+    } // Liberty change end
+    
     public AbstractLoggingInterceptor(String phase, LogEventSender sender) {
         super(phase);
         this.sender = sender;
@@ -63,7 +83,13 @@ public abstract class AbstractLoggingInterceptor extends AbstractPhaseIntercepto
 
     protected static boolean isLoggingDisabledNow(Message message) throws Fault {
         Object liveLoggingProp = message.getContextualProperty(LIVE_LOGGING_PROP);
-        return liveLoggingProp != null && PropertyUtils.isFalse(liveLoggingProp);
+        // Liberty change begin 
+        boolean bLiveLoggingProp = liveLoggingProp != null && PropertyUtils.isFalse(liveLoggingProp);
+        if(bLiveLoggingProp || getDisableLogging())    {
+            return true;
+        }
+        return false;
+     // Liberty change end
     }
 
     public void addBinaryContentMediaTypes(String mediaTypes) {
