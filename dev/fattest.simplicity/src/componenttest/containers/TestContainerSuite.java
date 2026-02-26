@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022, 2025 IBM Corporation and others.
+ * Copyright (c) 2022, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -251,11 +251,24 @@ public class TestContainerSuite {
      * Then generates a new ~/.docker-java.properties file in it's place.
      *
      * This method must run AFTER {@link #generateTcConfig()}
+     *
+     * TODO the bug that this method avoids was fixed in version 1.21.4 and could be
+     * removed if we upgraded to that version. But since Testcontainers no longer officially
+     * supports JUnit 4 we cannot expect they will continue to update the 1.X.X stream to support newer
+     * versions of the docker API and we will likely need to continue to update the minimum
+     * API versions until such time as we update our infrastructure to Junit 5.
      */
     private static void generateDjConfig() {
         final String m = "generateDjConfig";
 
         Properties djProps = new Properties();
+
+        // Do not touch a users docker-java properties unless we intended to connect
+        // to our own remote docker hosts.
+        if (!useRemoteDocker()) {
+            Log.info(c, m, "Skipping Docker-java config updates when testing against a local docker host.");
+            return;
+        }
 
         //Create new config file or load existing config properties
         if (djConfigSource.toFile().exists()) {
@@ -268,12 +281,10 @@ public class TestContainerSuite {
             Log.info(c, m, "Docker-java config being created at: " + djConfigSource.toAbsolutePath());
         }
 
-        if (useRemoteDocker()) {
-            if (ExternalDockerClientFilter.instance().isValid()) {
-                djProps.setProperty("api.version", ExternalDockerClientFilter.instance().getMinApiVersion().getVersion());
-            } else {
-                Log.warning(c, "Unable to find valid External Docker Client");
-            }
+        if (ExternalDockerClientFilter.instance().isValid()) {
+            djProps.setProperty("api.version", ExternalDockerClientFilter.instance().getMinApiVersion().getVersion());
+        } else {
+            Log.warning(c, "Unable to find valid External Docker Client");
         }
 
         try {
