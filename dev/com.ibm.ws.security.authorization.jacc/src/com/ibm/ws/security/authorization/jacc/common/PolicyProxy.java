@@ -37,13 +37,13 @@ public interface PolicyProxy {
      *
      * @return PrincipalMapper implementation
      */
-    default public Object getPrincipalMapper() {
+    default public Object getPrincipalMapper(String appName) {
         // Default is to throws exception since it isn't expected to be called for pre-EE 11 scenarios
         throw new UnsupportedOperationException();
     }
 
     /**
-     * Determines if a Policy is configured.  In EE 11, we create the PolicyProxy always even if there
+     * Determines if a Policy is configured. In EE 11, we create the PolicyProxy always even if there
      * isn't a PolicyFactory defined because it can be added dynamically by applications in their web.xml
      * or using the PolicyFactory.setPolicyFactory() method.
      */
