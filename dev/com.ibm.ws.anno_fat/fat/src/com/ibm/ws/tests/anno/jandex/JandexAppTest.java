@@ -89,16 +89,16 @@ public abstract class JandexAppTest extends LoggingTest {
         
         
         String versionString = RepeatTestFilter.getMostRecentRepeatAction().getID();   
-        if (versionString.contains("v3.5")) {
+        if (versionString.contains("switch_13")) {
         	testServlet40Jar.addPackage(ComputeIntEncloser.class.getPackage());
         	testServlet40Jar.addPackage(MemberClass.class.getPackage());
             ShrinkHelper.addDirectory(testServlet40War, "test-applications/" + WAR_NAME + "/resources_v3.5");
             ShrinkHelper.addDirectory(testServlet40Jar, "test-applications/" + JAR_NAME + "/resources_v3.5");
-        } else if (versionString.contains("v3")) {
+        } else if (versionString.contains("switch_12")) {
         	testServlet40Jar.addPackage(MemberClass.class.getPackage());
             ShrinkHelper.addDirectory(testServlet40War, "test-applications/" + WAR_NAME + "/resources_v3");
             ShrinkHelper.addDirectory(testServlet40Jar, "test-applications/" + JAR_NAME + "/resources_v3");
-        } else if (versionString.contains("v1")) {
+        } else  {
          	ShrinkHelper.addDirectory(testServlet40War, "test-applications/" + WAR_NAME + "/resources_v2");
             ShrinkHelper.addDirectory(testServlet40Jar, "test-applications/" + JAR_NAME + "/resources_v2");
         }     

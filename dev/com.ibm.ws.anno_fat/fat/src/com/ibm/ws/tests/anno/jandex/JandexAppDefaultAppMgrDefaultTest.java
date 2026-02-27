@@ -22,7 +22,8 @@ import org.junit.runner.RunWith;
 
 import com.ibm.ws.fat.util.SharedServer;
 import com.ibm.ws.tests.anno.JandexV1RepeatAction;
-import com.ibm.ws.tests.anno.JandexV3RepeatAction;
+import com.ibm.ws.tests.anno.JandexIndexV12RepeatAction;
+import com.ibm.ws.tests.anno.JandexIndexV13RepeatAction;
 
 import componenttest.custom.junit.runner.FATRunner;
 import componenttest.rules.repeater.RepeatTests;
@@ -32,7 +33,7 @@ public class JandexAppDefaultAppMgrDefaultTest extends JandexAppTest {
     private static final Logger LOG = Logger.getLogger(JandexAppDefaultAppMgrDefaultTest.class.getName());
     
     @ClassRule
-    public static RepeatTests r = RepeatTests.with(new JandexV1RepeatAction()).andWith(new JandexV3RepeatAction());
+    public static RepeatTests r = RepeatTests.with(new JandexV1RepeatAction()).andWith(new JandexIndexV12RepeatAction()).andWith(new JandexIndexV13RepeatAction());
 
     public static SharedServer SHARED_SERVER = new SharedServer("annoFat_server", false);
 

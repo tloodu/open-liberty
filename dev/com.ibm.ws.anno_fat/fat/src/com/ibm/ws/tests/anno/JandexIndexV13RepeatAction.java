@@ -12,11 +12,11 @@ package com.ibm.ws.tests.anno;
 
 import componenttest.rules.repeater.EmptyAction;
 
-public class JandexV3RepeatAction extends EmptyAction {
+public class JandexIndexV13RepeatAction extends EmptyAction {
 	
 	@Override
 	public String getID() {
-		return "Jandex_v3.5";
+		return "Jandex_test_switch_13";
 	}
 
 }
