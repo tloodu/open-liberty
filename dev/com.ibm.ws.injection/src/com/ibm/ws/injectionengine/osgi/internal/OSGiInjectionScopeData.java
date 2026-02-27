@@ -58,6 +58,13 @@ public class OSGiInjectionScopeData extends InjectionScopeData implements Deferr
     private static final TraceComponent tc = Tr.register(OSGiInjectionScopeData.class);
 
     /**
+     * Deferred reference data processing results expiration interval in nanoseconds.
+     * Determines how long after deferred reference data processing completes that
+     * threads will attempt a second lookup of java:app and java:module scopes.
+     */
+    private static final long DEFERRED_RESULT_EXPIRATION = TimeUnit.SECONDS.toNanos(30);
+
+    /**
      * The "primary" namespace for this scope data, which corresponds to this
      * scope data's storage location:
      * <ul>
@@ -135,8 +142,8 @@ public class OSGiInjectionScopeData extends InjectionScopeData implements Deferr
     /**
      * The result of {@link #processDeferredReferenceData} for the list of reference contexts
      * that were registered for deferred processing if a non-java:comp request is made. The
-     * result is an expiration (30 seconds after completion; nanoseconds) or Long.MIN_VALUE
-     * if there was no deferred metadata processed.
+     * result is the nanoTime when deferred processing completed or Long.MIN_VALUE if there
+     * was no deferred metadata processed.
      *
      * This field is initialized lazily and cleared if no reference data was processed or
      * 30 seconds after reference data was processed.
@@ -638,7 +645,7 @@ public class OSGiInjectionScopeData extends InjectionScopeData implements Deferr
 
                 // Unblock any concurrent access and clear the future if no longer required.
                 if (deferredReferenceDatasFuture != null) {
-                    deferredReferenceDatasFuture.complete(any ? System.nanoTime() + TimeUnit.SECONDS.toNanos(30) : Long.MIN_VALUE);
+                    deferredReferenceDatasFuture.complete(any ? System.nanoTime() : Long.MIN_VALUE);
 
                     // If there was no deferred reference data processed, no need to keep future.
                     if (!any) {
@@ -655,7 +662,8 @@ public class OSGiInjectionScopeData extends InjectionScopeData implements Deferr
 
                 // Return the result for a reasonable amount of time after processing has
                 // completed (30s); then just remove the future as it is no longer needed.
-                if (result != Long.MIN_VALUE && result > System.nanoTime()) {
+                // Result is true if the future returned a nanoTime other than MIN_VALUE.
+                if (result != Long.MIN_VALUE && System.nanoTime() - result < DEFERRED_RESULT_EXPIRATION) {
                     any = true;
                 } else {
                     synchronized (this) {
