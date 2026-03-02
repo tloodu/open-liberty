@@ -16,7 +16,7 @@ public class JandexV1RepeatAction extends EmptyAction {
 	
 	@Override
 	public String getID() {
-		return "Jandex_v1";
+		return "Jandex_test_switch_1";
 	}
 
 }
