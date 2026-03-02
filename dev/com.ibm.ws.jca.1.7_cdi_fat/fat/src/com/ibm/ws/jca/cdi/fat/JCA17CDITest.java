@@ -1,0 +1,234 @@
+/*******************************************************************************
+ * Copyright (c) 2026 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+package com.ibm.ws.jca.cdi.fat;
+
+import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
+import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.jboss.shrinkwrap.api.spec.ResourceAdapterArchive;
+import org.jboss.shrinkwrap.api.spec.WebArchive;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import com.ibm.websphere.simplicity.ShrinkHelper;
+import com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions;
+
+import componenttest.annotation.ExpectedFFDC;
+import componenttest.annotation.MinimumJavaLevel;
+import componenttest.annotation.Server;
+import componenttest.custom.junit.runner.FATRunner;
+import componenttest.topology.impl.LibertyServer;
+import componenttest.topology.utils.FATServletClient;
+import jakarta.enterprise.inject.spi.Extension;
+import lib.cdi.CDIExtension;
+
+/**
+ * This test class starts a single server and then drops in multiple applications
+ * to verify that each application installs without error.
+ * This tests differe
+ */
+@RunWith(FATRunner.class)
+@MinimumJavaLevel(javaLevel = 11)
+public class JCA17CDITest extends FATServletClient {
+
+    private static final String WEB_MODULE_NAME = "web";
+
+    private static final String BEANS_XML = "test-applications/web/resources/";
+
+    @Server("com.ibm.ws.jca.cdi.fat")
+    public static LibertyServer server;
+
+    @BeforeClass
+    public static void setUp() throws Exception {
+        server.startServer();
+    }
+
+    @AfterClass
+    public static void tearDown() throws Exception {
+        server.stopServer("CWNEN0047W" // Expected warning from test testMissingBundle
+        );
+    }
+
+    private static EnterpriseArchive createEAR(String testName, String... directories) throws Exception {
+        EnterpriseArchive ear = ShrinkWrap.create(EnterpriseArchive.class, testName + ".ear");
+        for (String directory : directories) {
+            ShrinkHelper.addDirectory(ear, directory);
+        }
+        return ear;
+    }
+
+    private static WebArchive createWAR(String... directories) throws Exception {
+        WebArchive war = ShrinkWrap.create(WebArchive.class, WEB_MODULE_NAME + ".war");
+        for (String directory : directories) {
+            ShrinkHelper.addDirectory(war, directory);
+        }
+        return war;
+    }
+
+    /**
+     * Verify that if the RAR bundle is actually missing, we still get an error
+     * in a reasonable amount of time.
+     *
+     * @throws Exception
+     */
+    @Test
+    @ExpectedFFDC({ "java.lang.NoClassDefFoundError",
+                    "org.jboss.weld.resources.spi.ResourceLoadingException" })
+    public void testMissingBundle() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR(BEANS_XML);
+        war.addClass(web.AODServlet.class);
+
+        // Create cdi library
+        JavaArchive jar = ShrinkHelper.buildJavaArchive("cdiextension", "lib.cdi");
+        jar.addAsServiceProvider(Extension.class, CDIExtension.class);
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsLibraries(jar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+    }
+
+    @Test
+    public void testAODResource() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR();
+        war.addClass(web.AODServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("adminobject", "ra.ao");
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+    @Test
+    public void testAODResourceWithCDI() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR(BEANS_XML);
+        war.addClass(web.cdi.AODServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("adminobject", "ra.ao");
+
+        // Create cdi library
+        JavaArchive jar = ShrinkHelper.buildJavaArchive("cdiextension", "lib.cdi");
+        jar.addAsServiceProvider(Extension.class, CDIExtension.class);
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+        ear.addAsLibraries(jar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+    @Test
+    public void testCFDResource() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR();
+        war.addClass(web.CFDServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("connectionfactory", "ra.cf");
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+    @Test
+    public void testCFDResourceWithCDI() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR(BEANS_XML);
+        war.addClass(web.cdi.CFDServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("connectionfactory", "ra.cf");
+
+        // Create cdi library
+        JavaArchive jar = ShrinkHelper.buildJavaArchive("cdiextension", "lib.cdi");
+        jar.addAsServiceProvider(Extension.class, CDIExtension.class);
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+        ear.addAsLibraries(jar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+}
