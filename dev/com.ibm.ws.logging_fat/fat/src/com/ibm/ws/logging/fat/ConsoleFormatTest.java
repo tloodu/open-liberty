@@ -404,16 +404,22 @@ public class ConsoleFormatTest {
         // Start the server with the server.env file configured with the consoleFormat=simple
         serverEnv.startServer();
 
-        // Retrieve the consoleLogFile RemoteFile
-        RemoteFile consoleLogFile = serverEnv.getConsoleLogFile();
+        try {
+            // Retrieve the consoleLogFile RemoteFile
+            RemoteFile consoleLogFile = serverEnv.getConsoleLogFile();
 
-        // Verify if the console logging format is not in the default dev format, and is in the simple format
-        List<String> lines = serverEnv.findStringsInLogs(SIMPLE_FORMAT_REGEX_PATTERN, consoleLogFile);
-        assertTrue("The console log is not in simple format.", lines.size() > 0);
+            // Verify if the console logging format is not in the default dev format, and is in the simple format
+            List<String> lines = serverEnv.findStringsInLogs(SIMPLE_FORMAT_REGEX_PATTERN, consoleLogFile);
+            assertTrue("The console log is not in simple format.", lines.size() > 0);
 
-        // Stop the serverEnv
-        if (serverEnv != null && serverEnv.isStarted()) {
-            serverEnv.stopServer(EXPECTED_FAILURES);
+        } finally {
+            // Stop the serverEnv here, to ensure proper clean up when failures occur.
+            if (serverEnv != null && serverEnv.isStarted()) {
+                serverEnv.stopServer(EXPECTED_FAILURES);
+            }
+
+            // Start the default server, to ensure other tests are run correctly.
+            restoreServer();
         }
     }
 
