@@ -17,6 +17,8 @@ src: \
 	fat/src,\
 	test-resourceadapters/adminobject/src,\
 	test-resourceadapters/connectionfactory/src,\
+	test-resourceadapters/jmsconnectionfactory/src,\
+	test-resourceadapters/jmsdestination/src,\
 	test-applications/web/src,\
 	test-libraries/cdiextension/src
 

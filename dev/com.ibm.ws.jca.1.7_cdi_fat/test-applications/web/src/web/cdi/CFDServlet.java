@@ -37,6 +37,9 @@ public class CFDServlet extends FATServlet {
     DummyService service;
 
     public void testCFDResourceWithCDI() throws Exception {
+        assertNotNull(dummy);
+        assertEquals("DUMMY_NAME", dummy.getMetaData().getAdapterName());
+
         assertNotNull(service);
         assertEquals("DUMMY_MESSAGE", service.message());
     }

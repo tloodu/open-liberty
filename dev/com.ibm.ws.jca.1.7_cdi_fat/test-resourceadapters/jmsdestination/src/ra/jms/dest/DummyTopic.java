@@ -10,21 +10,17 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-package web;
+package ra.jms.dest;
 
-import static org.junit.Assert.assertTrue;
+import jakarta.jms.JMSException;
+import jakarta.jms.Topic;
+import jakarta.resource.spi.AdministeredObject;
 
-import componenttest.app.FATServlet;
-import jakarta.servlet.annotation.WebServlet;
+@AdministeredObject
+public class DummyTopic implements Topic {
 
-@WebServlet("/*")
-public class TestServlet extends FATServlet {
-
-    private static final long serialVersionUID = 1L;
-
-    public void testDropin() {
-        System.out.println("KJA1017 called");
-        assertTrue(true);
+    @Override
+    public String getTopicName() throws JMSException {
+        return "DUMMY_TOPIC";
     }
-
 }

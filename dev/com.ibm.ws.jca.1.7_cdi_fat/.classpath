@@ -11,5 +11,7 @@
 	<classpathentry kind="src" path="test-resourceadapters/connectionfactory/src"/>
 	<classpathentry kind="src" path="test-libraries/cdiextension/src"/>
 	<classpathentry kind="src" path="test-applications/web/src"/>
+	<classpathentry kind="src" path="test-resourceadapters/jmsconnectionfactory/src"/>
+	<classpathentry kind="src" path="test-resourceadapters/jmsdestination/src"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

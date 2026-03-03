@@ -37,7 +37,10 @@ import lib.cdi.CDIExtension;
 /**
  * This test class starts a single server and then drops in multiple applications
  * to verify that each application installs without error.
- * This tests differe
+ *
+ * This tests different scenarios using Connector and JMS resource definitions with
+ * and without CDI to verify that the startup sequence can always find the
+ * resource adapter bundle.
  */
 @RunWith(FATRunner.class)
 @MinimumJavaLevel(javaLevel = 11)
@@ -52,7 +55,7 @@ public class JCA17CDITest extends FATServletClient {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        server.startServer();
+        server.startServer("JCA17CDITest");
     }
 
     @AfterClass
@@ -80,8 +83,6 @@ public class JCA17CDITest extends FATServletClient {
     /**
      * Verify that if the RAR bundle is actually missing, we still get an error
      * in a reasonable amount of time.
-     *
-     * @throws Exception
      */
     @Test
     @ExpectedFFDC({ "java.lang.NoClassDefFoundError",
@@ -109,6 +110,10 @@ public class JCA17CDITest extends FATServletClient {
         }
     }
 
+    /**
+     * Test @AdministeredObjectDefinition resource is available on install.
+     * Without CDI Bean discovery.
+     */
     @Test
     public void testAODResource() throws Exception {
         // Create web archive
@@ -137,6 +142,10 @@ public class JCA17CDITest extends FATServletClient {
         server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
     }
 
+    /**
+     * Test @AdministeredObjectDefinition resource is available on install.
+     * With CDI Bean discovery.
+     */
     @Test
     public void testAODResourceWithCDI() throws Exception {
         // Create web archive
@@ -170,6 +179,10 @@ public class JCA17CDITest extends FATServletClient {
         server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
     }
 
+    /**
+     * Test @ConnectionFactoryDefinition resource is available on install.
+     * Without CDI Bean discovery.
+     */
     @Test
     public void testCFDResource() throws Exception {
         // Create web archive
@@ -198,6 +211,10 @@ public class JCA17CDITest extends FATServletClient {
         server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
     }
 
+    /**
+     * Test @ConnectionFactoryDefinition resource is available on install.
+     * With CDI Bean discovery.
+     */
     @Test
     public void testCFDResourceWithCDI() throws Exception {
         // Create web archive
@@ -231,4 +248,143 @@ public class JCA17CDITest extends FATServletClient {
         server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
     }
 
+    /**
+     * Test @JMSConnectionFactoryDefinition resource is available on install.
+     * Without CDI Bean discovery.
+     */
+    @Test
+    public void testJMSCFDResource() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR();
+        war.addClass(web.JMSCFDServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("jmsconnectionfactory", "ra.jms.cf");
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+    /**
+     * Test @JMSConnectionFactoryDefinition resource is available on install.
+     * with CDI Bean discovery.
+     */
+    @Test
+    public void testJMSCFDResourceWithCDI() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR(BEANS_XML);
+        war.addClass(web.cdi.JMSCFDServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("jmsconnectionfactory", "ra.jms.cf");
+
+        // Create cdi library
+        JavaArchive jar = ShrinkHelper.buildJavaArchive("cdiextension", "lib.cdi");
+        jar.addAsServiceProvider(Extension.class, CDIExtension.class);
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+        ear.addAsLibrary(jar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+    /**
+     * Test @JMSDestinationDefinition resource is available on install.
+     * Without CDI Bean discovery.
+     */
+    //FIXME
+    @Test
+    public void testJMSDDResource() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR();
+        war.addClass(web.JMSDDServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("jmsdestination", "ra.jms.dest");
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
+
+    /**
+     * Test @JMSDestinationDefinition resource is available on install.
+     * with CDI Bean discovery.
+     */
+    //FIXME
+    @Test
+    public void testJMSDDResourceWithCDI() throws Exception {
+        // Create web archive
+        WebArchive war = createWAR();
+        war.addClass(web.cdi.JMSDDServlet.class);
+
+        // Create embedded resource adapter
+        ResourceAdapterArchive rar = ShrinkHelper.buildDefaultRar("jmsdestination", "ra.jms.dest");
+
+        // Create cdi library
+        JavaArchive jar = ShrinkHelper.buildJavaArchive("cdiextension", "lib.cdi");
+        jar.addAsServiceProvider(Extension.class, CDIExtension.class);
+
+        EnterpriseArchive ear = createEAR(getTestMethodSimpleName());
+        ear.addAsModule(war);
+        ear.addAsModule(rar);
+        ear.addAsLibrary(jar);
+
+        try {
+            server.setMarkToEndOfLog();
+            ShrinkHelper.exportDropinAppToServer(server, ear, DeployOptions.DISABLE_VALIDATION);
+            server.waitForStringInLogUsingMark("CWWKZ0001I:.*" + getTestMethodSimpleName());
+
+            runTest(server, WEB_MODULE_NAME, getTestMethodSimpleName());
+        } finally {
+            server.setMarkToEndOfLog();
+            server.deleteAllDropinApplications();
+        }
+
+        // Only wait if we are not throwing an exception
+        server.waitForStringInLogUsingMark("CWWKZ0009I:.*" + getTestMethodSimpleName());
+    }
 }

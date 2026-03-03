@@ -18,31 +18,31 @@ import static org.junit.Assert.assertNotNull;
 import componenttest.app.FATServlet;
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
-import jakarta.resource.AdministeredObjectDefinition;
+import jakarta.jms.JMSDestinationDefinition;
+import jakarta.jms.Topic;
 import jakarta.servlet.annotation.WebServlet;
 import lib.cdi.DummyService;
-import ra.ao.DummyInterface;
 
-@AdministeredObjectDefinition(name = "java:comp/env/jca/dummyaod",
-                              description = "Test Administered Object",
-                              resourceAdapter = "#adminobject",
-                              className = "ra.ao.DummyImpl",
-                              interfaceName = "ra.ao.DummyInterface",
-                              properties = { "message=DUMMY_MESSAGE" })
+@JMSDestinationDefinition(name = "java:comp/env/jms/dummydd",
+                          description = "Test JMS Destination",
+                          resourceAdapter = "testJMSDDResourceWithCDI.jmsdestination",
+                          interfaceName = "jakarta.jms.Topic",
+                          destinationName = "DUMMY_DESTINATION")
 @WebServlet("/*")
-public class AODServlet extends FATServlet {
+public class JMSDDServlet extends FATServlet {
 
-    @Resource(name = "jca/dummyaodRef", lookup = "java:comp/env/jca/dummyaod")
-    DummyInterface dummy;
+    @Resource(name = "jms/dummyddRef", lookup = "java:comp/env/jms/dummydd")
+    Topic dummy;
 
     @Inject
     DummyService service;
 
-    public void testAODResourceWithCDI() throws Exception {
+    public void testJMSDDResourceWithCDI() throws Exception {
         assertNotNull(dummy);
-        assertEquals("DUMMY_MESSAGE", dummy.message());
+        assertEquals("DUMMY_TOPIC", dummy.getTopicName());
 
         assertNotNull(service);
         assertEquals("DUMMY_MESSAGE", service.message());
     }
+
 }

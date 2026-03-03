@@ -14,33 +14,33 @@ package web.cdi;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import componenttest.app.FATServlet;
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
-import jakarta.resource.AdministeredObjectDefinition;
+import jakarta.jms.ConnectionFactory;
+import jakarta.jms.JMSConnectionFactoryDefinition;
 import jakarta.servlet.annotation.WebServlet;
 import lib.cdi.DummyService;
-import ra.ao.DummyInterface;
+import ra.jms.cf.DummyJMSConnectionFactoryImpl;
 
-@AdministeredObjectDefinition(name = "java:comp/env/jca/dummyaod",
-                              description = "Test Administered Object",
-                              resourceAdapter = "#adminobject",
-                              className = "ra.ao.DummyImpl",
-                              interfaceName = "ra.ao.DummyInterface",
-                              properties = { "message=DUMMY_MESSAGE" })
+@JMSConnectionFactoryDefinition(name = "java:comp/env/jms/dummycfd",
+                                description = "Test JMS Connection Factory",
+                                resourceAdapter = "testJMSCFDResourceWithCDI.jmsconnectionfactory",
+                                interfaceName = "jakarta.jms.ConnectionFactory")
 @WebServlet("/*")
-public class AODServlet extends FATServlet {
+public class JMSCFDServlet extends FATServlet {
 
-    @Resource(name = "jca/dummyaodRef", lookup = "java:comp/env/jca/dummyaod")
-    DummyInterface dummy;
+    @Resource(name = "jms/dummycfdRef", lookup = "java:comp/env/jms/dummycfd")
+    ConnectionFactory dummy;
 
     @Inject
     DummyService service;
 
-    public void testAODResourceWithCDI() throws Exception {
+    public void testJMSCFDResourceWithCDI() throws Exception {
         assertNotNull(dummy);
-        assertEquals("DUMMY_MESSAGE", dummy.message());
+        assertTrue(dummy instanceof DummyJMSConnectionFactoryImpl);
 
         assertNotNull(service);
         assertEquals("DUMMY_MESSAGE", service.message());
