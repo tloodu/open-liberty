@@ -1,14 +1,11 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2025 IBM Corporation and others.
+ * Copyright (c) 2006, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
  *
  * SPDX-License-Identifier: EPL-2.0
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package com.ibm.ws.ejbcontainer.injection.fat.tests;
 
@@ -33,6 +30,7 @@ import com.ibm.websphere.simplicity.config.ServerConfiguration;
 import com.ibm.websphere.simplicity.config.ServerConfigurationFactory;
 import com.ibm.ws.ejbcontainer.injection.fat.tests.repeataction.RepeatWithCDI;
 import com.ibm.ws.ejbcontainer.injection.fat.tests.repeataction.RepeatWithEE10CDI;
+import com.ibm.ws.ejbcontainer.injection.fat.tests.repeataction.RepeatWithEE11CDI;
 import com.ibm.ws.ejbcontainer.injection.fat.tests.repeataction.RepeatWithEE9CDI;
 import com.ibm.ws.ejbcontainer.injection.mix.web.AdvSFEnvInjectionServlet;
 import com.ibm.ws.ejbcontainer.injection.mix.web.AdvSFRemoteEnvInjectionServlet;
@@ -73,8 +71,33 @@ public class InjectionMIXTest {
                     @TestServlet(servlet = SuperEnvInjectionServlet.class, contextRoot = "EJB3INJSMWeb") })
     public static LibertyServer server;
 
+    /*@formatter:off*/
     @ClassRule
-    public static RepeatTests r = RepeatTests.with(FeatureReplacementAction.EE7_FEATURES().fullFATOnly().forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer")).andWith(FeatureReplacementAction.EE8_FEATURES().forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer")).andWith(RepeatWithCDI.WithRepeatWithCDI().forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer")).andWith(FeatureReplacementAction.EE9_FEATURES().conditionalFullFATOnly(FeatureReplacementAction.GREATER_THAN_OR_EQUAL_JAVA_11).forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer")).andWith(RepeatWithEE9CDI.EE9CDI_FEATURES().fullFATOnly().forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer")).andWith(FeatureReplacementAction.EE10_FEATURES().forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer")).andWith(RepeatWithEE10CDI.EE10CDI_FEATURES().fullFATOnly().forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"));
+    public static RepeatTests r = RepeatTests.with(FeatureReplacementAction.EE7_FEATURES()
+                                                   .fullFATOnly()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(FeatureReplacementAction.EE8_FEATURES()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(RepeatWithCDI.WithRepeatWithCDI()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(FeatureReplacementAction.EE9_FEATURES()
+                                                   .conditionalFullFATOnly(FeatureReplacementAction.GREATER_THAN_OR_EQUAL_JAVA_11)
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(RepeatWithEE9CDI.EE9CDI_FEATURES()
+                                                   .fullFATOnly()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(FeatureReplacementAction.EE10_FEATURES()
+                                                   .conditionalFullFATOnly(FeatureReplacementAction.GREATER_THAN_OR_EQUAL_JAVA_17)
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(RepeatWithEE10CDI.EE10CDI_FEATURES()
+                                                   .fullFATOnly()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(FeatureReplacementAction.EE11_FEATURES()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"))
+                                   .andWith(RepeatWithEE11CDI.EE11CDI_FEATURES()
+                                                   .fullFATOnly()
+                                                   .forServers("ejbcontainer.injection.ra.fat.MsgEndpointServer"));
+    /*@formatter:on*/
 
     @BeforeClass
     public static void beforeClass() throws Exception {

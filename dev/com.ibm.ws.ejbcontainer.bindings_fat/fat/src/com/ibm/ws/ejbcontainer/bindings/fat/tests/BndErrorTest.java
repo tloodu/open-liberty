@@ -1,14 +1,11 @@
 /*******************************************************************************
- * Copyright (c) 2007, 2024 IBM Corporation and others.
+ * Copyright (c) 2007, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
  *
  * SPDX-License-Identifier: EPL-2.0
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package com.ibm.ws.ejbcontainer.bindings.fat.tests;
 
@@ -29,6 +26,7 @@ import org.junit.runner.RunWith;
 import com.ibm.websphere.simplicity.ShrinkHelper;
 import com.ibm.ws.ejbcontainer.bindings.fat.tests.repeataction.EjbOnError;
 import com.ibm.ws.ejbcontainer.bindings.fat.tests.repeataction.RepeatOnErrorEE10;
+import com.ibm.ws.ejbcontainer.bindings.fat.tests.repeataction.RepeatOnErrorEE11;
 import com.ibm.ws.ejbcontainer.bindings.fat.tests.repeataction.RepeatOnErrorEE8;
 import com.ibm.ws.ejbcontainer.bindings.fat.tests.repeataction.RepeatOnErrorEE9;
 
@@ -59,8 +57,31 @@ public class BndErrorTest extends AbstractTest {
     @Server("com.ibm.ws.ejbcontainer.bindings.fat.server.err")
     public static LibertyServer server;
 
+    /*@formatter:off*/
     @ClassRule
-    public static RepeatTests r = RepeatTests.with(new RepeatOnErrorEE8(EjbOnError.WARN).forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err")).andWith(new RepeatOnErrorEE8(EjbOnError.FAIL).forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err")).andWith(new RepeatOnErrorEE9(EjbOnError.WARN).fullFATOnly().forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err")).andWith(new RepeatOnErrorEE9(EjbOnError.FAIL).fullFATOnly().forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err")).andWith(new RepeatOnErrorEE10(EjbOnError.WARN).fullFATOnly().forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err")).andWith(new RepeatOnErrorEE10(EjbOnError.FAIL).fullFATOnly().forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"));
+    public static RepeatTests r = RepeatTests.with(new RepeatOnErrorEE8(EjbOnError.WARN)
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE8(EjbOnError.FAIL)
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE9(EjbOnError.WARN)
+                                                   .fullFATOnly()
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE9(EjbOnError.FAIL)
+                                                   .fullFATOnly()
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE10(EjbOnError.WARN)
+                                                   .fullFATOnly()
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE10(EjbOnError.FAIL)
+                                                   .fullFATOnly()
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE11(EjbOnError.WARN)
+                                                   .fullFATOnly()
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"))
+                                   .andWith(new RepeatOnErrorEE11(EjbOnError.FAIL)
+                                                   .fullFATOnly()
+                                                   .forServers("com.ibm.ws.ejbcontainer.bindings.fat.server.err"));
+    /*@formatter:on*/
 
     @BeforeClass
     public static void setUp() throws Exception {
