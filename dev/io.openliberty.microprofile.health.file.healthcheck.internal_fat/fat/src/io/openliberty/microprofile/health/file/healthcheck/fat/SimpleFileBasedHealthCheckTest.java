@@ -109,28 +109,32 @@ public class SimpleFileBasedHealthCheckTest {
      * For tests checking for the ready and live file, check periodically instead of waiting for whole 10s.
      */
     public void waitForModifiedTimestamp(File serverRootDirFile) throws Exception {
-        long readyFileModifiedTimestamp = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
-        long liveFileModifiedTimestamp = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getLiveFile(serverRootDirFile));
+        File readyFile = HealthFileUtils.getReadyFile(serverRootDirFile);
+        File liveFile = HealthFileUtils.getLiveFile(serverRootDirFile);
 
+        long readyFileModifiedTimestamp = HealthFileUtils.getLastModifiedTime(readyFile);
+        long liveFileModifiedTimestamp = HealthFileUtils.getLastModifiedTime(liveFile);
         long deadlineTime = System.currentTimeMillis() + 10000;
 
         boolean readyFileUpdated = false;
         boolean liveFileUpdated = false;
 
-        while ((readyFileUpdated == false || liveFileUpdated == false) && System.currentTimeMillis() < deadlineTime) {
-            long newUpdatedReadyFileTimestamp = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
-            long newUpdatedLiveFileTimestamp = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getLiveFile(serverRootDirFile));
+        while (System.currentTimeMillis() < deadlineTime) {
+            long newUpdatedReadyFileTimestamp = HealthFileUtils.getLastModifiedTime(readyFile);
+            long newUpdatedLiveFileTimestamp = HealthFileUtils.getLastModifiedTime(liveFile);
 
-            if (liveFileUpdated == false && newUpdatedLiveFileTimestamp > liveFileModifiedTimestamp) {
+            if (!liveFileUpdated && newUpdatedLiveFileTimestamp > liveFileModifiedTimestamp) {
                 liveFileModifiedTimestamp = newUpdatedLiveFileTimestamp;
                 liveFileUpdated = true;
             }
-            if (readyFileUpdated == false && newUpdatedReadyFileTimestamp > readyFileModifiedTimestamp) {
+            if (!readyFileUpdated && newUpdatedReadyFileTimestamp > readyFileModifiedTimestamp) {
                 readyFileModifiedTimestamp = newUpdatedReadyFileTimestamp;
                 readyFileUpdated = true;
             }
 
-            TimeUnit.MILLISECONDS.sleep(250);
+            if (readyFileUpdated && liveFileUpdated) return;            
+
+            TimeUnit.MILLISECONDS.sleep(100);
         }
     }
 
