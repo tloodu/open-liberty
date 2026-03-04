@@ -11,6 +11,8 @@ package com.ibm.ws.resource;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -23,27 +25,37 @@ import com.ibm.wsspi.resource.ResourceInfo;
  * A convenience class that integrates a ResourceFactory and SynchronousBundleListener when
  * the resource factory requires that a specific bundle be available at runtime.
  */
-public abstract class AbstractWaitForBundleResourceFactory implements SynchronousBundleListener, ResourceFactory {
+public class WaitForBundleResourceFactory implements SynchronousBundleListener, ResourceFactory {
 
     private final BundleContext bundleContext;
     private final String targetBundleLocation;
     private final int requiredStateMask;
 
+    private final Function<Bundle, ResourceFactory> constructor;
+    private final Supplier<? extends RuntimeException> notReadyException;
+
     private final AtomicReference<ResourceFactory> delegate = new AtomicReference<>();
     private final AtomicReference<Exception> createException = new AtomicReference<>();
 
-    protected AbstractWaitForBundleResourceFactory(BundleContext bundleContext, String targetBundleLocation) {
-        this(bundleContext, targetBundleLocation, Bundle.STARTING | Bundle.ACTIVE);
+    public WaitForBundleResourceFactory(BundleContext bundleContext, String targetBundleLocation,
+                                        Function<Bundle, ResourceFactory> constructor,
+                                        Supplier<? extends RuntimeException> notReadyException) {
+        this(bundleContext, targetBundleLocation, constructor, notReadyException, Bundle.STARTING | Bundle.ACTIVE);
     }
 
-    protected AbstractWaitForBundleResourceFactory(BundleContext bundleContext,
-                                                   String targetBundleLocation,
-                                                   int requiredStateMask) {
+    public WaitForBundleResourceFactory(BundleContext bundleContext,
+                                        String targetBundleLocation,
+                                        Function<Bundle, ResourceFactory> constructor,
+                                        Supplier<? extends RuntimeException> notReadyException,
+                                        int requiredStateMask) {
         this.bundleContext = bundleContext;
         this.targetBundleLocation = targetBundleLocation;
+        this.constructor = constructor;
+        this.notReadyException = notReadyException;
         this.requiredStateMask = requiredStateMask;
     }
 
+    // TODO clean up bundle listener
     public final void listenForBundle() {
         bundleContext.addBundleListener(this);
 
@@ -72,7 +84,7 @@ public abstract class AbstractWaitForBundleResourceFactory implements Synchronou
             }
 
             try {
-                ResourceFactory rf = createDelegate(b);
+                ResourceFactory rf = constructor.apply(b);
                 return rf;
             } catch (Exception ex) {
                 createException.compareAndSet(null, ex);
@@ -85,19 +97,8 @@ public abstract class AbstractWaitForBundleResourceFactory implements Synchronou
         });
     }
 
-    protected boolean matchesTargetBundle(Bundle b) {
+    private boolean matchesTargetBundle(Bundle b) {
         return targetBundleLocation.equals(b.getLocation());
-    }
-
-    protected final String getTargetBundleLocation() {
-        return targetBundleLocation;
-    }
-
-    protected abstract ResourceFactory createDelegate(Bundle b) throws Exception;
-
-    protected RuntimeException notReadyException() {
-        return new IllegalStateException("ResourceFactory not ready; bundle not available/active: "
-                                         + targetBundleLocation);
     }
 
     private void cleanupListener() {
@@ -108,7 +109,7 @@ public abstract class AbstractWaitForBundleResourceFactory implements Synchronou
         }
     }
 
-    protected final ResourceFactory getDelegate() throws Exception {
+    private final ResourceFactory getDelegate() throws Exception {
         ResourceFactory rf = delegate.get();
         if (rf != null) {
             return rf;
@@ -117,7 +118,7 @@ public abstract class AbstractWaitForBundleResourceFactory implements Synchronou
         if (ex != null) {
             throw ex;
         }
-        throw notReadyException();
+        throw notReadyException.get();
     }
 
     @Override
