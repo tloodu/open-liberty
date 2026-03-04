@@ -479,43 +479,6 @@ public class NettyResponseMessage extends NettyBaseMessage implements HttpRespon
         throw new UnsupportedOperationException("duplicate() not supported in Netty context");
     }
 
-    /**
-     * Read an instance of this object from the input stream.
-     *
-     * @param input
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    @Override
-    public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(tc, "De-serializing into: " + this);
-        }
-        super.readExternal(input);
-        if (SERIALIZATION_V2 == deserializationVersion) {
-            setStatusCode(input.readShort());
-        } else {
-            setStatusCode(input.readInt());
-        }
-        setReasonPhrase(readByteArray(input));
-    }
-
-    /**
-     * Write this object instance to the output stream.
-     *
-     * @param output
-     * @throws IOException
-     */
-    @Override
-    public void writeExternal(ObjectOutput output) throws IOException {
-        if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-            Tr.event(tc, "Serializing: " + this);
-        }
-        super.writeExternal(output);
-        output.writeShort(getStatusCodeAsInt());
-        writeByteArray(output, this.getReasonPhraseBytes());
-    }
-
     public HttpResponse getResponse() {
         return nettyResponse;
     }

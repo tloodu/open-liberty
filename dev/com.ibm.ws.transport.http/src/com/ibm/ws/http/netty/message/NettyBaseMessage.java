@@ -11,7 +11,6 @@ package com.ibm.ws.http.netty.message;
 
 import static com.ibm.ws.http.netty.message.NettyBaseMessage.MessageType.REQUEST;
 
-import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -66,7 +65,7 @@ import io.openliberty.http.netty.cookie.CookieEncoder;
 /**
  *
  */
-public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
+public class NettyBaseMessage implements HttpBaseMessage {
 
     private static final TraceComponent tc = Tr.register(NettyBaseMessage.class, HttpMessages.HTTP_TRACE_NAME, HttpMessages.HTTP_BUNDLE);
 
@@ -131,96 +130,6 @@ public class NettyBaseMessage implements HttpBaseMessage, Externalizable {
 
     public MessageType setMessageType(MessageType messageType){
         return this.messageType = messageType;
-    }
-
-    @Override
-    public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
-        // recreate the local header storage
-        int len = input.readInt();
-        if (SERIALIZATION_V2 == len) {
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Deserializing a V2 object");
-            }
-            this.deserializationVersion = SERIALIZATION_V2;
-            len = input.readInt();
-        }
-        this.headersMap = new HashMap<>();
-
-        // now read all of the headers
-        int number = input.readInt();
-        if (SERIALIZATION_V2 == this.deserializationVersion) {
-            // this is the new format
-            for (int i = 0; i < number; i++) {
-                appendHeader(readByteArray(input), readByteArray(input));
-            }
-        } else {
-            // this is the old format
-            for (int i = 0; i < number; i++) {
-                appendHeader((String) input.readObject(), (String) input.readObject());
-            }
-        }
-        // BNFHeaders reading of the headers will trigger all the parsed/temp
-        // values at this layer
-        try {
-            if (SERIALIZATION_V2 == this.deserializationVersion) {
-                setVersion(readByteArray(input));
-            } else {
-                setVersion((String) input.readObject());
-            }
-        } catch (UnsupportedProtocolVersionException exc) {
-            // no FFDC required
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Unknown HTTP version");
-            }
-            // malformed version, can't make an "undefined" version
-            IOException ioe = new IOException("Failed deserialization of version");
-            ioe.initCause(exc);
-            throw ioe;
-        }
-        // V2 uses a boolean, while V1 used a byte... SHOULD be the same, but...
-        boolean isTrailer = (SERIALIZATION_V2 == this.deserializationVersion) ? input.readBoolean() : (1 == input.readByte());
-        if (isTrailer) {
-            //TODO update with Netty Trailers
-
-        }
-    }
-
-    /*
-     * @see
-     * com.ibm.ws.genericbnf.internal.GenericMessageImpl#writeExternal(java.io
-     * .ObjectOutput)
-     */
-    @Override
-    public void writeExternal(ObjectOutput output) throws IOException {
-
-        // convert any temporary Cookies into header storage
-        marshallCookieCache(cookieCacheMap.get(HttpHeaderKeys.HDR_COOKIE));
-        marshallCookieCache(cookieCacheMap.get(HttpHeaderKeys.HDR_COOKIE2));
-        marshallCookieCache(cookieCacheMap.get(HttpHeaderKeys.HDR_SET_COOKIE));
-        marshallCookieCache(cookieCacheMap.get(HttpHeaderKeys.HDR_SET_COOKIE2));
-
-        output.writeInt(SERIALIZATION_V2);
-        output.writeInt(this.headersMap.size());
-        output.writeInt(this.headersMap.size());
-
-        for (Map.Entry<String, String> entry : headersMap.entrySet()) {
-            writeByteArray(output, entry.getKey().getBytes());
-            writeByteArray(output, entry.getValue().getBytes());
-        }
-
-        writeByteArray(output, getVersionValue().getByteArray());
-    }
-
-    protected byte[] readByteArray(ObjectInput input) throws IOException {
-        int length = input.readInt();
-        byte[] data = new byte[length];
-        input.readFully(data);
-        return data;
-    }
-
-    protected void writeByteArray(ObjectOutput output, byte[] data) throws IOException {
-        output.writeInt(data.length);
-        output.write(data);
     }
 
     @Override
