@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024, 2026 IBM Corporation and others.
+ * Copyright (c) 2024, 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import jakarta.security.jacc.Policy;
 import jakarta.security.jacc.PolicyFactory;
 
-public class PolicyFactoryImpl extends PolicyFactory {
+public class JaccPolicyProxyFactory extends PolicyFactory {
 
     private final Map<String, Policy> policyMap = new ConcurrentHashMap<>();
 
@@ -28,7 +28,7 @@ public class PolicyFactoryImpl extends PolicyFactory {
         Policy policy = policyMap.get(contextId);
         if (policy == null) {
             // get policy and set it in the map
-            policy = new PolicyImpl(contextId);
+            policy = new JaccPolicyProxy(contextId);
             policyMap.put(contextId, policy);
         }
 

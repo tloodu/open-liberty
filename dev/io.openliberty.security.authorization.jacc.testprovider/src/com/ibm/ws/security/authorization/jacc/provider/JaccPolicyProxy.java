@@ -35,32 +35,6 @@ public class JaccPolicyProxy implements Policy {
     private static final TraceComponent tc = Tr.register(JaccPolicyProxy.class);
     private final String contextID;
 
-    static {
-        /**
-         * Force a pre-load of all these classes before JaccPolicyProxy
-         * gets set as the system policy. This is required to prevent a
-         * circular load dependency problem where the policy gets set
-         * and JaccPolicyProxy.implies is called to see if something is
-         * permitted.
-         *
-         * The circular flow is:
-         * 1. JaccPolicyProxy.implies is called.
-         * 2. JaccPolicyProxy.implies requires WebUserDataPermission.
-         * 3. Need to load WebUserDataPermission, which needs to access the
-         * file system (to load the JAR).
-         * 4. Check if we have permission to access the file system, which
-         * goes through JaccPolicyProxy.implies.
-         * 5. GOTO #1.
-         */
-        Class<?> c;
-        c = WebResourcePermission.class;
-        c = WebUserDataPermission.class;
-        c = WebRoleRefPermission.class;
-        c = EJBRoleRefPermission.class;
-        c = EJBMethodPermission.class;
-        c.getName(); // Use c to prevent compile warnings
-    }
-
     public JaccPolicyProxy(String contextId) {
         this.contextID = contextId;
     }
