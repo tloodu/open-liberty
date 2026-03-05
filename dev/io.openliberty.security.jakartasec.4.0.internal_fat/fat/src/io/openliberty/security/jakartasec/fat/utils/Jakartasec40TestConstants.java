@@ -18,6 +18,7 @@ public class Jakartasec40TestConstants {
      * Identity Store
      */
 
+    public static final String WEB_APP_SECURITY_CONFIGURATION_UPDATED = "CWWKS9112A";
     public static final String SERVER_CONFIG_UPDATE_MESSAGES_REGEX = "CWWKG0017I.*|CWWKG0018I.*"; // CWWKG0017I: successfully updated, CWWKG0018I: not updated
 
     // Expected messages

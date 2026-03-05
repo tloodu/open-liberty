@@ -12,13 +12,16 @@
  *******************************************************************************/
 package io.openliberty.security.jakartasec.fat.tests;
 
+import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.INVALID_PASSWORD;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.PRODUCTION_USE_WARNING_MSG;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.SERVER_CONFIG_UPDATE_MESSAGES_REGEX;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.USER_JASMINE;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.USER_THEO;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.VALID_PASSWORD;
+import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.WEB_APP_SECURITY_CONFIGURATION_UPDATED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
@@ -40,6 +43,8 @@ import componenttest.custom.junit.runner.FATRunner;
 import componenttest.custom.junit.runner.Mode;
 import componenttest.custom.junit.runner.Mode.TestMode;
 import componenttest.topology.impl.LibertyServer;
+import inmemory.identity.store.InMemoryIdentityStoreApplication;
+import inmemory.identity.store.InMemoryIdentityStoreProtectedResource;
 
 /**
  * Tests for InMemoryIdentityStore enabling element on server configuration.
@@ -89,7 +94,7 @@ public class InMemoryIdentityStoreEnablementTests extends BaseJakartaSecurity40T
 
         // Create the web application
         WebArchive app = ShrinkWrap.create(WebArchive.class,
-                                           APP_NAME + ".war").addPackage("inmemory.identity.store").addAsWebInfResource(new File("test-applications/inmemory/WEB-INF/web.xml"));
+                                           APP_NAME + ".war").addClass(InMemoryIdentityStoreApplication.class).addClass(InMemoryIdentityStoreProtectedResource.class).addAsWebInfResource(new File("test-applications/inmemory/WEB-INF/web.xml"));
 
         ShrinkHelper.exportDropinAppToServer(server, app, DeployOptions.SERVER_ONLY);
 
@@ -127,15 +132,29 @@ public class InMemoryIdentityStoreEnablementTests extends BaseJakartaSecurity40T
      * when the use of this store is not enabled via server XML configuration.
      * A custom server configuration is used with no such element specified (defaulted to false if missing)
      */
-    //@Test
+    @Test
     public void testInMemStoreNotAllowedIfElementIsAbsent() throws Exception {
         logInfo("testInMemStoreNotAllowedIfElementIsAbsent", "Testing that in-mem identity store is not allowed when element is missing");
 
-        // Replace the server configuration file with the test case
+        //1. Test with the existing server xml that allows the custom in-mem id store
+        executeGetRequest(url, USER_JASMINE, INVALID_PASSWORD, 401);
+
+        //2. Replace the server configuration file with the test case
         updateServerConfiguration(SERVER_XML_ID_STORE_MISSING_ELEMENT);
 
-        // Should get 401 since in-memory id-store is not involved in authentication
-        executeGetRequest(url, USER_THEO, VALID_PASSWORD, 401);
+        //2i. Check and confirm that the element has now changed to false (defaulted if missing)
+        String logContent = waitForStringInLog(WEB_APP_SECURITY_CONFIGURATION_UPDATED, 2000);
+
+        if (logContent != null) {
+            assertTrue("The following properties were modified: allowInMemoryIdentityStores=false",
+                       logContent.contains(WEB_APP_SECURITY_CONFIGURATION_UPDATED));
+        }
+
+        //3. Restart the application with the new server configuration
+        server.restartDropinsApplication(APP_NAME + ".war");
+
+        //4. Should get 403 since in-memory id-store is not involved in authentication
+        executeGetRequest(url, USER_JASMINE, INVALID_PASSWORD, 403);
 
         logInfo("testInMemStoreNotAllowedIfElementIsAbsent", "Test passed");
     }
@@ -200,7 +219,6 @@ public class InMemoryIdentityStoreEnablementTests extends BaseJakartaSecurity40T
 
     @AfterClass
     public static void tearDown() throws Exception {
-        // Expected warnings and errors during testing
         if (server != null && server.isStarted()) {
             server.stopServer();
         }

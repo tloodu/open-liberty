@@ -32,7 +32,7 @@ import componenttest.topology.impl.LibertyServer;
  */
 public abstract class BaseJakartaSecurity40Test {
 
-    protected static final String SERVER_NAME = "jakartaSec40Server";
+    protected static final String MULTIPLE_HAM_SERVER_NAME = "multipleHAMServer";
     protected static final String IN_MEM_ID_STORE_ENABLED_SERVER_NAME = "inMemIdStoreEnabledServer";
 
     protected static final String CONFIG_SERVER_NAME = "jakartaSec40ConfigServer";
