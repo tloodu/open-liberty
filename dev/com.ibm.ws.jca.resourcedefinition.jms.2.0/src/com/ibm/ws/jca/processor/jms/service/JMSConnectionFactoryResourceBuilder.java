@@ -1,10 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2019 IBM Corporation and others.
+ * Copyright (c) 2011, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -44,6 +44,7 @@ import com.ibm.ws.jca.cm.ConnectorService;
 import com.ibm.ws.jca.processor.jms.util.JMSResourceDefinitionConstants;
 import com.ibm.ws.jca.processor.jms.util.JMSResourceDefinitionHelper;
 import com.ibm.ws.jca.service.ConnectionFactoryService;
+import com.ibm.ws.resource.AbstractWaitForBundleResourceFactory;
 import com.ibm.ws.resource.ResourceFactory;
 import com.ibm.ws.resource.ResourceFactoryBuilder;
 import com.ibm.wsspi.kernel.service.location.VariableRegistry;
@@ -71,6 +72,8 @@ public class JMSConnectionFactoryResourceBuilder implements ResourceFactoryBuild
      * rather than being programmatically created via ConfigurationAdmin.
      */
     private static final String FILE = "file";
+
+    private static final String BUNDLE_LOCATION = "ConnectorModuleMetatype@ConnectorModule:";
 
     /**
      * Unique identifier attribute name.
@@ -219,9 +222,87 @@ public class JMSConnectionFactoryResourceBuilder implements ResourceFactoryBuild
         connectionFactorySvcProps.put(BOOTSTRAP_CONTEXT, "(id=" + resourceAdapter + ")");
         connectionFactorySvcProps.put(CREATES_OBJECTCLASS, interfaceName);
 
+        Bundle raBundle = JMSResourceDefinitionHelper.getBundle(bundleContext, resourceAdapter);
+        if (raBundle != null) {
+            return createAppDefinedResourceFactory(raBundle, declaringApplication, resourceAdapter, connectionFactoryID, interfaceName, connectionFactorySvcProps, cmSvcProps,
+                                                   annotationDDProps,
+                                                   variableRegistry);
+        } else {
+            // The RA bundle may come later;
+            // Use a factory that waits for the bundle to arrive once the modules are deployed
+            // TODO need an error condition on starting the application if the RA bundle
+            // doesn't arrive after the modules have been provisioned
+            WaitForRABundleResourceFactory resourceFactory = new WaitForRABundleResourceFactory(bundleContext, declaringApplication, resourceAdapter, connectionFactoryID, interfaceName, connectionFactorySvcProps, cmSvcProps, annotationDDProps, variableRegistry);
+            resourceFactory.listenForBundle();
+            return resourceFactory;
+        }
+
+    }
+
+    class WaitForRABundleResourceFactory extends AbstractWaitForBundleResourceFactory {
+        private final String declaringApplication;
+        private final String resourceAdapter;
+        private final String connectionFactoryID;
+        private final String interfaceName;
+        private final Hashtable<String, Object> connectionFactorySvcProps;
+        private final Hashtable<String, Object> cmSvcProps;
+        private final Map<String, Object> annotationDDProps;
+        private final VariableRegistry variableRegistry;
+
+        WaitForRABundleResourceFactory(BundleContext bundleContext,
+                                       String declaringApplication,
+                                       String resourceAdapter,
+                                       String connectionFactoryID,
+                                       String interfaceName,
+                                       Hashtable<String, Object> connectionFactorySvcProps,
+                                       Hashtable<String, Object> cmSvcProps,
+                                       Map<String, Object> annotationDDProps,
+                                       VariableRegistry variableRegistry) {
+
+            super(bundleContext, BUNDLE_LOCATION + resourceAdapter);
+            this.declaringApplication = declaringApplication;
+            this.resourceAdapter = resourceAdapter;
+            this.connectionFactoryID = connectionFactoryID;
+            this.interfaceName = interfaceName;
+            this.connectionFactorySvcProps = connectionFactorySvcProps;
+            this.cmSvcProps = cmSvcProps;
+            this.annotationDDProps = annotationDDProps;
+            this.variableRegistry = variableRegistry;
+        }
+
+        @Override
+        protected ResourceFactory createDelegate(Bundle b) throws Exception {
+            return createAppDefinedResourceFactory(b,
+                                                   declaringApplication,
+                                                   resourceAdapter,
+                                                   connectionFactoryID,
+                                                   interfaceName,
+                                                   connectionFactorySvcProps,
+                                                   cmSvcProps,
+                                                   annotationDDProps,
+                                                   variableRegistry);
+        }
+
+        @Override
+        protected RuntimeException notReadyException() {
+            return new IllegalStateException("RA bundle not ready for resourceAdapter=" + resourceAdapter +
+                                             ", declaringApplication=" + declaringApplication +
+                                             ", location=" + getTargetBundleLocation());
+        }
+    }
+
+    private ResourceFactory createAppDefinedResourceFactory(Bundle raBundle,
+                                                            String declaringApplication,
+                                                            String resourceAdapter,
+                                                            String connectionFactoryID,
+                                                            String interfaceName,
+                                                            Hashtable<String, Object> connectionFactorySvcProps,
+                                                            Hashtable<String, Object> cmSvcProps,
+                                                            Map<String, Object> annotationDDProps,
+                                                            VariableRegistry variableRegistry) throws Exception {
         //Get props with default values only and see if the same is specified by the user in annotation/dd, then use that value otherwise set the default value.
         //Note: Its not necessary for the user to specify the props which has default value, so we set them in here.
-        Dictionary<String, Object> connectionFactoryDefaultProps = getDefaultProperties(resourceAdapter, interfaceName);
+        Dictionary<String, Object> connectionFactoryDefaultProps = getDefaultProperties(raBundle, resourceAdapter, interfaceName);
 
         for (Enumeration<String> keys = connectionFactoryDefaultProps.keys(); keys.hasMoreElements();) {
             String key = keys.nextElement();
@@ -298,7 +379,7 @@ public class JMSConnectionFactoryResourceBuilder implements ResourceFactoryBuild
             throw x;
         }
 
-        if (trace && tc.isEntryEnabled())
+        if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled())
             Tr.exit(tc, "createResourceFactory", factory);
         return factory;
     }
@@ -327,27 +408,23 @@ public class JMSConnectionFactoryResourceBuilder implements ResourceFactoryBuild
      * @throws ConfigEvaluatorException
      * @throws ResourceException
      */
-    private Dictionary<String, Object> getDefaultProperties(String resourceAdapter, String interfaceName) throws ConfigEvaluatorException, ResourceException {
-        Bundle bundle = JMSResourceDefinitionHelper.getBundle(bundleContext, resourceAdapter);
+    private Dictionary<String, Object> getDefaultProperties(Bundle bundle, String resourceAdapter, String interfaceName) throws ConfigEvaluatorException, ResourceException {
+        MetaTypeInformation metaTypeInformation = metaTypeServiceRef.getService().getMetaTypeInformation(bundle);
+        String[] factoryPids = metaTypeInformation.getFactoryPids();
 
-        if (bundle != null) {
+        for (String factoryPid : factoryPids) {
+            ObjectClassDefinition ocd = metaTypeInformation.getObjectClassDefinition(factoryPid, null);
+            ocd.getAttributeDefinitions(0);
 
-            MetaTypeInformation metaTypeInformation = metaTypeServiceRef.getService().getMetaTypeInformation(bundle);
-            String[] factoryPids = metaTypeInformation.getFactoryPids();
-
-            for (String factoryPid : factoryPids) {
-                ObjectClassDefinition ocd = metaTypeInformation.getObjectClassDefinition(factoryPid, null);
-                ocd.getAttributeDefinitions(0);
-
-                Dictionary<String, Object> defaultProps = wsConfigurationHelperRef.getService().getMetaTypeDefaultProperties(factoryPid);
-                if (defaultProps.get(MANAGED_CONNECTION_FACTORY_CLASS) != null) {
-                    for (String createsClass : (String[]) defaultProps.get(CREATES_OBJECTCLASS)) {
-                        if (createsClass.equals(interfaceName))
-                            return defaultProps;
-                    }
+            Dictionary<String, Object> defaultProps = wsConfigurationHelperRef.getService().getMetaTypeDefaultProperties(factoryPid);
+            if (defaultProps.get(MANAGED_CONNECTION_FACTORY_CLASS) != null) {
+                for (String createsClass : (String[]) defaultProps.get(CREATES_OBJECTCLASS)) {
+                    if (createsClass.equals(interfaceName))
+                        return defaultProps;
                 }
             }
         }
+
         ResourceException x = new ResourceException();
         throw x;
     }
