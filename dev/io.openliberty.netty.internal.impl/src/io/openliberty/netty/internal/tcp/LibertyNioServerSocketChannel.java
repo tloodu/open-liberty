@@ -17,6 +17,11 @@ import com.ibm.websphere.ras.TraceComponent;
 
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+/**
+ * Retains all functionality of Netty's {@link NioServerSocketChannel}, but the 
+ * socket channel initialized will be the wrapper {@link LibertyNioSocketChannel}
+ * instead of the default {@link NioSocketChannel}.
+ */
 public class LibertyNioServerSocketChannel extends NioServerSocketChannel{
 
     private static final TraceComponent tc = Tr.register(LibertyNioServerSocketChannel.class, TCPMessageConstants.NETTY_TRACE_NAME,

@@ -21,9 +21,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.AttributeKey;
 
+/**  
+ * This class retains all functionality of Netty's {@link NioSocketChannel}, while also storing
+ * the underlying socket as a channel attribute. 
+ **/
 public class LibertyNioSocketChannel extends NioSocketChannel{
-
-    
 
     private static final TraceComponent tc = Tr.register(LibertyNioSocketChannel.class, TCPMessageConstants.NETTY_TRACE_NAME,
                                                          TCPMessageConstants.TCP_BUNDLE);
