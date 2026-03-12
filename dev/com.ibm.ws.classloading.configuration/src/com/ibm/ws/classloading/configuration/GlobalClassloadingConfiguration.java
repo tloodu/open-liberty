@@ -340,7 +340,11 @@ public class GlobalClassloadingConfiguration {
             try {
                 // Unfortunately the java.class.path prop does not contain any JARs from java agents
                 Set<URL> systemManifests = new HashSet<>(Collections.list(ClassLoader.getSystemClassLoader().getResources("META-INF/MANIFEST.MF")));
+                // Remove any manifests from the platform (this may no longer be needed on Java 9+ because platform has only modules (with no manifests)
                 systemManifests.removeAll(Collections.list(platformClassLoader.getResources("META-INF/MANIFEST.MF")));
+                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                    Tr.debug(tc, "isDefaultClassPath found the following manifests on the JVM classpath: " + systemManifests);
+                }
                 for (URL url : systemManifests) {
                     // This is using fuzzy in matching.  We simply check for the expected names in the path.
                     // This isn't perfect matching since someone could use the following strings
