@@ -57,7 +57,7 @@ public class RepeatableEnvEntryTest extends FATServletClient {
     @ClassRule
     public static RepeatTests r = RepeatTests.with(FeatureReplacementAction.EE8_FEATURES()
                                                     .forServers("com.ibm.ws.injection.fat.RepeatableEnvEntryServer"))
-                                    .andWith(FeatureReplacementAction.EE8_FEATURES()
+                                    .andWith(FeatureReplacementAction.EE9_FEATURES()
                                                     .forServers("com.ibm.ws.injection.fat.RepeatableEnvEntryServer")
                                                     .fullFATOnly())
                                     .andWith(FeatureReplacementAction.EE10_FEATURES()
