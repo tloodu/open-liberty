@@ -25,7 +25,9 @@ import componenttest.rules.repeater.EmptyAction;
 import componenttest.rules.repeater.RepeatTests;
 
 @RunWith(Suite.class)
-@SuiteClasses({ AlwaysPassesTest.class, LogoutTokenCreationTests.class,
+@SuiteClasses({
+		AlwaysPassesTest.class,
+		LogoutTokenCreationTests.class,
 
 })
 /**
@@ -34,10 +36,10 @@ import componenttest.rules.repeater.RepeatTests;
 public class FATSuite {
 
 	/*
-	 * Run EE9 and EE10 tests in only FULL mode and run EE7/EE8 tests only in LITE
+	 * Run EE9/EE10/EE11 tests in only FULL mode and run EE7/EE8 tests only in LITE
 	 * mode.
 	 *
-	 * This was done to increase coverage of EE9 and EE10 while not adding a large
+	 * This was done to increase coverage of EE9/EE10/EE11 while not adding a large
 	 * amount of test runtime.
 	 */
 	@ClassRule
