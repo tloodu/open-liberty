@@ -3911,7 +3911,6 @@ public class QueryInfo {
      * @throws MappingException if the repository method return type is incompatible with both
      *                              delete-only and find-and-delete.
      */
-    @SuppressWarnings("unlikely-arg-type")
     @Trivial
     private boolean isFindAndDelete() {
 
@@ -3926,10 +3925,10 @@ public class QueryInfo {
                                "; singleType: " + (singleType == null ? null : singleType.getSimpleName()));
 
         if (isFindAndDelete &&
-            type != null &&
-            !type.equals(entityInfo.entityClass) &&
-            !type.equals(entityInfo.recordClass) &&
-            !type.equals(Object.class) &&
+            singleType != null &&
+            !singleType.equals(entityInfo.entityClass) &&
+            !singleType.equals(entityInfo.recordClass) &&
+            !singleType.equals(Object.class) &&
             !Util.wrapperClassIfPrimitive(singleType) //
                             .equals(Util.wrapperClassIfPrimitive(entityInfo.idType)))
             throw Fail.returnTypeInvalidForDelete(this);
