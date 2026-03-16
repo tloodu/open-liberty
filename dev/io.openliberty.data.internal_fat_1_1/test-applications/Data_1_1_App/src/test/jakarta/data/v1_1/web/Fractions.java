@@ -49,6 +49,9 @@ import jakarta.data.restrict.Restriction;
  */
 @Repository(dataStore = "java:app/env/data/dbref")
 public interface Fractions {
+    int deleteByNameStartsWith(String prefix,
+                               Restriction<Fraction> filter);
+
     @Find
     Stream<Fraction> denominatoredUpTo //
     (@By(_Fraction.DENOMINATOR) NotNull<Integer> notNull,

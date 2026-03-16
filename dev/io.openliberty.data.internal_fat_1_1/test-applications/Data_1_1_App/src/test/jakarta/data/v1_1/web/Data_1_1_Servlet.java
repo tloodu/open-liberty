@@ -1262,6 +1262,13 @@ public class Data_1_1_Servlet extends FATServlet {
                                            AtMost.max(22),
                                            restriction));
 
+            System.out.println("Deletion by method name query with restriction:");
+
+            restriction = Restrict.all(_Fraction.name.left(5).right(1).equalTo(" "),
+                                       _Fraction.denominator.between(21, 30));
+
+            assertEquals(3, // 4/21, 5/21, 5/22
+                         fractions.deleteByNameStartsWith("F", restriction));
         } finally {
             // Ensure no fractions with deninators above 20 are left around
             fractions.discard(AtLeast.min(21),
