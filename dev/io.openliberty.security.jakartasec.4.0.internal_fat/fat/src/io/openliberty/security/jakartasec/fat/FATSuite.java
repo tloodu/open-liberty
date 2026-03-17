@@ -50,6 +50,7 @@ import io.openliberty.security.jakartasec.fat.tests.SingleHAMInbuiltCustomQualif
                 AppRolesTests.class,
                 AppBndRolesTests.class,
                 InMemoryIdStoreBadlyEncodedPwdTests.class,
+                InMemoryIdStoreBadlyEncodedPwdTests.class,
                 InMemoryIdStoreAesEncodedPwdTests.class
 })
 public class FATSuite {
