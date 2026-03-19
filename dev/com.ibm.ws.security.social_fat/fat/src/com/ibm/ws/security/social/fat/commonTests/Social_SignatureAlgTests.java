@@ -1013,7 +1013,7 @@ public class Social_SignatureAlgTests extends SocialCommonTest {
      * @throws Exception
      */
     @Test
-    public void Social_SignatureAlgTests_SignTokenRSAlgs_SocialVerifyFromHeader_AllowSignRSAlgs_useTrustedAlias() throws Exception {
+    public void Social_SignatureAlgTests_SignTokenRSAlgs_SocialVerifyFromHeader_AllowSignRSAlgs_useTrustAlias() throws Exception {
     
         List<String> allowedAlgs = new ArrayList<>();
         allowedAlgs.add("diff_" + Constants.SIGALG_RS256);

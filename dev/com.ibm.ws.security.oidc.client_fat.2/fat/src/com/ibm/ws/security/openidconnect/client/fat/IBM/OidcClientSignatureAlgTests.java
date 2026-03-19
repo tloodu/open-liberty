@@ -1029,7 +1029,7 @@ public class OidcClientSignatureAlgTests extends CommonTest {
      * @throws Exception
      */
     @Test
-    public void OidcClientSignatureAlgTests_SignTokenRSAlgs_RPVerifyFromHeader_AllowSignRSAlgs_useTrustedAlias() throws Exception {
+    public void OidcClientSignatureAlgTests_SignTokenRSAlgs_RPVerifyFromHeader_AllowSignRSAlgs_useTrustAlias() throws Exception {
     
         List<String> allowedAlgs = new ArrayList<>();
         allowedAlgs.add("diff_" + Constants.SIGALG_RS256);

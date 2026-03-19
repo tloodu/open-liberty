@@ -430,21 +430,18 @@ public class Jose4jValidator {
 
             // If using the header algorithm, check that it is one of the supported ones
             if (Constants.SIG_FROM_HEADER.equals(this.signingAlgorithm)) {
-                for (String alg : allowedSignatureAlgorithms) {
-                    if (alg.equals(algHeader)) {
-                        return;
+                if (!Arrays.asList(allowedSignatureAlgorithms).contains(algHeader)) {
+                    Object[] objects = new Object[] { this.clientId, Arrays.toString(this.allowedSignatureAlgorithms), algHeader };
+                    if (oidcClientRequest != null) {
+                        throw oidcClientRequest.errorCommon(true, tc, new String[] {
+                            "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR_ALG_MISMATCH",
+                            "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH" }, objects);
+                    } else {
+                        String errorMsg = Tr.formatMessage(tc, "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH", objects);
+                        Tr.error(tc, errorMsg);
+                        throw new JWTTokenValidationFailedException(errorMsg);
                     }
                 }
-                Object[] objects = new Object[] { this.clientId, Arrays.toString(this.allowedSignatureAlgorithms), algHeader };
-                if (oidcClientRequest != null) {
-                    throw oidcClientRequest.errorCommon(true, tc, new String[] { 
-                        "OIDC_IDTOKEN_SIGNATURE_VERIFY_ERR_ALG_MISMATCH",
-                        "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH" }, objects);
-                } else {
-                    String errorMsg = Tr.formatMessage(tc, "OIDC_JWT_SIGNATURE_VERIFY_ERR_ALG_MISMATCH", objects);
-                    Tr.error(tc, errorMsg);
-                    throw new JWTTokenValidationFailedException(errorMsg);
-                }   
             } else {
                 if (!(this.signingAlgorithm.equals(algHeader))) {
                     Object[] objects = new Object[] { this.clientId, this.signingAlgorithm, algHeader };

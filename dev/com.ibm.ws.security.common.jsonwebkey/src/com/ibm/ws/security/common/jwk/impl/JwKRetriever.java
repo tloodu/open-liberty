@@ -77,7 +77,7 @@ public class JwKRetriever {
     boolean defaultSSLConfig = false;
     String jwkEndpointUrl = null; // jwksUri
 
-    String sigAlg = null;
+    String algorithm = null;
     JWKSet jwkSet = null; // using the JWKSet from the JwtConsumerConfig. Do not create it every time
     SSLSupport sslSupport = null;//JwtUtils.getSSLSupportService();
 
@@ -132,7 +132,7 @@ public class JwKRetriever {
         this.hostNameVerificationEnabled = hnvEnabled;
         this.jwkClientId = jwkClientId;
         this.jwkClientSecret = jwkClientSecret;
-        this.sigAlg = algorithm;
+        this.algorithm = algorithm;
         this.keyText = keyText;
         this.keyLocation = keyLocation;
         this.httpUtils = new HttpUtils();
@@ -147,7 +147,7 @@ public class JwKRetriever {
     }
     
     public void setAlgorithm(String algorithm) {
-        this.sigAlg = algorithm;
+        this.algorithm = algorithm;
     }
 
     public void setKeyText(@Sensitive String keyText) {
@@ -270,7 +270,7 @@ public class JwKRetriever {
                         is = getInputStream(jwkFile, fileSystemCacheSelector, location, classLoadingCacheSelector);
                         if (is != null) {
                             keyString = getKeyAsString(is);
-                            parseJwk(keyString, null, jwkSet, sigAlg, keyType); // also adds entry to cache.
+                            parseJwk(keyString, null, jwkSet, algorithm, keyType); // also adds entry to cache.
                             key = getJwkFromJWKSet(locationUsed, kid, x5t, x5tS256, use, keyString, keyType);
                         }
                     } finally {
@@ -357,7 +357,7 @@ public class JwKRetriever {
             synchronized (jwkSet) {
                 Key key = getJwkFromJWKSet(keyText, kid, x5t, x5tS256, use, keyText, keyType);
                 if (key == null) {
-                    parseJwk(keyText, null, jwkSet, sigAlg, keyType);
+                    parseJwk(keyText, null, jwkSet, algorithm, keyType);
                     key = getJwkFromJWKSet(keyText, kid, x5t, x5tS256, use, keyText, keyType);
                 }
                 return key;
@@ -426,7 +426,7 @@ public class JwKRetriever {
             HttpClient client = createHTTPClient(sslSocketFactory, locationUsed, hostNameVerificationEnabled, useSystemPropertiesForHttpClientConnections);
             jsonString = getHTTPRequestAsString(client, locationUsed);
             
-            boolean bJwk = parseJwk(jsonString, null, jwkSet, sigAlg, keyType);
+            boolean bJwk = parseJwk(jsonString, null, jwkSet, algorithm, keyType);
             if (!bJwk) {
                 // can not get back any JWK from OP
                 // since getJwkLocal will be called later and NO key exception
@@ -536,7 +536,7 @@ public class JwKRetriever {
         // If the keyType is PRIVATE, validate against JWE encryption identifiers (i.e. RSA-OAEP, ECDH-ES)
         // Both JWS and JWE use PEM-compatible RSA/EC keys, but algorithms differ
         if (keyType == JwkKeyType.PRIVATE){
-            return KeyAlgorithmChecker.isRSAEncryptionAlgorithm(algorithm) || KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
+            return KeyAlgorithmChecker.isRSAEncryptionAlgorithm(algorithm) || KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
         }
         return KeyAlgorithmChecker.isRSAlgorithm(algorithm) || KeyAlgorithmChecker.isESAlgorithm(algorithm);
     }
@@ -576,7 +576,7 @@ public class JwKRetriever {
     @Sensitive
     JWK parsePrivateKeyJwk(@Sensitive String keyText, String algorithm) throws Exception {
         PrivateKey privateKey = PemKeyUtil.getPrivateKey(keyText);
-        if (KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm)) {
+        if (KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm)) {
             return getEcJwkPrivateKey(privateKey, algorithm);
         } else {
             return getRsaJwkPrivateKey(privateKey, algorithm);

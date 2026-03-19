@@ -725,52 +725,66 @@ public class KeyAlgorithmCheckerTest extends CommonTestClass {
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_nullAlgorithm() {
+    public void test_isECEncryptionAlgorithm_nullAlgorithm() {
         String algorithm = null;
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertFalse("Algorithm [" + algorithm + "] was considered an ESA encryption algorithm.", result);
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertFalse("Algorithm [" + algorithm + "] was considered an EC encryption algorithm.", result);
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_emptyString() {
+    public void test_isECEncryptionAlgorithm_emptyString() {
         String algorithm = "";
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertFalse("Algorithm [" + algorithm + "] was considered an ESA encryption algorithm.", result);
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertFalse("Algorithm [" + algorithm + "] was considered an EC encryption algorithm.", result);
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_ECDH_ES() {
+    public void test_isECEncryptionAlgorithm_ECDH_ES() {
         String algorithm = "ECDH-ES";
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertTrue("Algorithm [" + algorithm + "] was not considered an ESA encryption algorithm.", result);
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertTrue("Algorithm [" + algorithm + "] was not considered an EC encryption algorithm.", result);
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_ECDH_ES_A128KW() {
+    public void test_isECEncryptionAlgorithm_ECDH_ES_A128KW() {
         String algorithm = "ECDH-ES+A128KW";
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertTrue("Algorithm [" + algorithm + "] was not considered an ESA encryption algorithm.", result);
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertTrue("Algorithm [" + algorithm + "] was not considered an EC encryption algorithm.", result);
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_invalidPrefix() {
+    public void test_isECEncryptionAlgorithm_ECDH_ES_A192KW() {
+        String algorithm = "ECDH-ES+A192KW";
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertTrue("Algorithm [" + algorithm + "] was not considered an EC encryption algorithm.", result);
+    }
+
+    @Test
+    public void test_isECEncryptionAlgorithm_ECDH_ES_A256KW() {
+        String algorithm = "ECDH-ES+A256KW";
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertTrue("Algorithm [" + algorithm + "] was not considered an EC encryption algorithm.", result);
+    }
+
+    @Test
+    public void test_isECEncryptionAlgorithm_invalidPrefix() {
         String algorithm = "DECDH-ES";
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertFalse("Algorithm [" + algorithm + "] was considered an ESA encryption algorithm.", result);
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertFalse("Algorithm [" + algorithm + "] was considered an EC encryption algorithm.", result);
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_invalidSuffix() {
-        String algorithm = "ECDH-ESA";
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertFalse("Algorithm [" + algorithm + "] was considered an ESA encryption algorithm.", result);
+    public void test_isECEncryptionAlgorithm_invalidSuffix() {
+        String algorithm = "ECDH-ESB";
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertFalse("Algorithm [" + algorithm + "] was considered an EC encryption algorithm.", result);
     }
 
     @Test
-    public void test_isESAEncryptionAlgorithm_ESSignatureAlgorithm() {
+    public void test_isECEncryptionAlgorithm_ESSignatureAlgorithm() {
         String algorithm = "ES256";
-        boolean result = KeyAlgorithmChecker.isESAEncryptionAlgorithm(algorithm);
-        assertFalse("Algorithm [" + algorithm + "] was considered an ESA encryption algorithm.", result);
+        boolean result = KeyAlgorithmChecker.isECEncryptionAlgorithm(algorithm);
+        assertFalse("Algorithm [" + algorithm + "] was considered an EC encryption algorithm.", result);
     }
 
 

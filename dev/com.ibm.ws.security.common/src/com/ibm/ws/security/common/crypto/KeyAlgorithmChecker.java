@@ -35,7 +35,7 @@ public class KeyAlgorithmChecker {
     private static final Pattern ESA_PATTERN = Pattern.compile("ES[0-9]{3,}");
     private static final Pattern ALG_PATTERN = Pattern.compile("[RHEP]S([0-9]{3,})", Pattern.CASE_INSENSITIVE);
     private static final Pattern RSA_ENC_PATTERN = Pattern.compile("RSA1_5|RSA-OAEP(-[0-9]{3,})?");
-    private static final Pattern ESA_ENC_PATTERN = Pattern.compile("ECDH-ES(\\+A[0-9]{3,}KW)?");
+    private static final Pattern EC_ENC_PATTERN = Pattern.compile("ECDH-ES(\\+A[0-9]{3,}KW)?");
 
     public static int UNKNOWN_HASH_SIZE = 0;
 
@@ -172,11 +172,11 @@ public class KeyAlgorithmChecker {
         return m.matches();
     }
 
-    public static boolean isESAEncryptionAlgorithm(String alg) {
+    public static boolean isECEncryptionAlgorithm(String alg) {
         if (alg == null) {
             return false;
         }
-        Matcher m = ESA_ENC_PATTERN.matcher(alg);
+        Matcher m = EC_ENC_PATTERN.matcher(alg);
         return m.matches();
     }
 

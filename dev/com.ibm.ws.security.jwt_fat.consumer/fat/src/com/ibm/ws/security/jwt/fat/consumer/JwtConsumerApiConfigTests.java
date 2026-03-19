@@ -2987,7 +2987,7 @@ public class JwtConsumerApiConfigTests extends CommonSecurityFat {
      * @throws Exception
      */
     @Test
-    public void JwtConsumerApiConfigTests_SignTokenRSAlgs_FromHeader_AllowSignRSAlgs_useTrustedAlias() throws Exception {
+    public void JwtConsumerApiConfigTests_SignTokenRSAlgs_FromHeader_AllowSignRSAlgs_useTrustAlias() throws Exception {
 
         for (String sigAlg : JwtConsumerConstants.ALL_TEST_RSSIGALGS) {
             String builderId = "diff_sigAlg_" + sigAlg;

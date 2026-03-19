@@ -1611,7 +1611,7 @@ public class MPJwtConfigUsingBuilderTests extends MPJwt11MPConfigTests {
      * @throws Exception
      */
     @Test
-    public void JwtConsumerApiConfigTests_SignTokenRSAlgs_FromHeader_AllowSignRSAlgs_useTrustedAlias() throws Exception {
+    public void MPJwtConfigUsingBuilderTests_FromHeader_AllowAllRSAlgs_useTrustAlias() throws Exception {
         resourceServer.reconfigureServerUsingExpandedConfiguration(_testName, "rs_server_diff_sigAlg_FROM_HEADER_allow_RSAlgs.xml");
         
         for (String sigAlg : Arrays.asList(Constants.ALL_TEST_RSSIGALGS)) {
@@ -1631,7 +1631,7 @@ public class MPJwtConfigUsingBuilderTests extends MPJwt11MPConfigTests {
      */
     @ExpectedFFDC({ "org.jose4j.jwt.consumer.InvalidJwtSignatureException" })
     @Test
-    public void JwtConsumerApiConfigTests_SignTokenRSAlgs_FromHeader_AllowSignRSAlgs_useTrustAlias_keyMismatch() throws Exception {
+    public void MPJwtConfigUsingBuilderTests_FromHeader_AllowAllRSAlgs_useTrustAlias_keyMismatch() throws Exception {
         resourceServer.reconfigureServerUsingExpandedConfiguration(_testName, "rs_server_diff_sigAlg_FROM_HEADER_allow_RSAlgs.xml");
         
         for (String sigAlg : Arrays.asList(Constants.ALL_TEST_RSSIGALGS)) {
@@ -1660,7 +1660,7 @@ public class MPJwtConfigUsingBuilderTests extends MPJwt11MPConfigTests {
      * @throws Exception
      */
     @Test
-    public void JwtConsumerApiConfigTests_SignTokenESAlgs_FromHeader_AllowSignESAlgs_useTrustAlias_keyMismatch() throws Exception {
+    public void MPJwtConfigUsingBuilderTests_FromHeader_AllowAllESAlgs_useTrustAlias_keyMismatch() throws Exception {
         resourceServer.reconfigureServerUsingExpandedConfiguration(_testName, "rs_server_diff_sigAlg_FROM_HEADER_allow_ESAlgs.xml");
         
         for (String sigAlg : Arrays.asList(Constants.ALL_TEST_ESSIGALGS)) {

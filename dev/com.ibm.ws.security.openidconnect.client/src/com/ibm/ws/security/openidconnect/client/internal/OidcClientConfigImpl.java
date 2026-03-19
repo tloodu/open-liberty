@@ -583,8 +583,6 @@ public class OidcClientConfigImpl implements OidcClientConfig {
             initializeAccessTokenCache();
         }
 
-        // checkSignatureAlgorithmAgainstAllowedList();
-
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
             Tr.debug(tc, "id: " + id);
             Tr.debug(tc, "grantType: " + grantType);

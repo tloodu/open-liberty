@@ -916,13 +916,10 @@ public class ConsumerUtil {
                 Tr.debug(tc, "Signature algorithm is derived from the token header using ", requiredAlg);
                 Tr.debug(tc, "JWT is signed with algorithm: ", tokenAlg);
             }
-            for (String alg : allowedSignatureAlgorithms) {
-                if (alg.equals(tokenAlg)) {
-                    return;
-                }
+            if (!Arrays.asList(allowedSignatureAlgorithms).contains(tokenAlg)) {
+                String msg = Tr.formatMessage(tc, "JWT_ALGORITHM_MISMATCH", new Object[] { tokenAlg, Arrays.toString(allowedSignatureAlgorithms) });
+                throw new InvalidTokenException(msg);
             }
-            String msg = Tr.formatMessage(tc, "JWT_ALGORITHM_MISMATCH", new Object[] { tokenAlg, Arrays.toString(allowedSignatureAlgorithms) });
-            throw new InvalidTokenException(msg);
         } else {
             if (tc.isDebugEnabled()) {
                 Tr.debug(tc, "JWT is signed with algorithm: ", tokenAlg);
