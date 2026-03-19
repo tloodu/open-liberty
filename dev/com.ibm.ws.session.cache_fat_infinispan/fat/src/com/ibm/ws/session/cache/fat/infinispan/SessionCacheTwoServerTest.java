@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2023 IBM Corporation and others.
+ * Copyright (c) 2018, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.session.cache.fat.infinispan;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -84,8 +85,6 @@ public class SessionCacheTwoServerTest extends FATServletClient {
 
         serverA.startServer();
 
-        TimeUnit.SECONDS.sleep(10);
-
         // Since we initialize the JCache provider lazily, use an HTTP session on serverA before starting serverB,
         // so that the JCache provider has fully initialized on serverA. Otherwise, serverB might start up its own
         // cluster and not join to the cluster created on serverA.
@@ -95,7 +94,11 @@ public class SessionCacheTwoServerTest extends FATServletClient {
 
         serverB.startServer();
 
-        TimeUnit.SECONDS.sleep(10);
+        // Wait for Infinispan/JGroups to form a 2-node cluster. This message appears in serverA's log
+        // when serverB joins. Using a log-based wait instead of a fixed sleep makes this
+        // reliable across machines with varying startup times (especially Windows under load).
+        assertNotNull("Infinispan 2-node cluster did not form within 60 seconds",
+                      serverA.waitForStringInLog("ISPN000094.*\\(2\\)", 60000));
     }
 
     @AfterClass
@@ -131,6 +134,7 @@ public class SessionCacheTwoServerTest extends FATServletClient {
         }
         return false;
     }
+
 
     /**
      * Test lifecycle of cache for http sessions by putting data into a server,
