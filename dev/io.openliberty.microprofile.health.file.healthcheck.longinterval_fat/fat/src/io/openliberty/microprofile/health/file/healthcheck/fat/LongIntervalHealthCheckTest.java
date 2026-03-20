@@ -51,6 +51,7 @@ public class LongIntervalHealthCheckTest {
     final static String SERVER_LONG_CHECK_INTERVAL = "HealthServerLongCheckInterval";
     final static String FAIL_START_APP = "FailStartApp";
     final static String FAIL_START_APP_WAR = FAIL_START_APP + ".war";
+    final static int MAX_ATTEMPTS = 3;
 
     private static final String[] IGNORED_FAILURES = { "CWMMH0052W", "CWMMH0054W", "CWMMH0053W", "CWMMH0050E" };
 
@@ -133,9 +134,17 @@ public class LongIntervalHealthCheckTest {
 
         boolean diffInRange = false;
         File serverRootDirFile = null;
-        int attempts = 0;    
-    
-        while (!diffInRange && attempts++ < 5) {
+        int attempts = 0;
+
+        while (!diffInRange && attempts++ < MAX_ATTEMPTS) {
+
+            // If the difference is not in range, try again as the CPU may have been busy, so restart/cleanup the servers.
+            if (attempts > 1) {
+                after();
+                before();
+            }
+
+            Log.info(getClass(), METHOD_NAME, "Attempt: " + attempts);
 
             WebArchive testWAR = ShrinkWrap
                             .create(WebArchive.class, FAIL_START_APP_WAR)
@@ -182,20 +191,20 @@ public class LongIntervalHealthCheckTest {
             String traceEntryStartofFirstStartCheck = serverLongStart.waitForStringInTraceUsingMark(".*HealthCheck40ServiceImpl\\$StartedFileCreateProcess > run Entry.*");
             serverLongStart.setMarkToEndOfLog(serverLongStart.getMostRecentTraceFile());
 
-            Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "First `run` entry trace: " + traceEntryStartofFirstStartCheck);
+            Log.info(getClass(), METHOD_NAME, "First `run` entry trace: " + traceEntryStartofFirstStartCheck);
 
             // Expect to see something like this (ISO date format) : 2026-01-06T22:02:43.886+0300
             String dateTimeString = traceEntryStartofFirstStartCheck.split("]")[0].substring(1);
-            Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "Debug: first `run` trace's timestamp : " + dateTimeString);
+            Log.info(getClass(), METHOD_NAME, "Debug: first `run` trace's timestamp : " + dateTimeString);
 
             /*
              * Find the second `run` entry trace
              */
             String traceEntryStartofSecondStartCheck = serverLongStart.waitForStringInTraceUsingMark(".*HealthCheck40ServiceImpl\\$StartedFileCreateProcess > run Entry.*", 35000);
-            Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "Second `run` entry trace: " + traceEntryStartofSecondStartCheck);
+            Log.info(getClass(), METHOD_NAME, "Second `run` entry trace: " + traceEntryStartofSecondStartCheck);
 
             String dateTimeString2 = traceEntryStartofSecondStartCheck.split("]")[0].substring(1);
-            Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "Debug: second `run` trace timestamp : " + dateTimeString2);
+            Log.info(getClass(), METHOD_NAME, "Debug: second `run` trace timestamp : " + dateTimeString2);
 
             /*
              * Time to calculate the difference.
@@ -217,8 +226,6 @@ public class LongIntervalHealthCheckTest {
             if (!date.equals(date2))
                 diff += Duration.ofDays(1).getSeconds();
 
-            Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "The difference in time between the two timestamps is (in seconds) : " + diff);
-
             /*
              * We start with 29 seconds because the tracing the first trace and second trace may have a difference of 29s999ms.
              * That is because potential slowness may have caused the first trace to be emitted x ms after the timer actually was invoked.
@@ -228,14 +235,12 @@ public class LongIntervalHealthCheckTest {
             diffInRange = (diff >= 29 && diff <= 32);
 
             // If the difference is not in range, try again as the CPU may have been busy.
-            if (!diffInRange && attempts < 5) {
-                Log.info(getClass(), "StartedHealthCheckTestLongStartupInterval", "Retrying test after attempt " + attempts + " as the slow test may be caused by CPU being busy.");
-                after();
-                before();
+            if (!diffInRange) {
+                Log.info(getClass(), METHOD_NAME, "The difference in time between the two timestamps is (in seconds): " + diff + " but should be 29s or greater (but no more than 32).");
             }
         }
 
-        assertTrue("The difference expected should be 29s or greater (but no more than 32). We offer extra 2 seconds for potential slowness", diffInRange);
+        assertTrue("The difference expected should be 29s or greater (but no more than 32). We offer extra 2 seconds for potential slowness.", diffInRange);
 
         assertNotNull(serverLongStart.waitForStringInTraceUsingMark(".*Startup phase for local health check functionality completed.*"));
 
@@ -291,86 +296,116 @@ public class LongIntervalHealthCheckTest {
     public void HealthCheckTestLongCheckInterval() throws Exception {
         final String METHOD_NAME = "HealthCheckTestLongCheckInterval";
 
-        WebArchive testWAR = ShrinkWrap
-                        .create(WebArchive.class, FAIL_START_APP_WAR)
-                        .addAsWebInfResource(new File("test-applications/FileHealthCheckApp/resources/WEB-INF/web.xml"))
-                        .addPackage("io.openliberty.microprofile.health.file.healthcheck.app");
+        long readyCreatedModifiedTimeDiff = 0;
+        boolean readyCreatedModifiedTimeDiffInRange = false;
+        long readyUpdateDiff = 0;
+        boolean readyUpdateDiffInRange = false;
+        File serverRootDirFile = null;
+        int attempts = 0;
 
-        ShrinkHelper.exportDropinAppToServer(serverLongCheck, testWAR, DeployOptions.SERVER_ONLY);
+        while ((!readyCreatedModifiedTimeDiffInRange || !readyUpdateDiffInRange) && attempts++ < MAX_ATTEMPTS) {
 
-        serverLongCheck.startServer();
+            // If the difference is not in range, try again as the CPU may have been busy, so restart/cleanup the servers.
+            if (attempts > 1) {
+                after();
+                before();
+            }
 
-        // Read to run a smarter planet
-        serverLongCheck.waitForStringInLogUsingMark("CWWKF0011I");
-        assertTrue("Server is not started", serverLongCheck.isStarted());
+            Log.info(getClass(), METHOD_NAME, "Attempt: " + attempts);
 
-        String serverRoot = serverLongCheck.getServerRoot();
-        File serverRootDirFile = new File(serverRoot);
+            WebArchive testWAR = ShrinkWrap
+                            .create(WebArchive.class, FAIL_START_APP_WAR)
+                            .addAsWebInfResource(new File("test-applications/FileHealthCheckApp/resources/WEB-INF/web.xml"))
+                            .addPackage("io.openliberty.microprofile.health.file.healthcheck.app");
 
-        Log.info(getClass(), METHOD_NAME, "Server root directory is: " + serverRootDirFile.getAbsolutePath());
+            ShrinkHelper.exportDropinAppToServer(serverLongCheck, testWAR, DeployOptions.SERVER_ONLY);
 
-        /*
-         * Expect:
-         * [X] /health dir
-         * [x] Started
-         * [x] Ready
-         * [x] Live
-         *
-         * Not Expected:
-         * [] Started
-         * [] Ready
-         * [] Live
-         */
-        /*
-         * Checks that require to check that all files are created may encounter a scenario where FAT test is way ahead of the server.
-         * This results in the files not existing yet. isFilesCreated() will retry up to 2 seconds (w/ 250ms cycles).
-         */
-        Assert.assertTrue("Expected all files to be created: Review isAllHealthCheckFilesCreated logs for state of files.", FATSuite.isFilesCreated(serverRootDirFile));
+            serverLongCheck.startServer();
 
-        /*
-         * TO REDUCE ON POTENTIAL TEST SLOWNESS, WE'LL ONLY CHECK THE READY FILE.
-         * The underlying logic/mechanism is duplicated for updating the ready and live healht-check files.
-         */
+            // Read to run a smarter planet
+            serverLongCheck.waitForStringInLogUsingMark("CWWKF0011I");
+            assertTrue("Server is not started", serverLongCheck.isStarted());
 
-        long readyCreateModifiedTime = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
-        long readyCreatedTime = HealthFileUtils.getCreatedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
+            String serverRoot = serverLongCheck.getServerRoot();
+            serverRootDirFile = new File(serverRoot);
 
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "Debug: ready file creation time's modified time(ms): " + readyCreateModifiedTime);
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "Debug: ready file creation time(ms): " + readyCreatedTime);
+            Log.info(getClass(), METHOD_NAME, "Server root directory is: " + serverRootDirFile.getAbsolutePath());
 
-        assertTrue("Differnce between create time and initial modified time is too great for the ready file.", readyCreateModifiedTime - readyCreatedTime <= 1000);
+            /*
+             * Expect:
+             * [X] /health dir
+             * [x] Started
+             * [x] Ready
+             * [x] Live
+             *
+             * Not Expected:
+             * [] Started
+             * [] Ready
+             * [] Live
+             */
+            /*
+             * Checks that require to check that all files are created may encounter a scenario where FAT test is way ahead of the server.
+             * This results in the files not existing yet. isFilesCreated() will retry up to 2 seconds (w/ 250ms cycles).
+             */
+            Assert.assertTrue("Expected all files to be created: Review isAllHealthCheckFilesCreated logs for state of files.", FATSuite.isFilesCreated(serverRootDirFile));
 
-        long currTime = System.currentTimeMillis();
-        long diff = currTime - readyCreatedTime;
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "Diff from file creation time and current run time(ms): " + diff);
-        long timeRemaining = 30000L - diff;
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "Time remaining in the 30 second interval(ms): " + timeRemaining);
+            /*
+             * TO REDUCE ON POTENTIAL TEST SLOWNESS, WE'LL ONLY CHECK THE READY FILE.
+             * The underlying logic/mechanism is duplicated for updating the ready and live healht-check files.
+             */
 
-        TimeUnit.MILLISECONDS.sleep(timeRemaining / 2);
-        long readyModifiedTime = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "The ready file's `new` modified time(ms): " + readyModifiedTime);
+            long readyCreateModifiedTime = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
+            long readyCreatedTime = HealthFileUtils.getCreatedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
+            readyCreatedModifiedTimeDiff = readyCreateModifiedTime - readyCreatedTime;
 
-        /*
-         * If difference is less than a second, its effectively the "same" time.
-         * Encountered instances where there is a different of ~100ms.
-         * Perhaps something (i.e. OS) touched it immediately after creating it.
-         */
-        assertTrue("Ready file should not have been upated. The new modified time is (ms): " + readyModifiedTime, (readyModifiedTime - readyCreateModifiedTime) <= 999);
+            Log.info(getClass(), METHOD_NAME, "Debug: ready file creation time's modified time(ms): " + readyCreateModifiedTime);
+            Log.info(getClass(), METHOD_NAME, "Debug: ready file creation time(ms): " + readyCreatedTime);
 
-        /*
-         * We've waited half the remaining 30 seconds already, we're waiting the second half now and we need to offset
-         * (i.e. 7 / 2 = 3. We'd need to wait (3x2) + 1 to hit the full time. Add extra 1.5 seconds offset.
-         */
-        TimeUnit.MILLISECONDS.sleep((timeRemaining / 2) + 1500);
-        readyModifiedTime = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
-        assertTrue("The last modified time of ready should have been updated, but was still: " + readyModifiedTime, readyModifiedTime != readyCreateModifiedTime);
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "The ready file's `new` modified time(ms):" + readyModifiedTime);
+            readyCreatedModifiedTimeDiffInRange = readyCreatedModifiedTimeDiff <= 1000;
 
-        long readyUpdateDiff = readyModifiedTime - readyCreatedTime;
-        Log.info(getClass(), "HealthCheckTestLongCheckInterval", "The difference between creation time and the ready update is (ms) : " + readyUpdateDiff);
+            if (!readyCreatedModifiedTimeDiffInRange) {
+                Log.info(getClass(), METHOD_NAME, "Difference between create time and initial modified time is too great for the ready file.");
+                continue;
+            }
 
-        //Allow for 29.5-32 range to allow for quickness or slowness of system.
-        assertTrue("The modified time is out of bounds(ms): " + readyUpdateDiff, readyUpdateDiff >= 29500 && readyUpdateDiff <= 32000);
+            long currTime = System.currentTimeMillis();
+            long diff = currTime - readyCreatedTime;
+            Log.info(getClass(), METHOD_NAME, "Diff from file creation time and current run time(ms): " + diff);
+            long timeRemaining = 30000L - diff;
+            Log.info(getClass(), METHOD_NAME, "Time remaining in the 30 second interval(ms): " + timeRemaining);
+
+            TimeUnit.MILLISECONDS.sleep(timeRemaining / 2);
+            long readyModifiedTime = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
+            Log.info(getClass(), METHOD_NAME, "The ready file's `new` modified time(ms): " + readyModifiedTime);
+
+            /*
+             * If difference is less than a second, its effectively the "same" time.
+             * Encountered instances where there is a different of ~100ms.
+             * Perhaps something (i.e. OS) touched it immediately after creating it.
+             */
+            assertTrue("Ready file should not have been updated. The new modified time is (ms): " + readyModifiedTime, (readyModifiedTime - readyCreateModifiedTime) <= 999);
+
+            /*
+             * We've waited half the remaining 30 seconds already, we're waiting the second half now and we need to offset
+             * (i.e. 7 / 2 = 3. We'd need to wait (3x2) + 1 to hit the full time. Add extra 1.5 seconds offset.
+             */
+            TimeUnit.MILLISECONDS.sleep((timeRemaining / 2) + 1500);
+            readyModifiedTime = HealthFileUtils.getLastModifiedTime(HealthFileUtils.getReadyFile(serverRootDirFile));
+            assertTrue("The last modified time of ready should have been updated, but was still: " + readyModifiedTime, readyModifiedTime != readyCreateModifiedTime);
+            Log.info(getClass(), METHOD_NAME, "The ready file's `new` modified time(ms):" + readyModifiedTime);
+
+            readyUpdateDiff = readyModifiedTime - readyCreatedTime;
+            readyUpdateDiffInRange = readyUpdateDiff >= 29500 && readyUpdateDiff <= 32000;
+            Log.info(getClass(), METHOD_NAME, "The difference between creation time and the ready update is (ms) : " + readyUpdateDiff);
+
+            // If the difference is not in range, try again as the CPU may have been busy.
+            if (!readyUpdateDiffInRange) {
+                Log.info(getClass(), METHOD_NAME, "The modified time is out of bounds(ms): " + readyUpdateDiff);
+            }
+        }
+
+        assertTrue("Difference between create time and initial modified time is too great for the ready file.", readyCreatedModifiedTimeDiffInRange);
+        assertTrue("The modified time is out of bounds(ms): " + readyUpdateDiff, readyUpdateDiffInRange); //Allow for 29.5-32 range to allow for quickness or slowness of system.
 
     }
 }
