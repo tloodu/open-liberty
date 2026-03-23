@@ -3864,6 +3864,11 @@ public class QueryInfo {
                            (i == paramTypes.length - 1 ? ')' : ','));
         }
 
+        writer.println(indent + "method annotation: " +
+                       methodTypeAnno);
+        writer.println(indent + "first special parameter at index " +
+                       specialParamsStartAt + " (0-based)");
+
         writer.println(indent + "return array type: " +
                        (returnArrayType == null ? null : returnArrayType.getName()));
         writer.println(indent + "multiple result type: " +
@@ -3898,6 +3903,7 @@ public class QueryInfo {
         writer.println(indent + "JPQL parameter names: " + jpqlParamNames);
 
         writer.println(indent + "maximum results: " + maxResults);
+        writer.println(indent + "restrictions can be added at: " + restrictAt);
         writer.println(indent + "sorts: " + sorts);
         writer.print(indent + "positions of sort-related method parameters: ");
         if (sortPositions.length == 0)

@@ -572,6 +572,12 @@ public abstract class EntityManagerBuilder {
         writer.println(indent + "  repositories:");
         for (Class<?> r : repositoryInterfaces)
             writer.println(indent + "    " + r.getName());
+
+        if (convertibleTypes != null && !convertibleTypes.isEmpty()) {
+            writer.println(indent + "  convertibleTypes:");
+            for (Class<?> c : convertibleTypes)
+                writer.println(indent + "    " + c.getName());
+        }
     }
 
     /**

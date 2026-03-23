@@ -195,6 +195,8 @@ public class EntityInfo {
         writer.println(indent + "  record class: " +
                        (recordClass == null ? null : recordClass.getName()));
         writer.println(indent + "  builder: " + builder);
+        writer.println(indent + "  persistence provider is Hibernate? " +
+                       isHibernate);
         writer.println(indent + "  idType: " +
                        (idType == null ? null : idType.getName()));
         if (idClassAttributeAccessors != null)
