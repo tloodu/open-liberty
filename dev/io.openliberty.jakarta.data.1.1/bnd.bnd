@@ -21,6 +21,9 @@ Require-Capability: osgi.ee; filter:="(&(osgi.ee=JavaSE)(version=21))"
 Bundle-Name: Jakarta Data copy of API classes
 Bundle-SymbolicName: io.openliberty.jakarta.data.1.1
 Bundle-Description: Copied Jakarta Data API classes and some proposed or experimental ones; version=${bVersion}
+Specification-Title: Jakarta Data
+Specification-Vendor: Eclipse Foundation
+Specification-Version: 1.1
 
 Export-Package: \
   jakarta.data;version="1.0.0",\
