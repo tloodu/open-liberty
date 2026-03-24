@@ -19,6 +19,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
 
+import com.ibm.websphere.ras.annotation.Trivial;
+
+import io.openliberty.data.internal.cdi.RepositoryProducer;
 import jakarta.data.repository.Find;
 
 /**
@@ -110,6 +113,37 @@ public interface DataVersionCompatibility {
      *         otherwise false.
      */
     boolean atLeast(int major, int minor);
+
+    /**
+     * Construct partially complete query information.
+     *
+     * @param repositoryProducer    producer of the repository bean instance.
+     * @param repositoryInterface   interface annotated with @Repository.
+     * @param method                repository method.
+     * @param methodType            type of repository method, if known in advance.
+     * @param entityParamType       type of the first parameter if a life cycle method,
+     *                                  otherwise null.
+     * @param isOptional            indicates if the return type is an Optional.
+     * @param returnArrayType       array element type if the repository method returns
+     *                                  an array, otherwise null.
+     * @param multiType             Data structure type that allows multiple
+     *                                  results for this query. Null if the query
+     *                                  return type limits to single results.
+     * @param singleType            Type of a single result obtained by the query.
+     * @param singleTypeElementType Element type of singleType when singleType is an
+     *                                  array or collection. Otherwise null.
+     */
+    @Trivial
+    public QueryInfo createQueryInfo(RepositoryProducer<?> repositoryProducer,
+                                     Class<?> repositoryInterface,
+                                     Method method,
+                                     QueryType methodType,
+                                     Class<?> entityParamType,
+                                     boolean isOptional,
+                                     Class<?> returnArrayType,
+                                     Class<?> multiType,
+                                     Class<?> singleType,
+                                     Class<?> singleTypeElementType);
 
     /**
      * Appends JPQL to the partially built query to represent a Constraint.

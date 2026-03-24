@@ -14,6 +14,7 @@ import static io.openliberty.data.internal.QueryType.FIND_AND_DELETE;
 import static io.openliberty.data.internal.cdi.DataExtension.exc;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -920,16 +921,18 @@ public class Fail {
      * Raises MappingException for a return type that is not valid for the
      * repository method.
      *
-     * @param info query information for the repository method.
+     * @param repositoryInterface the repository interface.
+     * @param method              the repository method.
      * @throws the MappingException.
      */
-    static MappingException returnTypeInvalid(QueryInfo info) {
+    public static MappingException returnTypeInvalid(Class<?> repositoryInterface,
+                                                     Method method) {
         // TODO add helpful information about supported result types
         throw exc(UnsupportedOperationException.class,
                   "CWWKD1004.general.rtrn.err",
-                  info.method.getGenericReturnType().getTypeName(),
-                  info.method.getName(),
-                  info.repositoryInterface.getName());
+                  method.getGenericReturnType().getTypeName(),
+                  method.getName(),
+                  repositoryInterface.getName());
     }
 
     /**

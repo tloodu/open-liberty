@@ -99,7 +99,7 @@ import jakarta.persistence.TypedQuery;
 /**
  * Query information.
  */
-public class QueryInfo {
+public abstract class QueryInfo {
     private static final TraceComponent tc = Tr.register(QueryInfo.class);
 
     /**
@@ -340,262 +340,74 @@ public class QueryInfo {
     boolean validateResult;
 
     /**
-     * Construct partially complete query information.
+     * Used by the version-specific query info classes to construct partially
+     * complete query information.
      *
-     * @param repositoryProducer  producer of the repository bean instance.
-     * @param repositoryInterface interface annotated with @Repository.
-     * @param method              repository method.
-     * @param entityParamType     type of the first parameter if a life cycle method, otherwise null.
-     * @param returnArrayType     array element type if the repository method returns an array, otherwise null.
-     * @param returnTypeAtDepth   return type of the repository method return value,
-     *                                split into levels of depth for each type parameter and array component.
-     *                                This is useful in cases such as
-     *                                <code>&#64;Query(...) Optional&lt;Float&gt; priceOf(String productId)</code>
-     *                                which resolves to { Optional.class, Float.class }
-     *                                and
-     *                                <code>CompletableFuture&lt;Stream&lt;Product&gt&gt; findByNameLike(String namePattern)</code>
-     *                                which resolves to { CompletableFuture.class, Stream.class, Product.class }
-     *                                and
-     *                                <code>CompletionStage&lt;Product[]&gt; findByNameIgnoreCaseLike(String namePattern)</code>
-     *                                which resolves to { CompletionStage.class, Product[].class, Product.class }
+     * @param repositoryProducer    producer of the repository bean instance.
+     * @param repositoryInterface   interface annotated with @Repository.
+     * @param method                repository method.
+     * @param methodType            type of repository method, if known in advance.
+     * @param entityParamType       type of the first parameter if a life cycle method,
+     *                                  otherwise null.
+     * @param isOptional            indicates if the return type is an Optional.
+     * @param returnArrayType       array element type if the repository method returns
+     *                                  an array, otherwise null.
+     * @param multiType             Data structure type that allows multiple
+     *                                  results for this query. Null if the query
+     *                                  return type limits to single results.
+     * @param singleType            Type of a single result obtained by the query.
+     * @param singleTypeElementType Element type of singleType when singleType is an
+     *                                  array or collection. Otherwise null.
      */
     @Trivial
-    public QueryInfo(RepositoryProducer<?> repositoryProducer,
-                     Class<?> repositoryInterface,
-                     Method method,
-                     Class<?> entityParamType,
-                     Class<?> returnArrayType,
-                     List<Class<?>> returnTypeAtDepth) {
+    protected QueryInfo(RepositoryProducer<?> repositoryProducer,
+                        Class<?> repositoryInterface,
+                        Method method,
+                        QueryType methodType,
+                        Class<?> entityParamType,
+                        boolean isOptional,
+                        Class<?> returnArrayType,
+                        Class<?> multiType,
+                        Class<?> singleType,
+                        Class<?> singleTypeElementType) {
         final boolean trace = TraceComponent.isAnyTracingEnabled();
         if (trace && tc.isEntryEnabled()) {
             StringBuilder b = new StringBuilder(200) //
-                            .append(method.getGenericReturnType().getTypeName()).append(' ') //
-                            .append(repositoryInterface.getName()).append('.') //
-                            .append(method.getName());
+                            .append(method.getGenericReturnType().getTypeName()) //
+                            .append(' ').append(repositoryInterface.getName()) //
+                            .append('.').append(method.getName());
             boolean first = true;
             for (java.lang.reflect.Type p : method.getGenericParameterTypes()) {
                 b.append(first ? "(" : ", ").append(p.getTypeName());
                 first = false;
             }
             b.append(first ? "()" : ")");
-            Tr.entry(this, tc, "<init>", b.toString(), entityParamType, returnArrayType, returnTypeAtDepth);
+            Tr.entry(this, tc, "<init>",
+                     b.toString(),
+                     entityParamType,
+                     "result isOptional? " + isOptional,
+                     "result multiType:  " + multiType,
+                     "result singleType: " + singleType,
+                     "          element: " + singleTypeElementType,
+                     "return array type: " + returnArrayType,
+                     "type if known:     " + type);
         }
 
         this.producer = repositoryProducer;
         this.repositoryInterface = repositoryInterface;
         this.method = method;
+        this.type = methodType;
         this.entityParamType = entityParamType;
+        this.isOptional = isOptional;
         this.returnArrayType = returnArrayType;
-
-        int d = 0, depth = returnTypeAtDepth.size();
-        Class<?> type = returnTypeAtDepth.get(d);
-        if (CompletionStage.class.equals(type) || CompletableFuture.class.equals(type))
-            if (++d < depth)
-                type = returnTypeAtDepth.get(d);
-            else
-                throw Fail.returnTypeInvalid(this);
-        if (isOptional = Optional.class.equals(type)) {
-            multiType = null;
-            if (++d < depth)
-                type = returnTypeAtDepth.get(d);
-            else
-                throw Fail.returnTypeInvalid(this);
-        } else {
-            if (returnArrayType != null
-                || Iterator.class.equals(type)
-                || Iterable.class.isAssignableFrom(type) // includes Page, List, ...
-                || BaseStream.class.isAssignableFrom(type)) {
-                multiType = type;
-                if (++d < depth)
-                    type = returnTypeAtDepth.get(d);
-                else
-                    throw Fail.returnTypeInvalid(this);
-            } else {
-                multiType = null;
-            }
-        }
-
-        singleType = type;
-
-        if ((singleType.isArray() || Iterable.class.isAssignableFrom(singleType)) &&
-            ++d < depth)
-            singleTypeElementType = returnTypeAtDepth.get(d);
-        else
-            singleTypeElementType = null;
+        this.multiType = multiType;
+        this.singleType = singleType;
+        this.singleTypeElementType = singleTypeElementType;
 
         specialParamsStartAt = method.getParameterCount(); // assume none unless found
 
         if (trace && tc.isEntryEnabled())
-            Tr.exit(this, tc, "<init>", new Object[] { this,
-                                                       "result isOptional? " + isOptional,
-                                                       "result multiType:  " + multiType,
-                                                       "result singleType: " + singleType,
-                                                       "          element: " + singleTypeElementType });
-    }
-
-    /**
-     * Construct partially complete query information.
-     */
-    public QueryInfo(RepositoryProducer<?> repositoryProducer,
-                     Class<?> repositoryInterface,
-                     Method method,
-                     QueryType type) {
-        this.method = method;
-        this.entityParamType = null;
-        this.multiType = null;
-        this.isOptional = false;
-        this.producer = repositoryProducer;
-        this.repositoryInterface = repositoryInterface;
-        this.returnArrayType = null;
-        this.singleType = null;
-        this.singleTypeElementType = null;
-        this.specialParamsStartAt = method.getParameterCount();
-        this.type = type;
-    }
-
-    /**
-     * Construct a copy of a source QueryInfo, but with different JPQL and
-     * possibly different sorts.
-     *
-     * @param source        QueryInfo from which to copy.
-     * @param constraints   map of method parameter index (0-based) to deferred
-     *                          Constraint at the position. Empty if none.
-     * @param restriction   Restriction value that was supplied to the repository method.
-     *                          Otherwise null.
-     * @param jpqlParams    Map to be populated with JPQL parameter names and values
-     *                          for Constraints and Restrictions. Map keys are the
-     *                          named parameter name or positional parameter index.
-     *                          Map values are obtained from the Constraints or
-     *                          Restrictions. The first positional parameter index
-     *                          starts at jpqlParamCount, which is updated by this
-     *                          method when JPQL parameters for repository method
-     *                          special parameters are added.
-     * @param pageReq       PageRequest, if supplied to the repository method.
-     * @param sortsOverride If present, sorts to use instead of the sorts from source.
-     *                          A value is supplied when the repostiory method has
-     *                          Order or Sort parameters. Otherwise null.
-     */
-    // TODO 1.1 avoid logging customer data
-    private QueryInfo(QueryInfo source,
-                      Map<Integer, Object> constraints,
-                      Object restriction,
-                      Map<Object, Object> jpqlParams,
-                      PageRequest pageReq,
-                      List<Sort<Object>> sortsOverride) {
-        entityInfo = source.entityInfo;
-        entityParamType = source.entityParamType;
-        entityVar = source.entityVar;
-        entityVar_ = source.entityVar_;
-        isOptional = source.isOptional;
-        maxResults = source.maxResults;
-        method = source.method;
-        methodTypeAnno = source.methodTypeAnno;
-        multiType = source.multiType;
-        producer = source.producer;
-        repositoryInterface = source.repositoryInterface;
-        returnArrayType = source.returnArrayType;
-        singleType = source.singleType;
-        singleTypeElementType = source.singleTypeElementType;
-        sorts = sortsOverride == null ? source.sorts : sortsOverride;
-        type = source.type;
-        validateParams = source.validateParams;
-
-        DataVersionCompatibility compat = entityInfo.builder.provider.compat;
-        StringBuilder q;
-
-        if (constraints.isEmpty()) {
-            hasWhere = source.hasWhere;
-            jpqlAfterCursor = source.jpqlAfterCursor;
-            jpqlBeforeCursor = source.jpqlBeforeCursor;
-            jpqlCount = source.jpqlCount;
-            jpqlDelete = source.jpqlDelete;
-            jpqlParamCount = source.jpqlParamCount;
-            jpqlParamNames = source.jpqlParamNames.isEmpty() //
-                            ? source.jpqlParamNames //
-                            : new LinkedHashSet<>(source.jpqlParamNames);
-            restrictAt = source.restrictAt;
-            specialParamsStartAt = source.specialParamsStartAt;
-
-            if (restriction == null) {
-                // no Constraints deferred or Restriction
-                q = new StringBuilder(source.jpql);
-            } else {
-                // has Restriction, but no Constraints deferred
-                int len = source.jpql.length();
-                q = new StringBuilder(len + 200);
-                if (restrictAt >= 0 && restrictAt < len)
-                    q.append(source.jpql.substring(0, restrictAt));
-                else
-                    q.append(source.jpql).append(' ');
-
-                q.append(hasWhere ? "AND " : "WHERE ");
-                hasWhere = true;
-
-                jpqlParamCount = compat.generateRestrictions(q,
-                                                             entityVar_,
-                                                             restriction,
-                                                             jpqlParamCount,
-                                                             jpqlParamNames,
-                                                             jpqlParams);
-
-                if (restrictAt >= 0 && restrictAt < len) {
-                    int newPosition = q.length();
-                    q.append(' ').append(source.jpql.substring(restrictAt));
-                    restrictAt = newPosition;
-                }
-            }
-        } else {
-            // Constraints were deferred until execution
-            // Generate new JPQL for Query by Parameters
-
-            boolean countPages = Page.class.equals(multiType) ||
-                                 CursoredPage.class.equals(multiType);
-
-            q = initQueryByParameters(countPages, constraints, jpqlParams);
-
-            if (restriction != null) {
-                q.append(hasWhere ? " AND " : " WHERE ");
-                hasWhere = true;
-                jpqlParamCount = compat.generateRestrictions(q,
-                                                             entityVar_,
-                                                             restriction,
-                                                             jpqlParamCount,
-                                                             jpqlParamNames,
-                                                             jpqlParams);
-            }
-
-            // If there are no overrides from Order/Sort parameters, keep the
-            // static Sorts from the source QueryInfo.
-            if (sortsOverride == null)
-                sortsOverride = source.sorts;
-        }
-
-        boolean forward = pageReq == null ||
-                          pageReq.mode() != PageRequest.Mode.CURSOR_PREVIOUS;
-        StringBuilder order = null; // ORDER BY clause based on Sorts
-        if (sortsOverride != null)
-            for (Sort<?> sort : sortsOverride) {
-                validateSort(sort);
-                order = order == null //
-                                ? new StringBuilder(100).append(" ORDER BY ") //
-                                : order.append(", ");
-                generateSort(order, sort, forward);
-            }
-
-        if (pageReq == null ||
-            pageReq.mode() == PageRequest.Mode.OFFSET) {
-            // offset pagination can be a starting point for cursor pagination
-            if (order != null) {
-                restrictAt = q.length() + 1;
-                q.append(order);
-            }
-            this.jpql = q.toString();
-        } else { // CURSOR_NEXT or CURSOR_PREVIOUS
-            this.jpql = null;
-            generateCursorQueries(q,
-                                  forward ? order : null,
-                                  forward ? null : order);
-        }
+            Tr.exit(this, tc, "<init>", this);
     }
 
     /**
@@ -979,6 +791,153 @@ public class QueryInfo {
     }
 
     /**
+     * Construct a copy of this QueryInfo, but with different JPQL and
+     * possibly different sorts.
+     *
+     * @param source        QueryInfo from which to copy.
+     * @param constraints   map of method parameter index (0-based) to deferred
+     *                          Constraint at the position. Empty if none.
+     * @param restriction   Restriction value that was supplied to the repository method.
+     *                          Otherwise null.
+     * @param jpqlParams    Map to be populated with JPQL parameter names and values
+     *                          for Constraints and Restrictions. Map keys are the
+     *                          named parameter name or positional parameter index.
+     *                          Map values are obtained from the Constraints or
+     *                          Restrictions. The first positional parameter index
+     *                          starts at jpqlParamCount, which is updated by this
+     *                          method when JPQL parameters for repository method
+     *                          special parameters are added.
+     * @param pageReq       PageRequest, if supplied to the repository method.
+     * @param sortsOverride If present, sorts to use instead of the sorts from source.
+     *                          A value is supplied when the repostiory method has
+     *                          Order or Sort parameters. Otherwise null.
+     * @return the new query information.
+     */
+    private QueryInfo copy(Map<Integer, Object> constraints,
+                           Object restriction,
+                           Map<Object, Object> jpqlParams,
+                           PageRequest pageReq,
+                           List<Sort<Object>> sortsOverride) {
+        DataVersionCompatibility compat = entityInfo.builder.provider.compat;
+
+        QueryInfo info = compat.createQueryInfo(producer, //
+                                                repositoryInterface, //
+                                                method, //
+                                                type, //
+                                                entityParamType, //
+                                                isOptional, //
+                                                multiType, //
+                                                returnArrayType, //
+                                                singleType, //
+                                                singleTypeElementType);
+        info.entityInfo = entityInfo;
+        info.entityVar = entityVar;
+        info.entityVar_ = entityVar_;
+        info.maxResults = maxResults;
+        info.methodTypeAnno = methodTypeAnno;
+        info.sorts = sortsOverride == null ? sorts : sortsOverride;
+        info.validateParams = validateParams;
+
+        StringBuilder q;
+
+        if (constraints.isEmpty()) {
+            info.hasWhere = hasWhere;
+            info.jpqlAfterCursor = jpqlAfterCursor;
+            info.jpqlBeforeCursor = jpqlBeforeCursor;
+            info.jpqlCount = jpqlCount;
+            info.jpqlDelete = jpqlDelete;
+            info.jpqlParamCount = jpqlParamCount;
+            info.jpqlParamNames = jpqlParamNames.isEmpty() //
+                            ? jpqlParamNames //
+                            : new LinkedHashSet<>(jpqlParamNames);
+            info.restrictAt = restrictAt;
+            info.specialParamsStartAt = specialParamsStartAt;
+
+            if (restriction == null) {
+                // no Constraints deferred or Restriction
+                q = new StringBuilder(jpql);
+            } else {
+                // has Restriction, but no Constraints deferred
+                int len = jpql.length();
+                q = new StringBuilder(len + 200);
+                if (info.restrictAt >= 0 && info.restrictAt < len)
+                    q.append(jpql.substring(0, info.restrictAt));
+                else
+                    q.append(jpql).append(' ');
+
+                q.append(info.hasWhere ? "AND " : "WHERE ");
+                info.hasWhere = true;
+
+                info.jpqlParamCount = compat.generateRestrictions(q,
+                                                                  entityVar_,
+                                                                  restriction,
+                                                                  info.jpqlParamCount,
+                                                                  info.jpqlParamNames,
+                                                                  jpqlParams);
+
+                if (info.restrictAt >= 0 && info.restrictAt < len) {
+                    int newPosition = q.length();
+                    q.append(' ').append(jpql.substring(info.restrictAt));
+                    info.restrictAt = newPosition;
+                }
+            }
+        } else {
+            // Constraints were deferred until execution
+            // Generate new JPQL for Query by Parameters
+
+            boolean countPages = Page.class.equals(multiType) ||
+                                 CursoredPage.class.equals(multiType);
+
+            q = info.initQueryByParameters(countPages, constraints, jpqlParams);
+
+            if (restriction != null) {
+                q.append(info.hasWhere ? " AND " : " WHERE ");
+                info.hasWhere = true;
+                info.jpqlParamCount = compat.generateRestrictions(q,
+                                                                  entityVar_,
+                                                                  restriction,
+                                                                  info.jpqlParamCount,
+                                                                  info.jpqlParamNames,
+                                                                  jpqlParams);
+            }
+
+            // If there are no overrides from Order/Sort parameters, keep the
+            // static Sorts from the source QueryInfo.
+            if (sortsOverride == null)
+                sortsOverride = sorts;
+        }
+
+        boolean forward = pageReq == null ||
+                          pageReq.mode() != PageRequest.Mode.CURSOR_PREVIOUS;
+        StringBuilder order = null; // ORDER BY clause based on Sorts
+        if (sortsOverride != null)
+            for (Sort<?> sort : sortsOverride) {
+                info.validateSort(sort);
+                order = order == null //
+                                ? new StringBuilder(100).append(" ORDER BY ") //
+                                : order.append(", ");
+                info.generateSort(order, sort, forward);
+            }
+
+        if (pageReq == null ||
+            pageReq.mode() == PageRequest.Mode.OFFSET) {
+            // offset pagination can be a starting point for cursor pagination
+            if (order != null) {
+                info.restrictAt = q.length() + 1;
+                q.append(order);
+            }
+            info.jpql = q.toString();
+        } else { // CURSOR_NEXT or CURSOR_PREVIOUS
+            info.jpql = null;
+            info.generateCursorQueries(q,
+                                       forward ? order : null,
+                                       forward ? null : order);
+        }
+
+        return info;
+    }
+
+    /**
      * Execute a repository count query.
      *
      * @param em   entity manager.
@@ -1104,12 +1063,11 @@ public class QueryInfo {
         Map<Object, Object> addedJPQLParams = null;
 
         QueryInfo queryInfo = requiresNewQuery //
-                        ? new QueryInfo(this, //
-                                        deferredConstraints, //
-                                        restriction, //
-                                        addedJPQLParams = new LinkedHashMap<>(), //
-                                        null, //
-                                        null) //
+                        ? copy(deferredConstraints, //
+                               restriction, //
+                               addedJPQLParams = new LinkedHashMap<>(), //
+                               null, //
+                               null) //
                         : this;
 
         jakarta.persistence.Query query = typeOfTypedQuery == null //
@@ -1513,12 +1471,11 @@ public class QueryInfo {
         Map<Object, Object> addedJPQLParams = null;
 
         QueryInfo queryInfo = requiresNewQuery //
-                        ? new QueryInfo(this, //
-                                        deferredConstraints, //
-                                        restriction, //
-                                        addedJPQLParams = new LinkedHashMap<>(), //
-                                        pageReq, //
-                                        sortList) //
+                        ? copy(deferredConstraints, //
+                               restriction, //
+                               addedJPQLParams = new LinkedHashMap<>(), //
+                               pageReq, //
+                               sortList) //
                         : this;
 
         Object returnValue = queryInfo.find(limit,

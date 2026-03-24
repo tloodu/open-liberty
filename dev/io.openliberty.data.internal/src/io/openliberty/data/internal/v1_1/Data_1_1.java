@@ -35,7 +35,9 @@ import com.ibm.websphere.ras.annotation.Trivial;
 
 import io.openliberty.data.internal.AttributeConstraint;
 import io.openliberty.data.internal.DataVersionCompatibility;
+import io.openliberty.data.internal.QueryInfo;
 import io.openliberty.data.internal.QueryType;
+import io.openliberty.data.internal.cdi.RepositoryProducer;
 import io.openliberty.data.repository.Count;
 import io.openliberty.data.repository.Exists;
 import io.openliberty.data.repository.IgnoreCase;
@@ -360,6 +362,31 @@ public class Data_1_1 implements DataVersionCompatibility {
     @Trivial
     public boolean atLeast(int major, int minor) {
         return major == 1 && minor <= 1;
+    }
+
+    @Override
+    @Trivial
+    public QueryInfo createQueryInfo(RepositoryProducer<?> repositoryProducer,
+                                     Class<?> repositoryInterface,
+                                     Method method,
+                                     QueryType methodType,
+                                     Class<?> entityParamType,
+                                     boolean isOptional,
+                                     Class<?> returnArrayType,
+                                     Class<?> multiType,
+                                     Class<?> singleType,
+                                     Class<?> singleTypeElementType) {
+        return new QueryInfo_1_1( //
+                        repositoryProducer, //
+                        repositoryInterface, //
+                        method, //
+                        methodType, //
+                        entityParamType, //
+                        isOptional, //
+                        returnArrayType, //
+                        multiType, //
+                        singleType, //
+                        singleTypeElementType);
     }
 
     /**

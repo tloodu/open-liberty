@@ -28,8 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.BaseStream;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -48,6 +52,7 @@ import com.ibm.ws.threadContext.ComponentMetaDataAccessorImpl;
 import com.ibm.wsspi.kernel.service.utils.FrameworkState;
 
 import io.openliberty.data.internal.DataProvider;
+import io.openliberty.data.internal.Fail;
 import io.openliberty.data.internal.QueryInfo;
 import io.openliberty.data.internal.QueryType;
 import io.openliberty.data.internal.Util;
@@ -220,11 +225,17 @@ public class DataExtension implements Extension {
                 (EntityManager.class.equals(returnType)
                  || DataSource.class.equals(returnType)
                  || Connection.class.equals(returnType))) {
-                QueryInfo queryInfo = new QueryInfo( //
-                                producer, //
-                                repositoryInterface, //
-                                method, //
-                                QueryType.RESOURCE_ACCESS);
+                QueryInfo queryInfo = provider.compat //
+                                .createQueryInfo(producer, //
+                                                 repositoryInterface, //
+                                                 method, //
+                                                 QueryType.RESOURCE_ACCESS, //
+                                                 null, //
+                                                 false, //
+                                                 null, //
+                                                 null, //
+                                                 returnType, //
+                                                 null);
 
                 List<QueryInfo> queries = queriesPerEntity.get(Void.class);
                 if (queries == null)
@@ -372,13 +383,62 @@ public class DataExtension implements Extension {
                     queries = queriesWithQueryAnno;
             }
 
-            queries.add(new QueryInfo( //
-                            producer, //
-                            repositoryInterface, //
-                            method, //
-                            entityParamType, //
-                            returnArrayComponentType, //
-                            returnTypeAtDepth));
+            boolean isOptional;
+            Class<?> multiType;
+            Class<?> singleType;
+            Class<?> singleTypeElementType;
+
+            int d = 0, depth = returnTypeAtDepth.size();
+            Class<?> rtype = returnTypeAtDepth.get(d);
+            if (CompletionStage.class.equals(rtype) ||
+                CompletableFuture.class.equals(rtype))
+                if (++d < depth)
+                    rtype = returnTypeAtDepth.get(d);
+                else
+                    throw Fail.returnTypeInvalid(repositoryInterface,
+                                                 method);
+            if (isOptional = Optional.class.equals(rtype)) {
+                multiType = null;
+                if (++d < depth)
+                    rtype = returnTypeAtDepth.get(d);
+                else
+                    throw Fail.returnTypeInvalid(repositoryInterface,
+                                                 method);
+            } else {
+                if (returnArrayComponentType != null
+                    || Iterator.class.equals(rtype)
+                    || Iterable.class.isAssignableFrom(rtype) // includes Page, List, ...
+                    || BaseStream.class.isAssignableFrom(rtype)) {
+                    multiType = rtype;
+                    if (++d < depth)
+                        rtype = returnTypeAtDepth.get(d);
+                    else
+                        throw Fail.returnTypeInvalid(repositoryInterface,
+                                                     method);
+                } else {
+                    multiType = null;
+                }
+            }
+
+            singleType = rtype;
+
+            if ((singleType.isArray() ||
+                 Iterable.class.isAssignableFrom(singleType))
+                && ++d < depth)
+                singleTypeElementType = returnTypeAtDepth.get(d);
+            else
+                singleTypeElementType = null;
+
+            queries.add(provider.compat.createQueryInfo(producer, //
+                                                        repositoryInterface, //
+                                                        method, //
+                                                        null, //
+                                                        entityParamType, //
+                                                        isOptional, //
+                                                        multiType, //
+                                                        returnArrayComponentType, //
+                                                        singleType, //
+                                                        singleTypeElementType));
         }
 
         // Confirm which classes are actually entity classes and that all entity classes are supported
