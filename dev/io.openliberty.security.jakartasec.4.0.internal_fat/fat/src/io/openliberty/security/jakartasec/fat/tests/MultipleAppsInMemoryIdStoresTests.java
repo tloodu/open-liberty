@@ -12,11 +12,11 @@
  *******************************************************************************/
 package io.openliberty.security.jakartasec.fat.tests;
 
-import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.INVALID_PASSWORD;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.PASSWORD_XOR_VALID;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.PRODUCTION_USE_WARNING_MSG;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.USER_BILL;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.USER_JASMINE;
+import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.USER_LISA;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.VALID_PASSWORD;
 
 import java.io.File;
@@ -41,19 +41,23 @@ import inmemory.identity.store.InMemoryIdentityStoreHighestPriorityApplication;
 import inmemory.identity.store.InMemoryIdentityStoreProtectedResource;
 
 /**
- * Tests for multiple in-memory id stores with various password encoding schemes.
+ * Tests for multiple applications with specified in-memory id stores having various password encoding schemes.
  */
 @RunWith(FATRunner.class)
 @Mode(TestMode.LITE)
-public class MultipleInMemoryIdentityStoresTests extends BaseJakartaSecurity40Test {
+public class MultipleAppsInMemoryIdStoresTests extends BaseJakartaSecurity40Test {
 
-    private static final Class<?> c = MultipleInMemoryIdentityStoresTests.class;
+    private static final Class<?> c = MultipleAppsInMemoryIdStoresTests.class;
 
     public static final String APP_NAME = "IdentityStore";
+    public static final String APP_NAME2 = "IdentityStore2";
+
     private static final String CONTEXT_ROOT = "/" + APP_NAME;
+    private static final String CONTEXT_ROOT2 = "/" + APP_NAME2;
     private static final String RESOURCE_PATH = "/resource/test";
 
-    private static String url = null;
+    private static String url;
+    private static String url2;
 
     @Server(IN_MEM_ID_STORE_ENABLED_SERVER_NAME)
     public static LibertyServer server;
@@ -70,44 +74,48 @@ public class MultipleInMemoryIdentityStoresTests extends BaseJakartaSecurity40Te
 
     @BeforeClass
     public static void setUp() throws Exception {
-        MultipleInMemoryIdentityStoresTests instance = new MultipleInMemoryIdentityStoresTests();
+        MultipleAppsInMemoryIdStoresTests instance = new MultipleAppsInMemoryIdStoresTests();
         instance.logInfo("setUp", "Starting server setup...");
 
-        // The URL is not expected to be modified during this test scope
         url = instance.buildUrl(CONTEXT_ROOT, RESOURCE_PATH);
+        url2 = instance.buildUrl(CONTEXT_ROOT2, RESOURCE_PATH);
 
-        // Create the web application containing two in-memory id stores
-        WebArchive app = ShrinkWrap.create(WebArchive.class,
-                                           APP_NAME + ".war").addClass(InMemoryIdentityStoreApplication.class).addClass(InMemoryIdentityStoreHighestPriorityApplication.class).addClass(InMemoryIdentityStoreProtectedResource.class).addAsWebInfResource(new File("test-applications/inmemory/WEB-INF/web.xml"));
+        // Create the separate archives each one containing a in-memory id store definition with different priority
+        WebArchive multiapp1 = ShrinkWrap.create(WebArchive.class,
+                                                 APP_NAME + ".war").addClass(InMemoryIdentityStoreApplication.class).addClass(InMemoryIdentityStoreProtectedResource.class).addAsWebInfResource(new File("test-applications/inmemory/WEB-INF/web.xml"));
 
-        ShrinkHelper.exportDropinAppToServer(server, app, DeployOptions.SERVER_ONLY);
+        ShrinkHelper.exportDropinAppToServer(server, multiapp1, DeployOptions.SERVER_ONLY);
+
+        WebArchive multiapp2 = ShrinkWrap.create(WebArchive.class,
+                                                 APP_NAME2 + ".war").addClass(InMemoryIdentityStoreHighestPriorityApplication.class).addClass(InMemoryIdentityStoreProtectedResource.class).addAsWebInfResource(new File("test-applications/inmemory/WEB-INF/web.xml"));
+
+        ShrinkHelper.exportDropinAppToServer(server, multiapp2, DeployOptions.SERVER_ONLY);
 
         instance.startServer();
     }
 
     /**
-     * Test the priority when more than one in-memory identity stores are defined.
-     * Two in-memory id stores are involved in the same war; one with priority 5 and one with 10
-     * The one with the lower value in priority element takes precedence.
+     * Test different definitions of in-memory identity stores on multiple apps.
+     * Assert that they operate on application scope and there is no interlock
      *
      */
     @Test
-    public void testInMemStoresPriority() throws Exception {
-        logInfo("testInMemStoresPriority", "Testing that the id store with the lower value in priority element takes precedence over the the other");
+    public void testInMemStoresInMultiApps() throws Exception {
+        logInfo("testInMemStoresInMultiApps", "Testing the in-memory id stores in multiple applications");
 
-        // Should get 401 - this credential does not exist in either of the id stores
-        executeGetRequest(url, USER_BILL, VALID_PASSWORD, 401);
+        //USER_BILL exists as user only in the first id store, yet with different password; thus it returns 403
+        executeGetRequest(url, USER_BILL, VALID_PASSWORD, 403);
+        executeGetRequest(url2, USER_BILL, VALID_PASSWORD, 401);
 
-        // Should get 401 - this credential exists only on the less prioritised id-store (with priority=10)
-        executeGetRequest(url, USER_BILL, PASSWORD_XOR_VALID, 401);
+        //USER_LISA credentials exist only in one of the id stores; thus it returns 401 on the second id store
+        executeGetRequest(url, USER_LISA, PASSWORD_XOR_VALID, 200);
+        executeGetRequest(url2, USER_LISA, PASSWORD_XOR_VALID, 401);
 
-        // Should get 200 - this credential exists on the highest prioritised id-store (with priority=5)
+        //USER_JASMINE credentials exist on both id stores with valid passwords
         executeGetRequest(url, USER_JASMINE, PASSWORD_XOR_VALID, 200);
+        executeGetRequest(url2, USER_JASMINE, PASSWORD_XOR_VALID, 200);
 
-        // Should get 200 - the user exists on the highest prioritised id-store with different password
-        executeGetRequest(url, USER_JASMINE, INVALID_PASSWORD, 401);
-
-        logInfo("testInMemStoresPriority", "Test passed");
+        logInfo("testInMemStoresInMultiApps", "Test passed");
     }
 
     @AfterClass

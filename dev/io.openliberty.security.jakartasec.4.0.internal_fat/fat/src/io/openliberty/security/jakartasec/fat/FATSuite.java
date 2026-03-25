@@ -27,6 +27,7 @@ import io.openliberty.security.jakartasec.fat.tests.InMemoryIdentityStoreEnablem
 import io.openliberty.security.jakartasec.fat.tests.InMemoryIdentityStorePropertyNotFoundTest;
 import io.openliberty.security.jakartasec.fat.tests.InMemoryIdentityStoreTests;
 import io.openliberty.security.jakartasec.fat.tests.MissingCustomHandlerTests;
+import io.openliberty.security.jakartasec.fat.tests.MultipleAppsInMemoryIdStoresTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleHAMCustomTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleHAMDuplicateTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleHAMInbuiltQualifiersTests;
@@ -51,8 +52,10 @@ import io.openliberty.security.jakartasec.fat.tests.SingleHAMInbuiltCustomQualif
                 InMemoryIdStoreBadlyEncodedPwdTests.class,
                 InMemoryIdStoreAesEncodedPwdTests.class,
                 MultipleInMemoryIdentityStoresTests.class,
+                MultipleAppsInMemoryIdStoresTests.class,
                 AppRolesTests.class,
                 AppBndRolesTests.class
 })
+
 public class FATSuite {
 }
