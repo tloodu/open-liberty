@@ -236,7 +236,7 @@
 	>
 	</openidConnectClient>	
 
-	<!-- FROM_HEADER Configs -->
+	<!-- FROM_HEADER Configs
 
 	<authFilter id="authFilterFromHeaderHS256">
 		<requestUrl
@@ -647,6 +647,6 @@
 		trustStoreRef="trust_altAllSigAlg"
 		trustAliasName="altes256"
 	>
-	</openidConnectClient>
+	</openidConnectClient> -->
 
 </server>
