@@ -4,13 +4,10 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package com.ibm.ws.clientcontainer.HelloAppClient.test;
+package com.ibm.ws.clientcontainer.HelloAppClient.test.managedbean;
 
 import java.util.logging.Logger;
 
@@ -20,8 +17,7 @@ import javax.annotation.ManagedBean;
  * Simple Managed Bean that has been named.
  **/
 @ManagedBean("NamedManagedBean")
-public class NamedManagedBean
-{
+public class NamedManagedBean {
     private static final String CLASS_NAME = NamedManagedBean.class.getName();
     private static final Logger svLogger = Logger.getLogger(CLASS_NAME);
     private static int svNextID = 1;
@@ -29,11 +25,9 @@ public class NamedManagedBean
     private final int ivID;
     private String ivValue = "ManagedBean found";
 
-    public NamedManagedBean()
-    {
+    public NamedManagedBean() {
         // Use a unique id so it is easy to tell which instance is in use.
-        synchronized (NamedManagedBean.class)
-        {
+        synchronized (NamedManagedBean.class) {
             svLogger.info("-- ejb.NamedManagedBean.<init>:" + svNextID);
             ivID = svNextID++;
         }
@@ -42,8 +36,7 @@ public class NamedManagedBean
     /**
      * Returns the unique identifier of this instance.
      */
-    public int getIdentifier()
-    {
+    public int getIdentifier() {
         svLogger.info("-- getIdentifier : " + this);
         return ivID;
     }
@@ -51,8 +44,7 @@ public class NamedManagedBean
     /**
      * Returns the value.. to verify object is 'stateful'
      */
-    public String getValue()
-    {
+    public String getValue() {
         svLogger.info("-- getValue : " + this);
         return ivValue;
     }
@@ -60,15 +52,13 @@ public class NamedManagedBean
     /**
      * Sets the value.. to verify object is 'stateful'
      */
-    public void setValue(String value)
-    {
+    public void setValue(String value) {
         svLogger.info("-- setValue : " + ivValue + "->" + value + " : " + this);
         ivValue = value;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "ejb.NamedManagedBean(ID=" + ivID + "," + ivValue + ")";
     }
 

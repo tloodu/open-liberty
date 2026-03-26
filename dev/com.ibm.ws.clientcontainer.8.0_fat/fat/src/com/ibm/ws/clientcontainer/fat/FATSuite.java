@@ -19,7 +19,8 @@ import componenttest.rules.repeater.RepeatTests;
 
 @RunWith(Suite.class)
 @SuiteClasses({
-                AppClientTest.class
+                AppClientTest.class,
+                AppClientTestCDI.class
 })
 public class FATSuite {
     @ClassRule
