@@ -80,4 +80,11 @@ class JakartaPolicyFactoryProxyImpl implements PolicyProxy {
     public boolean isPolicyConfigured() {
         return PolicyFactory.getPolicyFactory() != null;
     }
+
+    @Override
+    public boolean isUnauthenticatedAuthorizationCheckAllowed() {
+        // If there is no policy defined, we fall back to built-in authorization behavior which
+        // follows the servlet specification rules.
+        return PolicyFactory.getPolicyFactory() != null;
+    }
 }
