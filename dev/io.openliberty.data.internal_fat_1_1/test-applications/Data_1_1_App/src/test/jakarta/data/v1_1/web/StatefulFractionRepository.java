@@ -17,6 +17,8 @@ import java.util.List;
 import jakarta.data.repository.DataRepository;
 import jakarta.data.repository.Repository;
 import jakarta.data.repository.stateful.Persist;
+import jakarta.data.repository.stateful.Refresh;
+import jakarta.data.repository.stateful.Remove;
 import jakarta.transaction.Transactional;
 
 /**
@@ -30,6 +32,12 @@ public interface StatefulFractionRepository //
     @Persist
     @Transactional
     void persistAll(List<Fraction> fractions);
+
+    @Remove
+    void remove(Fraction... fractions);
+
+    @Refresh
+    void restore(Fraction fraction);
 
     @Persist
     void write(Fraction fraction);
