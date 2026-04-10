@@ -16,7 +16,6 @@ import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConst
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.DB_USER_ALICE;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.DB_USER_CHARLIE;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.DB_USER_RORY;
-import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.ID_STORE_FOUND_MSG;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.ID_STORE_VALIDATION_FAIL_MSG;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.ID_STORE_VALIDATION_SUCCESS_MSG;
 import static io.openliberty.security.jakartasec.fat.utils.Jakartasec40TestConstants.INVALID_PASSWORD;
@@ -285,32 +284,6 @@ public class MultipleIdentityStoreTypesTests extends BaseJakartaSecurity40Test {
         assertNotNull("Database identity store should be invoked", logContent);
 
         logInfo("testBothStoresActive", "Test passed - both identity stores are active");
-    }
-
-    /**
-     * Test the priority order by checking which store validates first.
-     * When alice authenticates with in-memory password, database store should not be called.
-     */
-    @Test
-    public void testPriorityOrder() throws Exception {
-        logInfo("testPriorityOrder", "Testing identity store priority order");
-
-        // Authenticate alice with in-memory store password
-        executeGetRequest(url, DB_USER_ALICE, VALID_PASSWORD, 200);
-
-        String inMemIdStoreName = String.format(ID_STORE_FOUND_MSG, "IdentityStore");
-        String customDbIdStoreName = String.format(ID_STORE_FOUND_MSG, "CustomDatabaseIdentityStore");
-
-        //Both stores are found
-        assertNotNull("InMemoryIdentityStore should be found", waitForStringInLog(inMemIdStoreName));
-        assertNotNull("CustomDatabaseIdentityStore should be found", waitForStringInLog(customDbIdStoreName));
-
-        // The in-memory store should validate successfully, so database store should not be called
-        // for credential validation (it might be called for groups, but not for validation)
-        String inMemIdStoreValidated = String.format(ID_STORE_VALIDATION_SUCCESS_MSG, "IdentityStore");
-        assertNotNull("InMemoryIdentityStore should be validated", waitForStringInLog(inMemIdStoreValidated));
-
-        logInfo("testPriorityOrder", "Test passed - priority order verified");
     }
 
     @AfterClass

@@ -33,6 +33,7 @@ import io.openliberty.security.jakartasec.fat.tests.MultipleHAMDuplicateTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleHAMInbuiltQualifiersTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleHAMInbuiltTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleIdentityStoreTypesTests;
+import io.openliberty.security.jakartasec.fat.tests.MultipleIdentityStoresPriorityTests;
 import io.openliberty.security.jakartasec.fat.tests.MultipleInMemoryIdentityStoresTests;
 import io.openliberty.security.jakartasec.fat.tests.SingleHAMInbuiltCustomQualifierTests;
 
@@ -54,6 +55,7 @@ import io.openliberty.security.jakartasec.fat.tests.SingleHAMInbuiltCustomQualif
                 InMemoryIdStoreAesEncodedPwdTests.class,
                 MultipleInMemoryIdentityStoresTests.class,
                 MultipleIdentityStoreTypesTests.class,
+                MultipleIdentityStoresPriorityTests.class,
                 MultipleAppsInMemoryIdStoresTests.class,
                 AppRolesTests.class,
                 AppBndRolesTests.class
