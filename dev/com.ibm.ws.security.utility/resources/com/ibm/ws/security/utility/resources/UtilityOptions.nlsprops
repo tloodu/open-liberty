@@ -70,8 +70,8 @@ encode.option-desc.1.text=\
 encode.option-key.encoding=\
 \ \ \ \ --encoding=[xor|aes|hash{1}]
 encode.option-desc.encoding=\
-\tSpecify how to encode the password. Supported encodings are xor, aes, aes-128,\n\
-\tand hash. The default encoding is xor. Aes encrypts by using an aes-256 bit key.\n\
+\tRequired. Specify how to encode the password. Supported encodings are xor, aes, aes-128,\n\
+\tand hash. AES encryption is recommended for better security. Aes encrypts by using an aes-256 bit key.\n\
 \taes-128 can be used for compatibility with server versions before 25.0.0.2. {2}
 encode.option-key.key=\
 \ \ \ \ --key=[key]
@@ -174,8 +174,8 @@ For more control over certificate creation, use keytool directly.
 sslCert.option-key.password.encoding=\
 \ \ \ \ --passwordEncoding=[xor|aes]
 sslCert.option-desc.password.encoding=\
-\tSpecify how to encode the keystore password. Supported encodings are\n\
-\txor and aes. The default encoding is xor.\n\
+\tRequired. Specify how to encode the keystore password. Supported encodings are\n\
+\txor and aes. AES encryption is recommended for better security.\n\
 \tUse securityUtility encode --listCustom command to see if any\n\
 \tadditional custom encryptions are supported.
 sslCert.option-key.password.key=\
@@ -275,8 +275,8 @@ createLTPAKeys.option-desc.file=\
 createLTPAKeys.option-key.password.encoding=\
 \ \ \ \ --passwordEncoding=[xor|aes]
 createLTPAKeys.option-desc.password.encoding=\
-\tSpecify how to encode the LTPA keys password in the server.xml.\n\
-\tSupported encodings are xor and aes. The default encoding is xor.\n\
+\tRequired. Specify how to encode the LTPA keys password in the server.xml.\n\
+\tSupported encodings are xor and aes. AES encryption is recommended for better security.\n\
 \tUse securityUtility encode --listCustom command to see if any\n\
 \tadditional custom encryptions are supported.
 createLTPAKeys.option-key.password.key=\

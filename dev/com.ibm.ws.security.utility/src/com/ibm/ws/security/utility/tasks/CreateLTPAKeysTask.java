@@ -104,15 +104,22 @@ public class CreateLTPAKeysTask extends BaseCommandTask {
         }
 
         boolean passwordFound = false;
+        boolean encodingFound = false;
         for (String arg : args) {
             String key = arg.split("=")[0];
             if (key.equals(ARG_PASSWORD)) {
                 passwordFound = true;
             }
+            if (key.equals(BaseCommandTask.ARG_PASSWORD_ENCODING)) {
+                encodingFound = true;
+            }
         }
 
         if (!passwordFound) {
             message += " " + getMessage("missingArg", ARG_PASSWORD);
+        }
+        if (!encodingFound) {
+            message += " " + getMessage("missingArg", ARG_ENCODING);
         }
         if (!message.isEmpty()) {
             throw new IllegalArgumentException(message);
@@ -174,7 +181,7 @@ public class CreateLTPAKeysTask extends BaseCommandTask {
         } else {
             Map<String, String> argMap = new HashMap<>();
             String password = getArgumentValue(ARG_PASSWORD, args, null);
-            String encoding = getArgumentValue(BaseCommandTask.ARG_PASSWORD_ENCODING, args, PasswordUtil.getDefaultEncoding());
+            String encoding = getArgumentValue(BaseCommandTask.ARG_PASSWORD_ENCODING, args, null);
             String key = getArgumentValue(BaseCommandTask.ARG_PASSWORD_KEY, args, null);
             argMap.put(BaseCommandTask.ARG_PASSWORD_KEY, key);
             String base64Key = getArgumentValue(BaseCommandTask.ARG_PASSWORD_BASE64_KEY, args, null);
