@@ -244,6 +244,10 @@ public class ConsoleFormatTest {
             // Restore the initial contents of bootstrap.properties
             FileOutputStream out = getFileOutputStreamForRemoteFile(bootstrapFile, false);
             writeProperties(initialBootstrapProps, out);
+
+            // Restart the default server so the bootstrap properties is restored, to ensure other tests are run correctly.
+            Log.info(c, "testSimpleFormatSetInBootstrapProperties", "Restarting the server...");
+            restoreServer();
         }
     }
 
@@ -279,6 +283,10 @@ public class ConsoleFormatTest {
             // Restore the initial contents of bootstrap.properties
             FileOutputStream out = getFileOutputStreamForRemoteFile(bootstrapFile, false);
             writeProperties(initialBootstrapProps, out);
+
+            // Restart the default server so the bootstrap properties is restored, to ensure other tests are run correctly.
+            Log.info(c, "testSimpleFormatSetInBootstrapProperties", "Restarting the server...");
+            restoreServer();
         }
     }
 
