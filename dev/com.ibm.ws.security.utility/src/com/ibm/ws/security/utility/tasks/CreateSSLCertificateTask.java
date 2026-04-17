@@ -197,7 +197,7 @@ public class CreateSSLCertificateTask extends BaseCommandTask {
 
         try {
             Map<String, String> argProps = new HashMap<>();
-            String encoding = getArgumentValue(BaseCommandTask.ARG_PASSWORD_ENCODING, args, null);
+            String encoding = getArgumentValue(BaseCommandTask.ARG_PASSWORD_ENCODING, args, PasswordUtil.getDefaultEncoding());
             argProps.put(BaseCommandTask.ARG_PASSWORD_KEY, getArgumentValue(BaseCommandTask.ARG_PASSWORD_KEY, args, null));
             argProps.put(BaseCommandTask.ARG_AES_CONFIG_FILE, getArgumentValue(BaseCommandTask.ARG_AES_CONFIG_FILE, args, null));
             argProps.put(BaseCommandTask.ARG_PASSWORD_BASE64_KEY, getArgumentValue(BaseCommandTask.ARG_PASSWORD_BASE64_KEY, args, null));
@@ -262,7 +262,6 @@ public class CreateSSLCertificateTask extends BaseCommandTask {
         boolean serverFound = false;
         boolean clientFound = false;
         boolean passwordFound = false;
-        boolean encodingFound = false;
         for (String arg : args) {
             if (arg.startsWith(ARG_SERVER)) {
                 serverFound = true;
@@ -273,9 +272,6 @@ public class CreateSSLCertificateTask extends BaseCommandTask {
             if (arg.startsWith(ARG_PASSWORD)) {
                 passwordFound = true;
             }
-            if (arg.startsWith(BaseCommandTask.ARG_PASSWORD_ENCODING)) {
-                encodingFound = true;
-            }
         }
         if (!serverFound && !clientFound) {
             //missingArg need either --server or --client
@@ -285,11 +281,6 @@ public class CreateSSLCertificateTask extends BaseCommandTask {
         if (!passwordFound) {
             message += " " + getMessage("missingArg", ARG_PASSWORD);
         }
-        
-        if (!encodingFound) {
-            message += " " + getMessage("missingArg", ARG_ENCODING);
-        }
-        
         if (!message.isEmpty()) {
             throw new IllegalArgumentException(message);
         }

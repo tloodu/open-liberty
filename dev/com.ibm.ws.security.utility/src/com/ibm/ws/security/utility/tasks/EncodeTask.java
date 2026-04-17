@@ -110,7 +110,7 @@ public class EncodeTask extends BaseCommandTask {
                           Map<String, String> properties) throws InvalidPasswordEncodingException, UnsupportedCryptoAlgorithmException {
         String ret = null;
         try {
-            ret = PasswordUtil.encode(plaintext, encodingType, properties);
+            ret = PasswordUtil.encode(plaintext, encodingType == null ? PasswordUtil.getDefaultEncoding() : encodingType, properties);
         } catch (InvalidPasswordEncodingException e) {
             e.printStackTrace(stderr);
             throw e;
@@ -124,7 +124,6 @@ public class EncodeTask extends BaseCommandTask {
     /** {@inheritDoc} */
     @Override
     public SecurityUtilityReturnCodes handleTask(ConsoleWrapper stdin, PrintStream stdout, PrintStream stderr, String[] args) throws Exception {
-        validateArgumentList(args, Arrays.asList(ARG_NO_TRIM, ARG_LIST_CUSTOM));
         Map<String, String> argMap = parseArgumentList(args);
         if (argMap.containsKey(BaseCommandTask.ARG_LIST_CUSTOM)) {
             String output = PasswordCipherUtil.listCustom();
@@ -133,11 +132,11 @@ public class EncodeTask extends BaseCommandTask {
             }
             stdout.println(output);
         } else {
-            String encoding = argMap.get(ARG_ENCODING);
+            String encoding = argMap.get(BaseCommandTask.ARG_ENCODING);
             Map<String, String> props = BaseCommandTask.convertToProperties(argMap, stdout);
             
             // 26.0.0.3+ - Require a key be specified for AES encryption
-            if (encoding.contains("aes")) {
+            if (encoding != null && encoding.contains("aes")) {
                 boolean hasKey = argMap.containsKey(BaseCommandTask.ARG_KEY) ||
                                 argMap.containsKey(BaseCommandTask.ARG_BASE64_KEY) ||
                                 argMap.containsKey(BaseCommandTask.ARG_AES_CONFIG_FILE);
@@ -284,23 +283,7 @@ public class EncodeTask extends BaseCommandTask {
     /** {@inheritDoc} */
     @Override
     void checkRequiredArguments(String[] args) {
-
-        String message = "";
-        boolean encodingFound = false;
-        for (String arg : args) {
-            String key = arg.split("=")[0];
-            if (key.equals(ARG_ENCODING)) {
-                encodingFound = true;
-                break;
-            }
-        }
-        
-        if (!encodingFound) {
-            message += " " + getMessage("missingArg", ARG_ENCODING);
-        }
-        if (!message.isEmpty()) {
-            throw new IllegalArgumentException(message);
-        }
+        // checkRequiredArguments is not used by this implementation
     }
 
     /**
