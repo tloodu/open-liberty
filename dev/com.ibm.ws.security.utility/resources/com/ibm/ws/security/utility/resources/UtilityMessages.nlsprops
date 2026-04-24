@@ -45,6 +45,7 @@ encode.mutuallyExclusiveArgError=The input file cannot specify both the {0} and 
 encode.aesConfigFileEncryptionAmbiguous=ERROR: The input file cannot be used if it contains both the {0} and {1} variables.
 encode.aesConfigFileMissingEncryptionVariables=Cannot encode password; either the input file does not contain the {0} or {1} variables, or the input file is malformed.
 encode.aesKeyRequired=When using AES encoding, one of the following arguments must be specified: --key, --base64Key, --aesConfigFile, or --keyring.
+encode.encodingRequired=The --encoding argument is required. Specify an encoding method such as xor, aes, or hash. AES encryption is recommended for security.
 
 password.enterText=Enter password:
 password.reenterText=Re-enter password:

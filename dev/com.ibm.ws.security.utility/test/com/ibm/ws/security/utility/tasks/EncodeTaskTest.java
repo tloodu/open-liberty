@@ -76,7 +76,7 @@ public class EncodeTaskTest {
                 will(returnValue(null));
             }
         });
-        String[] args = { "encode" };
+        String[] args = { "encode", "--encoding=xor" };
         try {
             encode.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
@@ -140,7 +140,7 @@ public class EncodeTaskTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void handleTask_multiArgText() throws Exception {
-        String[] args = { "encode", plaintext, "extraArg" };
+        String[] args = { "encode", "--encoding=xor", plaintext, "extraArg" };
         try {
             encode.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
@@ -174,6 +174,24 @@ public class EncodeTaskTest {
             System.setProperty("com.ibm.ws.beta.edition", "false");
         }
 
+    }
+
+    /**
+     * Test that encoding parameter is required when not using --listCustom
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void handleTask_missingEncodingParameter() throws Exception {
+        String[] args = { "encode", plaintext };
+        encode.handleTask(stdin, stdout, stderr, args);
+    }
+    
+    /**
+     * Test that encoding parameter is required in interactive mode
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void handleTask_missingEncodingInteractive() throws Exception {
+        String[] args = { "encode" };
+        encode.handleTask(stdin, stdout, stderr, args);
     }
 
     public static Matcher<String> aStringStartsWith(String prefix) {

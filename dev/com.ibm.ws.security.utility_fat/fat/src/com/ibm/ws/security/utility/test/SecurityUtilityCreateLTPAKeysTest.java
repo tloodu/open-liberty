@@ -408,7 +408,8 @@ public class SecurityUtilityCreateLTPAKeysTest {
             new String[] {
                 "createLTPAKeys",
                 "--file=" + CUSTOM_LTPA_KEY_FILE,
-                "--password=" + ltpaPassword
+                "--password=" + ltpaPassword,
+                "--passwordEncoding=xor"
             },
             libertyInstallRoot,
             testEnvironment);
@@ -681,10 +682,11 @@ public class SecurityUtilityCreateLTPAKeysTest {
         // Execute createLTPAKeys command with non-existent server
         ProgramOutput commandOutput = testMachine.execute(
             securityUtilityPath,
-            new String[] { 
-                "createLTPAKeys", 
-                "--server=" + nonExistentServer, 
-                "--password=" + ltpaPassword 
+            new String[] {
+                "createLTPAKeys",
+                "--server=" + nonExistentServer,
+                "--password=" + ltpaPassword,
+                "--passwordEncoding=xor"
             },
             libertyInstallRoot,
             testEnvironment);
@@ -713,7 +715,8 @@ public class SecurityUtilityCreateLTPAKeysTest {
             securityUtilityPath,
             new String[] {
                 "createLTPAKeys",
-                "--password=" + ltpaPassword
+                "--password=" + ltpaPassword,
+                "--passwordEncoding=xor"
             },
             libertyInstallRoot,
             testEnvironment);
@@ -759,11 +762,12 @@ public class SecurityUtilityCreateLTPAKeysTest {
         // Execute createLTPAKeys command with both --server and --file
         ProgramOutput commandOutput = testMachine.execute(
             securityUtilityPath,
-            new String[] { 
-                "createLTPAKeys", 
+            new String[] {
+                "createLTPAKeys",
                 "--server=" + LTPA_TEST_SERVER_NAME,
                 "--file=" + CUSTOM_LTPA_KEY_FILE,
-                "--password=" + ltpaPassword 
+                "--password=" + ltpaPassword,
+                "--passwordEncoding=xor"
             },
             libertyInstallRoot,
             testEnvironment);
@@ -847,5 +851,31 @@ public class SecurityUtilityCreateLTPAKeysTest {
         assertNotNull("Expected LTPA configuration ready message not found in the log.",
                       ltpaTestServer.waitForStringInLogUsingMark("CWWKS4105I", 5000));
         ltpaTestServer.stopServer();
+    }
+
+    /**
+     * Tests that createLTPAKeys fails when --passwordEncoding parameter is missing.
+     * This verifies the breaking change that removes the default XOR encoding.
+     */
+    @Test
+    public void testCreateLTPAKeysMissingPasswordEncoding() throws Exception {
+        ProgramOutput commandOutput = testMachine.execute(
+            securityUtilityPath,
+            new String[] { 
+                "createLTPAKeys", 
+                "--password=testPass" 
+            },
+            libertyInstallRoot,
+            testEnvironment);
+        
+        Log.info(thisClass, testName.getMethodName(), "stdout:\n" + commandOutput.getStdout());
+        Log.info(thisClass, testName.getMethodName(), "stderr:\n" + commandOutput.getStderr());
+        Log.info(thisClass, testName.getMethodName(), "Return code: " + commandOutput.getReturnCode());
+        
+        assertEquals("createLTPAKeys without --passwordEncoding should fail", 
+                     FAILURE_RC, commandOutput.getReturnCode());
+        assertTrue("Error should mention passwordEncoding required",
+                   commandOutput.getStdout().contains("passwordEncoding") || 
+                   commandOutput.getStderr().contains("passwordEncoding"));
     }
 }

@@ -84,7 +84,7 @@ public class EncodeTask extends BaseCommandTask {
         }
 
         return getTaskHelp("encode.desc", "encode.usage.options",
-                           null, null,
+                           "encode.required-key.", "encode.required-desc.",
                            "encode.option-key.", "encode.option-desc.",
                            null, null,
                            scriptName, customAlgorithm, customDescription);
@@ -110,7 +110,7 @@ public class EncodeTask extends BaseCommandTask {
                           Map<String, String> properties) throws InvalidPasswordEncodingException, UnsupportedCryptoAlgorithmException {
         String ret = null;
         try {
-            ret = PasswordUtil.encode(plaintext, encodingType == null ? PasswordUtil.getDefaultEncoding() : encodingType, properties);
+            ret = PasswordUtil.encode(plaintext, encodingType, properties);
         } catch (InvalidPasswordEncodingException e) {
             e.printStackTrace(stderr);
             throw e;
@@ -124,6 +124,7 @@ public class EncodeTask extends BaseCommandTask {
     /** {@inheritDoc} */
     @Override
     public SecurityUtilityReturnCodes handleTask(ConsoleWrapper stdin, PrintStream stdout, PrintStream stderr, String[] args) throws Exception {
+        validateArgumentList(args, Arrays.asList(BaseCommandTask.ARG_LIST_CUSTOM, BaseCommandTask.ARG_NO_TRIM));
         Map<String, String> argMap = parseArgumentList(args);
         if (argMap.containsKey(BaseCommandTask.ARG_LIST_CUSTOM)) {
             String output = PasswordCipherUtil.listCustom();
@@ -236,6 +237,7 @@ public class EncodeTask extends BaseCommandTask {
             if (arg.startsWith("--")) {
                 if (arg.equals(BaseCommandTask.ARG_NO_TRIM) || arg.equals(BaseCommandTask.ARG_LIST_CUSTOM)) {
                     result.put(arg, "true");
+                    this.validateMutuallyExclusiveArgs(arg, result);
                 } else {
                     int index = arg.indexOf('=');
                     if (index == -1) {
@@ -253,6 +255,7 @@ public class EncodeTask extends BaseCommandTask {
                         throw new IllegalArgumentException(getMessage("missingValue", arg));
                     }
                     result.put(arg, value);
+                    this.validateMutuallyExclusiveArgs(arg, result);
                 }
             } else if (result.containsKey(BaseCommandTask.ARG_PASSWORD)) {
                 // A non-option argument to be encoded has already been recorded
@@ -260,8 +263,8 @@ public class EncodeTask extends BaseCommandTask {
             } else {
                 // The first non-option argument is assumed to be the value to be encoded
                 result.put(BaseCommandTask.ARG_PASSWORD, arg);
+                // Don't validate mutual exclusivity for the password value itself
             }
-            this.validateMutuallyExclusiveArgs(arg, result);
         }
 
         return result;
@@ -280,10 +283,72 @@ public class EncodeTask extends BaseCommandTask {
         return value;
     }
 
+    /**
+     * Override to handle positional password arguments.
+     * {@inheritDoc}
+     */
+    @Override
+    protected void validateArgumentList(String[] args, List<String> keyOnlyArgs) {
+        checkRequiredArguments(args);
+        Map<String, String> inputMap = new HashMap<String, String>();
+        for (int i = 1; i < args.length; i++) {
+            String argPair = args[i];
+            
+            // Skip positional arguments (password values) - they don't start with --
+            if (!argPair.startsWith("--")) {
+                continue;
+            }
+            
+            String arg = null;
+            String value = null;
+            if (argPair.contains("=")) {
+                arg = argPair.split("=")[0];
+                value = getValue(argPair);
+            } else {
+                arg = argPair;
+            }
+
+            if (!isKnownArgument(arg)) {
+                throw new IllegalArgumentException(getMessage("invalidArg", arg));
+            } else {
+                if (!keyOnlyArgs.contains(arg) && (value == null)) {
+                    throw new IllegalArgumentException(getMessage("missingValue", arg));
+                }
+            }
+            inputMap.put(arg, value);
+            validateMutuallyExclusiveArgs(arg, inputMap);
+        }
+    }
+
     /** {@inheritDoc} */
     @Override
     void checkRequiredArguments(String[] args) {
-        // checkRequiredArguments is not used by this implementation
+        String message = "";
+        if (args.length < 2) {
+            message = getMessage("insufficientArgs");
+        }
+        
+        boolean encodingFound = false;
+        boolean listCustomFound = false;
+        
+        for (String arg : args) {
+            String key = arg.split("=")[0];
+            if (key.equals(BaseCommandTask.ARG_ENCODING)) {
+                encodingFound = true;
+            }
+            if (key.equals(BaseCommandTask.ARG_LIST_CUSTOM)) {
+                listCustomFound = true;
+            }
+        }
+        
+        // --encoding is not required when using --listCustom
+        if (!encodingFound && !listCustomFound) {
+            message += " " + getMessage("encode.encodingRequired");
+        }
+        
+        if (!message.isEmpty()) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
     /**

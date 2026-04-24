@@ -519,8 +519,9 @@ public class SecurityUtilityCreateSSLCertificateTest {
     @Test
     public void testCreateCertificateForServer() throws Exception {
         ProgramOutput commandOutput = runCreateSSLCert(
-            "--server=" + SSL_TEST_SERVER_NAME, 
-            "--password=Liberty"
+            "--server=" + SSL_TEST_SERVER_NAME,
+            "--password=Liberty",
+            "--passwordEncoding=xor"
         );
         int returnCode = commandOutput.getReturnCode();
         assertTrue(returnCode == SUCCESS_RC);
@@ -537,8 +538,9 @@ public class SecurityUtilityCreateSSLCertificateTest {
     @Test
     public void testCreateCertificateForClient() throws Exception {
         ProgramOutput commandOutput = runCreateSSLCert(
-            "--client=" + SSL_TEST_CLIENT_NAME, 
-            "--password=Liberty"
+            "--client=" + SSL_TEST_CLIENT_NAME,
+            "--password=Liberty",
+            "--passwordEncoding=xor"
         );
         int returnCode = commandOutput.getReturnCode();
         assertTrue(returnCode == SUCCESS_RC);
@@ -562,6 +564,7 @@ public class SecurityUtilityCreateSSLCertificateTest {
         ProgramOutput commandOutput = runCreateSSLCert(
             "--server=" + SSL_TEST_SERVER_NAME,
             "--password=Liberty",
+            "--passwordEncoding=xor",
             "--keyType=JKS"
         );
         assertEquals(SUCCESS_RC, commandOutput.getReturnCode());
@@ -683,6 +686,7 @@ public class SecurityUtilityCreateSSLCertificateTest {
         ProgramOutput commandOutput = runCreateSSLCert(
             "--client=" + SSL_TEST_CLIENT_NAME,
             "--password=Liberty",
+            "--passwordEncoding=xor",
             "--subject=CN=CustomSubject,OU=QA,O=IBM,C=US",
             "--validity=730"
         );
@@ -728,6 +732,7 @@ public class SecurityUtilityCreateSSLCertificateTest {
         ProgramOutput commandOutput = runCreateSSLCert(
             "--server=" + SSL_TEST_SERVER_NAME,
             "--password=Liberty",
+            "--passwordEncoding=xor",
             "--extInfo=" + subjectAltNames,
             "--keySize=4096",
             "--sigAlg=SHA384withRSA"
@@ -770,13 +775,14 @@ public class SecurityUtilityCreateSSLCertificateTest {
     public void testCreateSSLCertificateWithLargeKeySize() throws Exception {
         ProgramOutput commandOutput = testMachine.execute(
             libertyInstallRoot + "/bin/securityUtility",
-            new String[] { 
-                "createSSLCertificate", 
+            new String[] {
+                "createSSLCertificate",
                 "--server=" + SSL_TEST_SERVER_NAME,
-                "--password=Liberty", 
-                "--keySize=8192" 
+                "--password=Liberty",
+                "--passwordEncoding=xor",
+                "--keySize=8192"
             },
-            libertyInstallRoot, 
+            libertyInstallRoot,
             testEnvironment
         );
 
@@ -803,7 +809,7 @@ public class SecurityUtilityCreateSSLCertificateTest {
      */
     @Test
     public void testMissingServer() throws Exception {
-        ProgramOutput commandOutput = runCreateSSLCert("--server=NoSuchServer", "--password=Liberty");
+        ProgramOutput commandOutput = runCreateSSLCert("--server=NoSuchServer", "--password=Liberty", "--passwordEncoding=xor");
         assertEquals(SERVER_NOT_FOUND_RC, commandOutput.getReturnCode());
     }
 
@@ -812,8 +818,8 @@ public class SecurityUtilityCreateSSLCertificateTest {
      */
     @Test
     public void testDuplicateKeystore() throws Exception {
-        runCreateSSLCert("--server=" + SSL_TEST_SERVER_NAME, "--password=Liberty");
-        ProgramOutput commandOutput = runCreateSSLCert("--server=" + SSL_TEST_SERVER_NAME, "--password=Liberty");
+        runCreateSSLCert("--server=" + SSL_TEST_SERVER_NAME, "--password=Liberty", "--passwordEncoding=xor");
+        ProgramOutput commandOutput = runCreateSSLCert("--server=" + SSL_TEST_SERVER_NAME, "--password=Liberty", "--passwordEncoding=xor");
         assertEquals(KEYSTORE_EXISTS_RC, commandOutput.getReturnCode());
     }
 
@@ -834,7 +840,8 @@ public class SecurityUtilityCreateSSLCertificateTest {
                 "createSSLCertificate",
                 "--server=" + SSL_TEST_SERVER_NAME,
                 "--client=" + SSL_TEST_CLIENT_NAME,
-                "--password=" + certificatePassword
+                "--password=" + certificatePassword,
+                "--passwordEncoding=xor"
             },
             libertyInstallRoot,
             testEnvironment);
@@ -858,5 +865,32 @@ public class SecurityUtilityCreateSSLCertificateTest {
         int valueStart = xmlContent.indexOf("value=\"") + 7;
         int valueEnd = xmlContent.indexOf("\"", valueStart);
         return xmlContent.substring(valueStart, valueEnd);
+    }
+
+    /**
+     * Tests that createSSLCertificate fails when --passwordEncoding parameter is missing.
+     * This verifies the breaking change that removes the default XOR encoding.
+     */
+    @Test
+    public void testCreateSSLCertificateMissingPasswordEncoding() throws Exception {
+        ProgramOutput commandOutput = testMachine.execute(
+            libertyInstallRoot + "/bin/securityUtility",
+            new String[] { 
+                "createSSLCertificate", 
+                "--server=" + SSL_TEST_SERVER_NAME, 
+                "--password=testPass" 
+            },
+            libertyInstallRoot,
+            testEnvironment);
+        
+        Log.info(thisClass, testName.getMethodName(), "stderr:\n" + commandOutput.getStderr());
+        Log.info(thisClass, testName.getMethodName(), "stdout:\n" + commandOutput.getStdout());
+        Log.info(thisClass, testName.getMethodName(), "Return code: " + commandOutput.getReturnCode());
+        
+        assertEquals("createSSLCertificate without --passwordEncoding should fail", 
+                     FAILURE_RC, commandOutput.getReturnCode());
+        assertTrue("Error should mention passwordEncoding required",
+                   commandOutput.getStdout().contains("passwordEncoding") || 
+                   commandOutput.getStderr().contains("passwordEncoding"));
     }
 }

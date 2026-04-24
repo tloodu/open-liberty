@@ -259,7 +259,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_providedPassword_fileExists() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -285,7 +285,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_providedPassword_fileCreated() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -311,7 +311,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_promptPassword_fileExists() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password" };
+        String[] args = new String[] { "securityUtility", "--password", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -337,7 +337,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_promptPassword_fileCreated() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password" };
+        String[] args = new String[] { "securityUtility", "--password", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -368,7 +368,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_specifiedFile_fileExists() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--file=targetLtpaKeysFile" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--file=targetLtpaKeysFile", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -394,7 +394,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_specifiedFile_fileCreated() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--file=targetLtpaKeysFile" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--file=targetLtpaKeysFile", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -509,7 +509,7 @@ public class CreateLTPAKeysTaskTest {
     @Test()
     public void handleTask_specifiedFileAndServer() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--file=targetLtpaKeysFile", "--server=targetServer" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--file=targetLtpaKeysFile", "--server=targetServer", "--passwordEncoding=xor" };
 
         try {
             task.handleTask(stdin, stdout, stderr, args);
@@ -529,7 +529,7 @@ public class CreateLTPAKeysTaskTest {
     @Test()
     public void handleTask_specifiedServer_serverDoesNotExist() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -557,7 +557,7 @@ public class CreateLTPAKeysTaskTest {
     @Test()
     public void handleTask_specifiedServer_canNotCreatePath() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -590,7 +590,7 @@ public class CreateLTPAKeysTaskTest {
     @Test()
     public void handleTask_specifiedServer_fileExists() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -626,7 +626,7 @@ public class CreateLTPAKeysTaskTest {
     @Test()
     public void handleTask_specifiedServer_fileCreated() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer" };
+        String[] args = new String[] { "securityUtility", "--password=Liberty", "--server=targetServer", "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {

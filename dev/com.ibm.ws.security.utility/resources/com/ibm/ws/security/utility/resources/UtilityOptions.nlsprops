@@ -53,7 +53,9 @@ help.usage.options=\
 #------------------------------\n at 72 chars Leading "\ \ \ \ "-------\n\#
 #------------------------------\n at 72 chars Leading "\t"-------------\n\#
 encode.desc=\
-\tEncode the provided text.\n\n\
+\tEncode the provided text.\n\
+\tYou must specify an encoding method using the --encoding option.\n\
+\tAES encryption is recommended for security.\n\n\
 \tIf your password includes special characters, you must escape each special character to help ensure that the password is properly encoded.\n\
 \tSpecial characters and escape characters might vary according to your operating system.\n\
 \tFor example, on UNIX systems, pa$$W0rd must be provided as pa\\$\\$W0rd.\n\
@@ -61,18 +63,18 @@ encode.desc=\
 #Note to translator the word "encode" should not be translated
 encode.usage.options=\
 \t{0} encode [options] textToEncode
+encode.required-key.encoding=\
+\ \ \ \ --encoding=[xor|aes|hash{1}]
+encode.required-desc.encoding=\
+\tSpecify how to encode the password. Supported encodings are xor, aes, aes-128,\n\
+\tand hash. AES encryption is recommended for security. Aes encrypts by using an aes-256 bit key.\n\
+\taes-128 can be used for compatibility with server versions before 25.0.0.2. {2}
 encode.option-key.1.text=\
 \ \ \ \ textToEncode
 encode.option-desc.1.text=\
 \tIf no arguments are specified, the tool will enter the interactive\n\
 \tmode; otherwise, the provided text will be encoded.\n\
 \tText with spaces must be fully quoted if specified as an argument.
-encode.option-key.encoding=\
-\ \ \ \ --encoding=[xor|aes|hash{1}]
-encode.option-desc.encoding=\
-\tSpecify how to encode the password. Supported encodings are xor, aes, aes-128,\n\
-\tand hash. The default encoding is xor. Aes encrypts by using an aes-256 bit key.\n\
-\taes-128 can be used for compatibility with server versions before 25.0.0.2. {2}
 encode.option-key.key=\
 \ \ \ \ --key=[key]
 encode.option-desc.key=\
@@ -157,6 +159,13 @@ sslCert.required-key.password=\
 sslCert.required-desc.password=\
 \tKeystore password, minimum {1} characters.\n\
 \tIf no value is defined you will be prompted.
+sslCert.required-key.password.encoding=\
+\ \ \ \ --passwordEncoding=[xor|aes]
+sslCert.required-desc.password.encoding=\
+\tSpecify how to encode the keystore password. Supported encodings are\n\
+\txor and aes. AES encryption is recommended for security.\n\
+\tUse securityUtility encode --listCustom command to see if any\n\
+\tadditional custom encryptions are supported.
 sslCert.option-key.validity=\
 \ \ \ \ --validity=days
 sslCert.option-desc.validity=\
@@ -171,13 +180,6 @@ sslCert.option.addon=\
 The certificate will be created with alias {4}.\n\
 The key algorithm is {5} and signature algorithm is {6}.\n\
 For more control over certificate creation, use keytool directly.
-sslCert.option-key.password.encoding=\
-\ \ \ \ --passwordEncoding=[xor|aes]
-sslCert.option-desc.password.encoding=\
-\tSpecify how to encode the keystore password. Supported encodings are\n\
-\txor and aes. The default encoding is xor.\n\
-\tUse securityUtility encode --listCustom command to see if any\n\
-\tadditional custom encryptions are supported.
 sslCert.option-key.password.key=\
 \ \ \ \ --passwordKey=[key]
 sslCert.option-desc.password.key=\
@@ -262,6 +264,13 @@ createLTPAKeys.required-key.password=\
 \ \ \ \ --password[=pwd]
 createLTPAKeys.required-desc.password=\
 \tLTPA keys password. If no value is defined you will be prompted.
+createLTPAKeys.required-key.password.encoding=\
+\ \ \ \ --passwordEncoding=[xor|aes]
+createLTPAKeys.required-desc.password.encoding=\
+\tSpecify how to encode the LTPA keys password in the server.xml.\n\
+\tSupported encodings are xor and aes. AES encryption is recommended for security.\n\
+\tUse securityUtility encode --listCustom command to see if any\n\
+\tadditional custom encryptions are supported.
 createLTPAKeys.option-key.server=\
 \ \ \ \ --server=name
 createLTPAKeys.option-desc.server=\
@@ -272,13 +281,6 @@ createLTPAKeys.option-key.file=\
 createLTPAKeys.option-desc.file=\
 \tThe file in which to write the LTPA keys.\n\
 \tThis argument can not be used if the --server argument is used.
-createLTPAKeys.option-key.password.encoding=\
-\ \ \ \ --passwordEncoding=[xor|aes]
-createLTPAKeys.option-desc.password.encoding=\
-\tSpecify how to encode the LTPA keys password in the server.xml.\n\
-\tSupported encodings are xor and aes. The default encoding is xor.\n\
-\tUse securityUtility encode --listCustom command to see if any\n\
-\tadditional custom encryptions are supported.
 createLTPAKeys.option-key.password.key=\
 \ \ \ \ --passwordKey=[key]
 createLTPAKeys.option-desc.password.key=\

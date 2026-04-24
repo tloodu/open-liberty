@@ -18,6 +18,7 @@ import org.junit.After;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
@@ -190,14 +191,14 @@ public class SecurityUtilityEncodeTest {
         final String encodedText = "{xor}KzonKwswGjE8MDs6";
         final String customEncodedText = "{custom}NkshbYjxhL2z1Yc5dv+wDg==";
 
-        // Test default XOR encoding
+        // Test XOR encoding (now requires explicit --encoding parameter)
         ProgramOutput po = machine.execute(
             securityUtilityPath,
-            new String[] { "encode", textToEncode },
+            new String[] { "encode", "--encoding=xor", textToEncode },
             installRoot,
             env);
 
-        Log.info(thisClass, name.getMethodName(), "Executed securityUtility encode command:" + po.getCommand());
+        Log.info(thisClass, name.getMethodName(), "Executed securityUtility encode --encoding=xor command:" + po.getCommand());
         Log.info(thisClass, name.getMethodName(), "Result:\n" + po.getStdout());
         printManifestIfRC32(po);
         Assert.assertTrue("encode arg result", po.getStdout().contains(encodedText));
@@ -249,6 +250,48 @@ public class SecurityUtilityEncodeTest {
                 Assert.fail("The UnsupportedCryptoAlgorithmException should be reported.");
             }
         }
+    }
+
+    /**
+     * Tests that the encode command fails when --encoding parameter is missing.
+     * This verifies the breaking change that removes the default XOR encoding.
+     */
+    @Test
+    public void testEncodeMissingEncodingParameter() throws Exception {
+        env = new Properties();
+        ProgramOutput po = machine.execute(
+            securityUtilityPath,
+            new String[] { "encode", "testPassword" },
+            installRoot,
+            env);
+        
+        Log.info(thisClass, name.getMethodName(), "stdout:\n" + po.getStdout());
+        Log.info(thisClass, name.getMethodName(), "stderr:\n" + po.getStderr());
+        Log.info(thisClass, name.getMethodName(), "Return code: " + po.getReturnCode());
+        
+        Assert.assertEquals("encode without --encoding should fail", 1, po.getReturnCode());
+        Assert.assertTrue("Error should mention encoding required", 
+                   po.getStdout().contains("--encoding") || po.getStderr().contains("--encoding"));
+    }
+    
+    /**
+     * Tests that help output shows --encoding as a required parameter.
+     */
+    @Test
+    public void testHelpShowsEncodingRequired() throws Exception {
+        env = new Properties();
+        ProgramOutput po = machine.execute(
+            securityUtilityPath,
+            new String[] { "help", "encode" },
+            installRoot,
+            env);
+        
+        Log.info(thisClass, name.getMethodName(), "stdout:\n" + po.getStdout());
+        Log.info(thisClass, name.getMethodName(), "Return code: " + po.getReturnCode());
+        
+        Assert.assertEquals("help should succeed", 0, po.getReturnCode());
+        Assert.assertTrue("Help should show encoding as required", 
+                   po.getStdout().contains("Required") && po.getStdout().contains("--encoding"));
     }
 
     /**

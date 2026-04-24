@@ -859,7 +859,8 @@ public class CreateSSLCertificateTaskTest {
                                        "--validity=" + VALIDITY,
                                        "--password=" + PLAINTEXT,
                                        "--subject=" + SUBJECT_DN,
-                                       "--server=" + SERVER_NAME };
+                                       "--server=" + SERVER_NAME,
+                                       "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
@@ -887,7 +888,8 @@ public class CreateSSLCertificateTaskTest {
                                        "--validity=" + VALIDITY,
                                        "--password=" + PLAINTEXT,
                                        "--subject=" + SUBJECT_DN,
-                                       "--server=" + SERVER_NAME };
+                                       "--server=" + SERVER_NAME,
+                                       "--passwordEncoding=xor" };
 
         mock.checking(new Expectations() {
             {
