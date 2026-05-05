@@ -124,7 +124,6 @@ public class EncodeTask extends BaseCommandTask {
     /** {@inheritDoc} */
     @Override
     public SecurityUtilityReturnCodes handleTask(ConsoleWrapper stdin, PrintStream stdout, PrintStream stderr, String[] args) throws Exception {
-        validateArgumentList(args, Arrays.asList(BaseCommandTask.ARG_LIST_CUSTOM, BaseCommandTask.ARG_NO_TRIM));
         Map<String, String> argMap = parseArgumentList(args);
         if (argMap.containsKey(BaseCommandTask.ARG_LIST_CUSTOM)) {
             String output = PasswordCipherUtil.listCustom();
@@ -230,6 +229,10 @@ public class EncodeTask extends BaseCommandTask {
      */
     private Map<String, String> parseArgumentList(String[] args) {
         Map<String, String> result = new HashMap<String, String>();
+
+        // Check that all required arguments have been provided
+        checkRequiredArguments(args);
+
         // Skip the first argument as it is the task name
         String arg = null;
         for (int i = 1; i < args.length; i++) {
@@ -237,7 +240,6 @@ public class EncodeTask extends BaseCommandTask {
             if (arg.startsWith("--")) {
                 if (arg.equals(BaseCommandTask.ARG_NO_TRIM) || arg.equals(BaseCommandTask.ARG_LIST_CUSTOM)) {
                     result.put(arg, "true");
-                    this.validateMutuallyExclusiveArgs(arg, result);
                 } else {
                     int index = arg.indexOf('=');
                     if (index == -1) {
@@ -255,7 +257,6 @@ public class EncodeTask extends BaseCommandTask {
                         throw new IllegalArgumentException(getMessage("missingValue", arg));
                     }
                     result.put(arg, value);
-                    this.validateMutuallyExclusiveArgs(arg, result);
                 }
             } else if (result.containsKey(BaseCommandTask.ARG_PASSWORD)) {
                 // A non-option argument to be encoded has already been recorded
@@ -263,8 +264,8 @@ public class EncodeTask extends BaseCommandTask {
             } else {
                 // The first non-option argument is assumed to be the value to be encoded
                 result.put(BaseCommandTask.ARG_PASSWORD, arg);
-                // Don't validate mutual exclusivity for the password value itself
             }
+            this.validateMutuallyExclusiveArgs(arg, result);
         }
 
         return result;
@@ -281,43 +282,6 @@ public class EncodeTask extends BaseCommandTask {
             }
         }
         return value;
-    }
-
-    /**
-     * Override to handle positional password arguments.
-     * {@inheritDoc}
-     */
-    @Override
-    protected void validateArgumentList(String[] args, List<String> keyOnlyArgs) {
-        checkRequiredArguments(args);
-        Map<String, String> inputMap = new HashMap<String, String>();
-        for (int i = 1; i < args.length; i++) {
-            String argPair = args[i];
-            
-            // Skip positional arguments (password values) - they don't start with --
-            if (!argPair.startsWith("--")) {
-                continue;
-            }
-            
-            String arg = null;
-            String value = null;
-            if (argPair.contains("=")) {
-                arg = argPair.split("=")[0];
-                value = getValue(argPair);
-            } else {
-                arg = argPair;
-            }
-
-            if (!isKnownArgument(arg)) {
-                throw new IllegalArgumentException(getMessage("invalidArg", arg));
-            } else {
-                if (!keyOnlyArgs.contains(arg) && (value == null)) {
-                    throw new IllegalArgumentException(getMessage("missingValue", arg));
-                }
-            }
-            inputMap.put(arg, value);
-            validateMutuallyExclusiveArgs(arg, inputMap);
-        }
     }
 
     /** {@inheritDoc} */
