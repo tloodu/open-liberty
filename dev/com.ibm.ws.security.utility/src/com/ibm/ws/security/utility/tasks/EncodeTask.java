@@ -307,7 +307,7 @@ public class EncodeTask extends BaseCommandTask {
         
         // --encoding is not required when using --listCustom
         if (!encodingFound && !listCustomFound) {
-            message += " " + getMessage("encode.encodingRequired");
+            message += " " + getMessage("missingArg", BaseCommandTask.ARG_ENCODING);
         }
         
         if (!message.isEmpty()) {
