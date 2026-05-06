@@ -223,7 +223,7 @@ public class CreateLTPAKeysTaskTest {
     @Test
     public void handleTask_noPassword() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility" };
+        String[] args = new String[] { "securityUtility", "--passwordEncoding=xor" };
 
         try {
             task.handleTask(stdin, stdout, stderr, args);
@@ -239,9 +239,27 @@ public class CreateLTPAKeysTaskTest {
      * .
      */
     @Test
+    public void handleTask_noPasswordEncoding() throws Exception {
+        CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
+        String[] args = new String[] { "securityUtility", "--password=Liberty" };
+
+        try {
+            task.handleTask(stdin, stdout, stderr, args);
+        } catch (IllegalArgumentException e) {
+            assertTrue("FAIL: The thrown exception did not specify --passwordEncoding in its message",
+                       e.getMessage().contains("--passwordEncoding"));
+        }
+    }
+
+    /**
+     * Test method for
+     * {@link com.ibm.ws.security.utility.tasks.CreateLTPAKeysTask#handleTask(com.ibm.ws.security.utility.utils.ConsoleWrapper, java.io.PrintStream, java.io.PrintStream, java.lang.String[])}
+     * .
+     */
+    @Test
     public void handleTask_incorrectPasswordFlag() throws Exception {
         CreateLTPAKeysTask task = new CreateLTPAKeysTask(ltpaKeyFileUtil, fileUtil, TEST_UTILITY_NAME);
-        String[] args = new String[] { "securityUtility", "--passwords=Liberty" };
+        String[] args = new String[] { "securityUtility", "--passwords=Liberty", "--passwordEncoding=xor" };
 
         try {
             task.handleTask(stdin, stdout, stderr, args);

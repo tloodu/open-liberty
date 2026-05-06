@@ -866,31 +866,4 @@ public class SecurityUtilityCreateSSLCertificateTest {
         int valueEnd = xmlContent.indexOf("\"", valueStart);
         return xmlContent.substring(valueStart, valueEnd);
     }
-
-    /**
-     * Tests that createSSLCertificate fails when --passwordEncoding parameter is missing.
-     * This verifies the breaking change that removes the default XOR encoding.
-     */
-    @Test
-    public void testCreateSSLCertificateMissingPasswordEncoding() throws Exception {
-        ProgramOutput commandOutput = testMachine.execute(
-            libertyInstallRoot + "/bin/securityUtility",
-            new String[] { 
-                "createSSLCertificate", 
-                "--server=" + SSL_TEST_SERVER_NAME, 
-                "--password=testPass" 
-            },
-            libertyInstallRoot,
-            testEnvironment);
-        
-        Log.info(thisClass, testName.getMethodName(), "stderr:\n" + commandOutput.getStderr());
-        Log.info(thisClass, testName.getMethodName(), "stdout:\n" + commandOutput.getStdout());
-        Log.info(thisClass, testName.getMethodName(), "Return code: " + commandOutput.getReturnCode());
-        
-        assertEquals("createSSLCertificate without --passwordEncoding should fail", 
-                     FAILURE_RC, commandOutput.getReturnCode());
-        assertTrue("Error should mention passwordEncoding required",
-                   commandOutput.getStdout().contains("passwordEncoding") || 
-                   commandOutput.getStderr().contains("passwordEncoding"));
-    }
 }

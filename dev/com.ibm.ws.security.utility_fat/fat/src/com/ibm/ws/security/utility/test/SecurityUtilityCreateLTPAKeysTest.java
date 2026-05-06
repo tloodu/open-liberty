@@ -739,7 +739,8 @@ public class SecurityUtilityCreateLTPAKeysTest {
         ProgramOutput commandOutput = testMachine.execute(
             securityUtilityPath,
             new String[] { 
-                "createLTPAKeys"
+                "createLTPAKeys",
+                "--passwordEncoding=xor"
             },
             libertyInstallRoot,
             testEnvironment);
@@ -863,7 +864,7 @@ public class SecurityUtilityCreateLTPAKeysTest {
             securityUtilityPath,
             new String[] { 
                 "createLTPAKeys", 
-                "--password=testPass" 
+                "--password" + ltpaPassword
             },
             libertyInstallRoot,
             testEnvironment);

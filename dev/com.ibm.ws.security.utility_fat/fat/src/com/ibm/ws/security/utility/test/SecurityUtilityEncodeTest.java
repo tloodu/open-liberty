@@ -259,9 +259,12 @@ public class SecurityUtilityEncodeTest {
     @Test
     public void testEncodeMissingEncodingParameter() throws Exception {
         env = new Properties();
+
+        final String textToEncode = "textToEncode";
+
         ProgramOutput po = machine.execute(
             securityUtilityPath,
-            new String[] { "encode", "testPassword" },
+            new String[] { "encode", textToEncode },
             installRoot,
             env);
         
@@ -280,6 +283,7 @@ public class SecurityUtilityEncodeTest {
     @Test
     public void testHelpShowsEncodingRequired() throws Exception {
         env = new Properties();
+        
         ProgramOutput po = machine.execute(
             securityUtilityPath,
             new String[] { "help", "encode" },

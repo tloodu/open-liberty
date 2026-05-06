@@ -247,7 +247,8 @@ public class CreateSSLCertificateTaskTest {
     @Test(expected = IllegalArgumentException.class)
     public void handleTask_noServerArgument() throws Exception {
         String[] args = new String[] { task.getTaskName(),
-                                       "--password=" + PLAINTEXT };
+                                       "--password=" + PLAINTEXT,
+                                       "--passwordEncoding=xor" };
         try {
             task.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
@@ -267,7 +268,8 @@ public class CreateSSLCertificateTaskTest {
     @Test(expected = IllegalArgumentException.class)
     public void handleTask_noPasswordArgument() throws Exception {
         String[] args = new String[] { task.getTaskName(),
-                                       "--server=" + SERVER_NAME };
+                                       "--server=" + SERVER_NAME,
+                                       "--passwordEncoding=xor" };
         try {
             task.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
@@ -287,7 +289,50 @@ public class CreateSSLCertificateTaskTest {
     @Test(expected = IllegalArgumentException.class)
     public void handleTask_noPasswordArgumentWithClient() throws Exception {
         String[] args = new String[] { task.getTaskName(),
-                                       "--client=" + CLIENT_NAME };
+                                       "--client=" + CLIENT_NAME,
+                                       "--passwordEncoding=xor" };
+        try {
+            task.handleTask(stdin, stdout, stderr, args);
+        } catch (Exception e) {
+            throw e;
+
+        }
+
+    }
+
+    /**
+     * Test method for
+     * {@link com.ibm.ws.security.utility.tasks.CreateSSLCertificateTask#handleTask(com.ibm.ws.security.utility.utils.ConsoleWrapper, java.io.PrintStream, java.io.PrintStream, java.lang.String[])}
+     * .
+     *
+     * @throws Exception
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void handleTask_noPasswordEncodingArgument() throws Exception {
+        String[] args = new String[] { task.getTaskName(),
+                                       "--server=" + SERVER_NAME,
+                                       "--password=" + PLAINTEXT };
+        try {
+            task.handleTask(stdin, stdout, stderr, args);
+        } catch (Exception e) {
+            throw e;
+
+        }
+
+    }
+
+    /**
+     * Test method for
+     * {@link com.ibm.ws.security.utility.tasks.CreateSSLCertificateTask#handleTask(com.ibm.ws.security.utility.utils.ConsoleWrapper, java.io.PrintStream, java.io.PrintStream, java.lang.String[])}
+     * .
+     *
+     * @throws Exception
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void handleTask_noPasswordEncodingArgumentWithClient() throws Exception {
+        String[] args = new String[] { task.getTaskName(),
+                                       "--client=" + CLIENT_NAME,
+                                       "--password=" + PLAINTEXT };
         try {
             task.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
@@ -308,7 +353,8 @@ public class CreateSSLCertificateTaskTest {
     public void handleTask_justRequiredFlagsNoValues() throws Exception {
         String[] args = new String[] { task.getTaskName(),
                                        "--server",
-                                       "--password" };
+                                       "--password",
+                                       "--passwordEncoding" };
         try {
             task.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
@@ -330,7 +376,8 @@ public class CreateSSLCertificateTaskTest {
         String[] args = new String[] { task.getTaskName(),
                                        "--server" + SERVER_NAME,
                                        "--client" + CLIENT_NAME,
-                                       "--password=liberty" };
+                                       "--password=liberty",
+                                       "--passwordEncoding=xor" };
         try {
             task.handleTask(stdin, stdout, stderr, args);
         } catch (Exception e) {
