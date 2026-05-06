@@ -99,7 +99,7 @@ public class CreateLTPAKeysTask extends BaseCommandTask {
     void checkRequiredArguments(String[] args) {
         String message = "";
         // We expect at least the password arguments and the task name
-        if (args.length < 2) {
+        if (args.length < 3) {
             message = getMessage("insufficientArgs");
         }
 

@@ -255,7 +255,7 @@ public class CreateSSLCertificateTask extends BaseCommandTask {
     void checkRequiredArguments(String[] args) {
         String message = "";
         // We expect at least two arguments and the task name
-        if (args.length < 3) {
+        if (args.length < 4) {
             message = getMessage("insufficientArgs");
         }
 
