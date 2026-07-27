@@ -79,7 +79,10 @@ class LTPAKeyCreateTask implements Runnable {
         tokenFactoryMap.put(LTPAConstants.PRIMARY_PRIVATE_KEY, primaryPrivateKey);
         tokenFactoryMap.put(LTPAConstants.VALIDATION_KEYS, validationKeys);
         tokenFactoryMap.put(LTPAConfigurationImpl.KEY_EXP_DIFF_ALLOWED, expDiffAllowed);
-        
+        tokenFactoryMap.put("ltpaConfiguration", config);
+        tokenFactoryMap.put("keyInfoManager", keyInfoManager);
+        tokenFactoryMap.put("primaryKeyFile", config.getPrimaryKeyFile());
+
         // Add hybrid PQC keys for Token Version 3
         String tokenVersion = config.getTokenVersion();
         if ("3".equals(tokenVersion)) {

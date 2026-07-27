@@ -186,19 +186,20 @@ public class LTPAToken2 implements Token, Serializable {
 
     /**
      * Encrypt the token passed into the token.
+     * Uses AES-GCM (authenticated encryption) when cryptoMode is pqc or hybrid,
+     * otherwise falls back to AES-CBC for classical backward compatibility.
      *
      * @throws TokenException
      */
     private final void encrypt() throws Exception {
-    // TODO: PQC #35556 - Task 2.6: Implement AES-GCM encryption
-    // Current: Uses AES-CBC
-    // Future: Check PQC config, use AES-GCM if enabled
-    // Format: [IV (12 bytes)][Ciphertext][Auth Tag (16 bytes)]
         String signStr = Base64Coder.toString(Base64Coder.base64Encode(signature));
         String ud = userData.toString();
 
+        boolean useGCM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode);
+
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-            Tr.event(this, tc, "encrypt: userData" + ud);
+            Tr.event(this, tc, "encrypt: userData=" + ud + " cipher=" + (useGCM ? CIPHER_AES_GCM : cipher) + " cryptoMode=" + cryptoMode);
         }
 
         byte[] accessID = Base64Coder.getBytes(ud);
@@ -213,7 +214,11 @@ public class LTPAToken2 implements Token, Serializable {
             toBeEnc[i] = timeAndSign[i - accessID.length];
         }
         try {
-            encryptedBytes = LTPAKeyUtil.encrypt(toBeEnc, sharedKey, cipher);
+            if (useGCM) {
+                encryptedBytes = LTPAKeyUtil.encryptGCM(toBeEnc, sharedKey);
+            } else {
+                encryptedBytes = LTPAKeyUtil.encrypt(toBeEnc, sharedKey, cipher);
+            }
         } catch (Exception e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
                 Tr.event(this, tc, "Error encrypting; " + e);
@@ -228,16 +233,25 @@ public class LTPAToken2 implements Token, Serializable {
 
     /**
      * Decrypt the encrypted token bytes passed into the constructor.
+     * Uses AES-GCM (authenticated encryption) when cryptoMode is pqc or hybrid,
+     * otherwise falls back to AES-CBC for classical backward compatibility.
      */
     @FFDCIgnore({ BadPaddingException.class, Exception.class })
     private final void decrypt() throws InvalidTokenException {
-    // TODO: PQC #35556 - Task 2.6: Implement AES-GCM decryption
-    // Current: Uses AES-CBC
-    // Future: Detect format, use AES-GCM if detected
-    // Must verify authentication tag
+        boolean useGCM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode);
+
+        if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
+            Tr.event(this, tc, "decrypt: cipher=" + (useGCM ? CIPHER_AES_GCM : cipher) + " cryptoMode=" + cryptoMode);
+        }
+
         byte[] tokenData;
         try {
-            tokenData = LTPAKeyUtil.decrypt(encryptedBytes.clone(), sharedKey, cipher);
+            if (useGCM) {
+                tokenData = LTPAKeyUtil.decryptGCM(encryptedBytes.clone(), sharedKey);
+            } else {
+                tokenData = LTPAKeyUtil.decrypt(encryptedBytes.clone(), sharedKey, cipher);
+            }
 
             checkTokenBytes(tokenData);
             String UTF8TokenString = toUTF8String(tokenData);
