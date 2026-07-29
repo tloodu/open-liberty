@@ -47,7 +47,11 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 * @throws Exception
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, final String realm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm);
+		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm, null);
+	}
+
+	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, final String realm, String mldsaAlgorithm) throws Exception {
+		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm, mldsaAlgorithm);
 	}
 
 	/**
@@ -69,6 +73,11 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
 			byte[] publicKeyBytes, final String realm) throws Exception {
+		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null);
+	}
+
+	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
+			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm) throws Exception {
 		Properties expProps = null;
 
 		try {
@@ -104,7 +113,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 
 			// Generate PQC (ML-DSA) keys for signatures
 			try {
-				KeyPair mldsaKeyPair = generateMLDSAKeyPair();
+				KeyPair mldsaKeyPair = generateMLDSAKeyPair(mldsaAlgorithm);
 				if (mldsaKeyPair != null) {
 					byte[] mldsaPublicKeyBytes = mldsaKeyPair.getPublic().getEncoded();
 					byte[] mldsaPrivateKeyBytes = mldsaKeyPair.getPrivate().getEncoded();
@@ -115,8 +124,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 
 					expProps.put("com.ibm.websphere.ltpa.pqc.PublicKey", tmpMLDSAPublic);
 					expProps.put("com.ibm.websphere.ltpa.pqc.PrivateKey", tmpMLDSAPrivate);
-//					expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", "ML-DSA-65");
-					expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", "ML-DSA-44");
+					expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", mldsaAlgorithm);
 				}
 			} catch (Exception mldsaEx) {
 				// ML-DSA key generation failed - log but continue with classical keys only
@@ -124,25 +132,25 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			}
 
 			// Generate PQC (ML-KEM) keys for encryption (Phase 4)
-			try {
-				KeyPair mlkemKeyPair = generateMLKEMKeyPair();
-				if (mlkemKeyPair != null) {
-					byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
-					byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
-					byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
+// 			try {
+// 				KeyPair mlkemKeyPair = generateMLKEMKeyPair();
+// 				if (mlkemKeyPair != null) {
+// 					byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
+// 					byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
+// 					byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
 
-					String tmpMLKEMPublic = Base64Coder.base64EncodeToString(mlkemPublicKeyBytes);
-					String tmpMLKEMPrivate = Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes);
+// 					String tmpMLKEMPublic = Base64Coder.base64EncodeToString(mlkemPublicKeyBytes);
+// 					String tmpMLKEMPrivate = Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes);
 
-					expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
-					expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
-//                    expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-768");
-					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-512");
-				}
-			} catch (Exception mlkemEx) {
-				// ML-KEM key generation failed - log but continue without encryption
-				System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
-			}
+// 					expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
+// 					expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
+// //                    expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-768");
+// 					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-512");
+// 				}
+// 			} catch (Exception mlkemEx) {
+// 				// ML-KEM key generation failed - log but continue without encryption
+// 				System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
+// 			}
 		} catch (Exception e) {
 			throw e;
 		}
@@ -203,10 +211,11 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 * ML-DSA support without requiring MLDSAParameterSpec. The KeyPairGenerator
 	 * uses default parameters (ML-DSA-65) when not explicitly initialized.
 	 *
+	 * @param algorithm ML-DSA algorithm name (e.g. "ML-DSA-44", "ML-DSA-65", "ML-DSA-87")
 	 * @return KeyPair containing ML-DSA public and private keys, or null if
 	 *         generation fails
 	 */
-	private KeyPair generateMLDSAKeyPair() {
+	private KeyPair generateMLDSAKeyPair(String algorithm) {
 		System.out.println("DEBUG: Starting ML-DSA key pair generation");
 		System.out.println("DEBUG: Java version: " + System.getProperty("java.version"));
 		System.out.println("DEBUG: Java vendor: " + System.getProperty("java.vendor"));
@@ -228,11 +237,9 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			// KeyPairGenerator
 			// works with default parameters (ML-DSA-65) without explicit initialization
 			System.out.println("DEBUG: Getting KeyPairGenerator instance for ML-DSA...");
-//			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("ML-DSA");
-			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("ML-DSA-44");
+			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance(algorithm);
 			System.out.println("DEBUG: KeyPairGenerator obtained, provider: " + keyGen.getProvider().getName());
-//			System.out.println("DEBUG: Using default parameters (ML-DSA-65) - no explicit initialization needed");
-			System.out.println("DEBUG: Using default parameters (ML-DSA-44) - no explicit initialization needed");
+			System.out.println("DEBUG: Using algorithm: " + algorithm);
 
 			System.out.println("DEBUG: Generating ML-DSA key pair...");
 			KeyPair keyPair = keyGen.generateKeyPair();

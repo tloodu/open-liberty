@@ -59,7 +59,8 @@ class LTPAKeyCreateTask implements Runnable {
                                           config.getPrimaryKeyFile(),
                                           getKeyPasswordBytes(),
                                           config.getValidationKeys(),
-                                          config.getTryToReEncryptLtpaKeys());
+                                          config.getTryToReEncryptLtpaKeys(),
+                                          config.getMLDSAAlgorithm());
         return keyInfoManager;
     }
 
