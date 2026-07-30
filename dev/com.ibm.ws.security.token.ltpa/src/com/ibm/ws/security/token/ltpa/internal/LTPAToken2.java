@@ -15,6 +15,8 @@ package com.ibm.ws.security.token.ltpa.internal;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -33,13 +35,12 @@ import com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil;
 import com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey;
 import com.ibm.ws.crypto.ltpakeyutil.LTPAPublicKey;
 import com.ibm.ws.ffdc.annotation.FFDCIgnore;
-import com.ibm.wsspi.security.ltpa.Token;
-import com.ibm.wsspi.security.token.AttributeNameConstants;
-
+import com.ibm.ws.security.token.ltpa.pqc.LTPAPQCCrypto;
+import com.ibm.ws.security.token.ltpa.pqc.MLKEMAlgorithmType;
 import com.ibm.ws.security.token.ltpa.pqc.PQCConstants;
 import com.ibm.ws.security.token.ltpa.pqc.PQCSignatureHelper;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import com.ibm.wsspi.security.ltpa.Token;
+import com.ibm.wsspi.security.token.AttributeNameConstants;
 
 /**
  * Represents an LTPAToken that is delegatable. The token contains user data,
@@ -77,6 +78,11 @@ public class LTPAToken2 implements Token, Serializable {
     private final PublicKey mldsaPublicKey;
     private final String cryptoMode;
 
+    // PQC: ML-KEM keys for Token3-style encryption
+    private final PublicKey mlkemPublicKey;
+    private final PrivateKey mlkemPrivateKey;
+    private final MLKEMAlgorithmType mlkemAlgorithmType;
+
     private String cipher = null;
     private long expirationDifferenceAllowed;
 
@@ -102,13 +108,20 @@ public class LTPAToken2 implements Token, Serializable {
      * @param attributes The list of attributes will be removed from the LTPA2 token
      */
      public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, LTPAPrivateKey privateKey, LTPAPublicKey publicKey, long expDiffAllowed,
-                      String... attributes) throws InvalidTokenException, TokenExpiredException {
-        this(tokenBytes, sharedKey, privateKey, publicKey, null, null, PQCConstants.CRYPTO_MODE_CLASSICAL, expDiffAllowed, attributes);
-    }
+                       String... attributes) throws InvalidTokenException, TokenExpiredException {
+        this(tokenBytes, sharedKey, privateKey, publicKey, null, null, PQCConstants.CRYPTO_MODE_CLASSICAL, null, null, null, expDiffAllowed, attributes);
+     }
 
     public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
                       PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String cryptoMode, long expDiffAllowed,
                       String... attributes) throws InvalidTokenException, TokenExpiredException {
+        this(tokenBytes, sharedKey, privateKey, publicKey, mldsaPrivateKey, mldsaPublicKey, cryptoMode, null, null, null, expDiffAllowed, attributes);
+    }
+
+    public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
+                      PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String cryptoMode,
+                      PrivateKey mlkemPrivateKey, PublicKey mlkemPublicKey, MLKEMAlgorithmType mlkemAlgorithmType,
+                      long expDiffAllowed, String... attributes) throws InvalidTokenException, TokenExpiredException {
         checkTokenBytes(tokenBytes);
         this.signature = null;
         this.encryptedBytes = tokenBytes.clone();
@@ -118,6 +131,9 @@ public class LTPAToken2 implements Token, Serializable {
         this.mldsaPrivateKey = mldsaPrivateKey;
         this.mldsaPublicKey = mldsaPublicKey;
         this.cryptoMode = cryptoMode != null ? cryptoMode : PQCConstants.CRYPTO_MODE_CLASSICAL;
+        this.mlkemPrivateKey = mlkemPrivateKey;
+        this.mlkemPublicKey = mlkemPublicKey;
+        this.mlkemAlgorithmType = mlkemAlgorithmType;
         this.expirationInMilliseconds = 0;
         this.cipher = CryptoUtils.AES_CBC_CIPHER;
         this.expirationDifferenceAllowed = expDiffAllowed;
@@ -142,12 +158,19 @@ public class LTPAToken2 implements Token, Serializable {
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
                          LTPAPrivateKey privateKey, LTPAPublicKey publicKey) {
-        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, null, null, PQCConstants.CRYPTO_MODE_CLASSICAL);
+        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, null, null, PQCConstants.CRYPTO_MODE_CLASSICAL, null, null, null);
     }
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
                          LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
                          PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String cryptoMode) {
+        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, mldsaPrivateKey, mldsaPublicKey, cryptoMode, null, null, null);
+    }
+
+    protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
+                         LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
+                         PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String cryptoMode,
+                         PrivateKey mlkemPrivateKey, PublicKey mlkemPublicKey, MLKEMAlgorithmType mlkemAlgorithmType) {
         this.signature = null;
         this.encryptedBytes = null;
         this.sharedKey = sharedKey.clone();
@@ -156,6 +179,9 @@ public class LTPAToken2 implements Token, Serializable {
         this.mldsaPrivateKey = mldsaPrivateKey;
         this.mldsaPublicKey = mldsaPublicKey;
         this.cryptoMode = cryptoMode != null ? cryptoMode : PQCConstants.CRYPTO_MODE_CLASSICAL;
+        this.mlkemPrivateKey = mlkemPrivateKey;
+        this.mlkemPublicKey = mlkemPublicKey;
+        this.mlkemAlgorithmType = mlkemAlgorithmType;
         this.userData = new UserData(accessID);
         setExpiration(expirationInMinutes);
         this.cipher = CryptoUtils.AES_CBC_CIPHER;
@@ -176,9 +202,12 @@ public class LTPAToken2 implements Token, Serializable {
         this.sharedKey = sharedKey.clone();
         this.privateKey = privateKey;
         this.publicKey = publicKey;
-        this.mldsaPrivateKey = null;           
-        this.mldsaPublicKey = null;  
-        this.cryptoMode = PQCConstants.CRYPTO_MODE_CLASSICAL; 
+        this.mldsaPrivateKey = null;
+        this.mldsaPublicKey = null;
+        this.cryptoMode = PQCConstants.CRYPTO_MODE_CLASSICAL;
+        this.mlkemPrivateKey = null;
+        this.mlkemPublicKey = null;
+        this.mlkemAlgorithmType = null;
         this.userData = userdata;
         setExpiration(expirationInMinutes);
         this.cipher = CryptoUtils.AES_CBC_CIPHER;
@@ -186,22 +215,18 @@ public class LTPAToken2 implements Token, Serializable {
 
     /**
      * Encrypt the token passed into the token.
-     * Uses AES-GCM (authenticated encryption) when cryptoMode is pqc or hybrid,
-     * otherwise falls back to AES-CBC for classical backward compatibility.
+     * When cryptoMode is pqc and ML-KEM keys are present, uses ML-KEM key encapsulation
+     * + AES-256-GCM (Token3-style encryption) with the same inner plaintext format as
+     * classical Token2: accessID % expiration % base64(signature).
+     * Otherwise falls back to AES-GCM (hybrid) or AES-CBC (classical).
      *
-     * @throws TokenException
+     * @throws Exception
      */
     private final void encrypt() throws Exception {
         String signStr = Base64Coder.toString(Base64Coder.base64Encode(signature));
         String ud = userData.toString();
 
-        boolean useGCM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
-                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode);
-
-        if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-            Tr.event(this, tc, "encrypt: userData=" + ud + " cipher=" + (useGCM ? CIPHER_AES_GCM : cipher) + " cryptoMode=" + cryptoMode);
-        }
-
+        // Build the Token2 inner plaintext: accessID % expiration % base64(signature)
         byte[] accessID = Base64Coder.getBytes(ud);
         StringBuilder sb = new StringBuilder(DELIM);
         sb.append(getExpiration()).append(DELIM).append(signStr);
@@ -213,8 +238,24 @@ public class LTPAToken2 implements Token, Serializable {
         for (int i = accessID.length; i < toBeEnc.length; i++) {
             toBeEnc[i] = timeAndSign[i - accessID.length];
         }
+
+        // Use ML-KEM encryption (Token3-style) when in pqc mode with ML-KEM keys
+        boolean useMLKEM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                        && mlkemPublicKey != null
+                        && mlkemAlgorithmType != null;
+        boolean useGCM = !useMLKEM && (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode));
+
+        if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
+            String encType = useMLKEM ? "ML-KEM+AES-GCM" : (useGCM ? CIPHER_AES_GCM : cipher);
+            Tr.event(this, tc, "encrypt: userData=" + ud + " cipher=" + encType + " cryptoMode=" + cryptoMode);
+        }
+
         try {
-            if (useGCM) {
+            if (useMLKEM) {
+                // Token3-style: ML-KEM encapsulation + AES-256-GCM, inner plaintext is Token2 format
+                encryptedBytes = LTPAPQCCrypto.encryptToken(toBeEnc, mlkemPublicKey, mlkemAlgorithmType);
+            } else if (useGCM) {
                 encryptedBytes = LTPAKeyUtil.encryptGCM(toBeEnc, sharedKey);
             } else {
                 encryptedBytes = LTPAKeyUtil.encrypt(toBeEnc, sharedKey, cipher);
@@ -233,21 +274,31 @@ public class LTPAToken2 implements Token, Serializable {
 
     /**
      * Decrypt the encrypted token bytes passed into the constructor.
-     * Uses AES-GCM (authenticated encryption) when cryptoMode is pqc or hybrid,
-     * otherwise falls back to AES-CBC for classical backward compatibility.
+     * When cryptoMode is pqc and ML-KEM keys are present, uses ML-KEM decapsulation
+     * + AES-256-GCM (Token3-style decryption). The recovered plaintext is the same
+     * Token2 inner format: accessID % expiration % base64(signature).
+     * Otherwise falls back to AES-GCM (hybrid) or AES-CBC (classical).
      */
     @FFDCIgnore({ BadPaddingException.class, Exception.class })
     private final void decrypt() throws InvalidTokenException {
-        boolean useGCM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
-                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode);
+        // Use ML-KEM decryption (Token3-style) when in pqc mode with ML-KEM keys
+        boolean useMLKEM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                        && mlkemPrivateKey != null
+                        && mlkemAlgorithmType != null;
+        boolean useGCM = !useMLKEM && (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode));
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-            Tr.event(this, tc, "decrypt: cipher=" + (useGCM ? CIPHER_AES_GCM : cipher) + " cryptoMode=" + cryptoMode);
+            String encType = useMLKEM ? "ML-KEM+AES-GCM" : (useGCM ? CIPHER_AES_GCM : cipher);
+            Tr.event(this, tc, "decrypt: cipher=" + encType + " cryptoMode=" + cryptoMode);
         }
 
         byte[] tokenData;
         try {
-            if (useGCM) {
+            if (useMLKEM) {
+                // Token3-style: ML-KEM decapsulation + AES-256-GCM; result is Token2 inner plaintext
+                tokenData = LTPAPQCCrypto.decryptToken(encryptedBytes.clone(), mlkemPrivateKey, mlkemAlgorithmType);
+            } else if (useGCM) {
                 tokenData = LTPAKeyUtil.decryptGCM(encryptedBytes.clone(), sharedKey);
             } else {
                 tokenData = LTPAKeyUtil.decrypt(encryptedBytes.clone(), sharedKey, cipher);

@@ -66,7 +66,7 @@
             required="false" type="String" ibm:type="password"/>
         <AD id="mlkemAlgorithm" name="%mlkemAlgorithm" description="%mlkemAlgorithm.desc"
             required="false" type="String"
-            default="ML-KEM-768">
+            default="ML-KEM-512">
             <Option label="%mlkemAlgorithm.512" value="ML-KEM-512"/>
             <Option label="%mlkemAlgorithm.768" value="ML-KEM-768"/>
             <Option label="%mlkemAlgorithm.1024" value="ML-KEM-1024"/>

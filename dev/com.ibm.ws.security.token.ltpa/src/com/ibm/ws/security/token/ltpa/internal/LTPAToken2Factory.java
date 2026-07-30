@@ -31,6 +31,7 @@ import com.ibm.ws.security.token.ltpa.LTPAValidationKeysInfo;
 import com.ibm.wsspi.security.ltpa.Token;
 import com.ibm.wsspi.security.ltpa.TokenFactory;
 
+import com.ibm.ws.security.token.ltpa.pqc.MLKEMAlgorithmType;
 import com.ibm.ws.security.token.ltpa.pqc.PQCConstants;
 import com.ibm.ws.security.token.ltpa.pqc.PQCSignatureHelper;
 import java.security.KeyFactory;
@@ -110,7 +111,49 @@ public class LTPAToken2Factory implements TokenFactory {
                         }
                         return null;
                 }
-        }      
+        }
+
+        /**
+         * Load ML-KEM keys from key info manager.
+         *
+         * @param keyInfoMgr The key info manager
+         * @param keyFile The key file name
+         * @return Array containing [PrivateKey, PublicKey, MLKEMAlgorithmType] or null if not available
+         */
+        private Object[] loadMLKEMKeys(LTPAKeyInfoManager keyInfoMgr, String keyFile) {
+                try {
+                        byte[] privateKeyBytes = keyInfoMgr.getMLKEMPrivateKey(keyFile);
+                        byte[] publicKeyBytes = keyInfoMgr.getMLKEMPublicKey(keyFile);
+
+                        if (privateKeyBytes == null || publicKeyBytes == null) {
+                                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                                        Tr.debug(tc, "ML-KEM keys not found in key file");
+                                }
+                                return null;
+                        }
+
+                        KeyFactory keyFactory = KeyFactory.getInstance("ML-KEM");
+
+                        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+                        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+
+                        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
+                        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+                        // Infer algorithm type from key size (ML-KEM-768 public key is ~1184 bytes)
+                        MLKEMAlgorithmType algorithmType = MLKEMAlgorithmType.fromString(
+                                publicKeyBytes.length <= 850 ? "ML-KEM-512" :
+                                publicKeyBytes.length <= 1200 ? "ML-KEM-768" : "ML-KEM-1024");
+
+                        return new Object[] { privateKey, publicKey, algorithmType };
+
+                } catch (Exception e) {
+                        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                                Tr.debug(tc, "Error loading ML-KEM keys: " + e.getMessage());
+                        }
+                        return null;
+                }
+        }
     /** {@inheritDoc} */
     @Override
     public Token createToken(Map tokenData) throws TokenCreationFailedException {
@@ -119,19 +162,25 @@ public class LTPAToken2Factory implements TokenFactory {
         // PQC: Check if PQC is enabled (Issue #35556 - Task 2.7)
         String cryptoMode = ltpaConfig != null ? ltpaConfig.getCryptoMode() : PQCConstants.CRYPTO_MODE_CLASSICAL;
         
-        if (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) || 
+        if (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) ||
             PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode)) {
-            
+
             // Try to load ML-DSA keys
             Object[] mldsaKeys = loadMLDSAKeys(keyInfoMgr, primaryKeyFile, null);
-            
+            // Try to load ML-KEM keys (for Token3-style encryption in pqc mode)
+            Object[] mlkemKeys = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) ? loadMLKEMKeys(keyInfoMgr, primaryKeyFile) : null;
+
             if (mldsaKeys != null) {
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "Creating PQC token with crypto mode: " + cryptoMode);
+                    Tr.debug(tc, "Creating PQC token with crypto mode: " + cryptoMode +
+                             (mlkemKeys != null ? " (ML-KEM encryption enabled)" : " (ML-KEM not available, using shared key)"));
                 }
                 return new LTPAToken2(userUniqueId, expirationInMinutes,
                                     primarySharedKey, primaryPrivateKey, primaryPublicKey,
-                                    (PrivateKey) mldsaKeys[0], (PublicKey) mldsaKeys[1], cryptoMode);
+                                    (PrivateKey) mldsaKeys[0], (PublicKey) mldsaKeys[1], cryptoMode,
+                                    mlkemKeys != null ? (PrivateKey) mlkemKeys[0] : null,
+                                    mlkemKeys != null ? (PublicKey) mlkemKeys[1] : null,
+                                    mlkemKeys != null ? (MLKEMAlgorithmType) mlkemKeys[2] : null);
             } else {
                 if (TraceComponent.isAnyTracingEnabled() && tc.isWarningEnabled()) {
                     Tr.warning(tc, "ML-DSA keys not available, falling back to classical mode");
@@ -174,17 +223,21 @@ public class LTPAToken2Factory implements TokenFactory {
     @Override
     public Token validateTokenBytes(byte[] tokenBytes, String... removeAttributes) throws InvalidTokenException, TokenExpiredException {
         Token validatedToken = null;
-  
-        // PQC: Try to load ML-DSA keys if PQC is configured (Issue #35556 - Task 2.7)
+
+        // PQC: Try to load ML-DSA and ML-KEM keys if PQC is configured (Issue #35556 - Task 2.7)
         String cryptoMode = ltpaConfig != null ? ltpaConfig.getCryptoMode() : PQCConstants.CRYPTO_MODE_CLASSICAL;
         Object[] mldsaKeys = null;
-        
-        if (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) || 
+        Object[] mlkemKeys = null;
+
+        if (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) ||
             PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode)) {
             mldsaKeys = loadMLDSAKeys(keyInfoMgr, primaryKeyFile, null);
             if (mldsaKeys == null && TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                 Tr.debug(tc, "ML-DSA keys not available for validation, will try classical mode");
             }
+        }
+        if (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)) {
+            mlkemKeys = loadMLKEMKeys(keyInfoMgr, primaryKeyFile);
         }
 
         // primary key for create and validation
@@ -196,7 +249,11 @@ public class LTPAToken2Factory implements TokenFactory {
             try {
                 if (mldsaKeys != null) {
                     validatedToken = new LTPAToken2(tokenBytes, primarySharedKey, primaryPrivateKey, primaryPublicKey,
-                                                   (PrivateKey) mldsaKeys[0], (PublicKey) mldsaKeys[1], cryptoMode, expDiffAllowed, removeAttributes);
+                                                   (PrivateKey) mldsaKeys[0], (PublicKey) mldsaKeys[1], cryptoMode,
+                                                   mlkemKeys != null ? (PrivateKey) mlkemKeys[0] : null,
+                                                   mlkemKeys != null ? (PublicKey) mlkemKeys[1] : null,
+                                                   mlkemKeys != null ? (MLKEMAlgorithmType) mlkemKeys[2] : null,
+                                                   expDiffAllowed, removeAttributes);
                 } else {
                     validatedToken = new LTPAToken2(tokenBytes, primarySharedKey, primaryPrivateKey, primaryPublicKey, expDiffAllowed, removeAttributes);
                 }
@@ -239,12 +296,16 @@ public class LTPAToken2Factory implements TokenFactory {
                     }
                     if (sharedKeyForValidation != null && ltpaPrivateKeyForValidation != null && ltpaPublicKeyForValidation != null) {
                         try {
-                            if (mldsaKeys != null) {
-                                validatedToken = new LTPAToken2(tokenBytes, sharedKeyForValidation, ltpaPrivateKeyForValidation, ltpaPublicKeyForValidation,
-                                                               (PrivateKey) mldsaKeys[0], (PublicKey) mldsaKeys[1], cryptoMode, expDiffAllowed, removeAttributes);
-                            } else {
-                                validatedToken = new LTPAToken2(tokenBytes, sharedKeyForValidation, ltpaPrivateKeyForValidation, ltpaPublicKeyForValidation, expDiffAllowed, removeAttributes);
-                            }
+                                if (mldsaKeys != null) {
+                                    validatedToken = new LTPAToken2(tokenBytes, sharedKeyForValidation, ltpaPrivateKeyForValidation, ltpaPublicKeyForValidation,
+                                                                   (PrivateKey) mldsaKeys[0], (PublicKey) mldsaKeys[1], cryptoMode,
+                                                                   mlkemKeys != null ? (PrivateKey) mlkemKeys[0] : null,
+                                                                   mlkemKeys != null ? (PublicKey) mlkemKeys[1] : null,
+                                                                   mlkemKeys != null ? (MLKEMAlgorithmType) mlkemKeys[2] : null,
+                                                                   expDiffAllowed, removeAttributes);
+                                } else {
+                                    validatedToken = new LTPAToken2(tokenBytes, sharedKeyForValidation, ltpaPrivateKeyForValidation, ltpaPublicKeyForValidation, expDiffAllowed, removeAttributes);
+                                }
                             if (validatedToken != null) {
                                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                                     Tr.debug(tc, "validateTokenBytes with validationKeys (success)");

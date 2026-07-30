@@ -132,25 +132,25 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			}
 
 			// Generate PQC (ML-KEM) keys for encryption (Phase 4)
-// 			try {
-// 				KeyPair mlkemKeyPair = generateMLKEMKeyPair();
-// 				if (mlkemKeyPair != null) {
-// 					byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
-// 					byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
-// 					byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
+			try {
+				KeyPair mlkemKeyPair = generateMLKEMKeyPair();
+				if (mlkemKeyPair != null) {
+					byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
+					byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
+					byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
 
-// 					String tmpMLKEMPublic = Base64Coder.base64EncodeToString(mlkemPublicKeyBytes);
-// 					String tmpMLKEMPrivate = Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes);
+					String tmpMLKEMPublic = Base64Coder.base64EncodeToString(mlkemPublicKeyBytes);
+					String tmpMLKEMPrivate = Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes);
 
-// 					expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
-// 					expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
-// //                    expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-768");
-// 					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-512");
-// 				}
-// 			} catch (Exception mlkemEx) {
-// 				// ML-KEM key generation failed - log but continue without encryption
-// 				System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
-// 			}
+					expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
+					expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
+//                    expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-768");
+					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-512");
+				}
+			} catch (Exception mlkemEx) {
+				// ML-KEM key generation failed - log but continue without encryption
+				System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
+			}
 		} catch (Exception e) {
 			throw e;
 		}
