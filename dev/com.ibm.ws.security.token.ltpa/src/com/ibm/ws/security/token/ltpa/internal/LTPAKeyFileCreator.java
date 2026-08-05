@@ -51,6 +51,20 @@ public interface LTPAKeyFileCreator extends LTPAKeyFileUtility {
     public Properties createLTPAKeysFile(WsLocationAdmin locService, String keyFile, @Sensitive byte[] keyPasswordBytes, String mldsaAlgorithm) throws Exception;
 
     /**
+     * Create the LTPA keys file at the specified location using the specified
+     * password bytes, ML-DSA algorithm, and ML-KEM algorithm.
+     *
+     * @param locService
+     * @param keyFile
+     * @param keyPasswordBytes
+     * @param mldsaAlgorithm ML-DSA algorithm to use (e.g. "ML-DSA-44")
+     * @param mlkemAlgorithm ML-KEM algorithm to use (e.g. "ML-KEM-768")
+     * @return A Properties object containing the various attributes created for the LTPA keys
+     * @throws Exception
+     */
+    public Properties createLTPAKeysFile(WsLocationAdmin locService, String keyFile, @Sensitive byte[] keyPasswordBytes, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception;
+
+    /**
      * Create the LTPA keys file at the specified location using
      * the specified password bytes, shared key bytes, private key bytes, and public key bytes.
      * <p>

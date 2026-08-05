@@ -243,8 +243,8 @@ public class LTPAToken2 implements Token, Serializable {
         boolean useMLKEM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
                         && mlkemPublicKey != null
                         && mlkemAlgorithmType != null;
-        boolean useGCM = !useMLKEM && (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
-                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode));
+        boolean useGCM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode);
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             String encType = useMLKEM ? "ML-KEM+AES-GCM" : (useGCM ? CIPHER_AES_GCM : cipher);
@@ -285,8 +285,8 @@ public class LTPAToken2 implements Token, Serializable {
         boolean useMLKEM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
                         && mlkemPrivateKey != null
                         && mlkemAlgorithmType != null;
-        boolean useGCM = !useMLKEM && (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
-                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode));
+        boolean useGCM = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)
+                      || PQCConstants.CRYPTO_MODE_HYBRID.equals(cryptoMode);
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             String encType = useMLKEM ? "ML-KEM+AES-GCM" : (useGCM ? CIPHER_AES_GCM : cipher);

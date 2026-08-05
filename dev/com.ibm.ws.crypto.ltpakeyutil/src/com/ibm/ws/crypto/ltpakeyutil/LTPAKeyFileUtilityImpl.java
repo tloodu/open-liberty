@@ -51,7 +51,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	}
 
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, final String realm, String mldsaAlgorithm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm, mldsaAlgorithm);
+		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm, mldsaAlgorithm, null);
 	}
 
 	/**
@@ -73,11 +73,16 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
 			byte[] publicKeyBytes, final String realm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null);
+		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, null);
 	}
 
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
 			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm) throws Exception {
+		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, mldsaAlgorithm, null);
+	}
+
+	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
+			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
 		Properties expProps = null;
 
 		try {
@@ -133,7 +138,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 
 			// Generate PQC (ML-KEM) keys for encryption (Phase 4)
 			try {
-				KeyPair mlkemKeyPair = generateMLKEMKeyPair();
+				KeyPair mlkemKeyPair = generateMLKEMKeyPair(mlkemAlgorithm);
 				if (mlkemKeyPair != null) {
 					byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
 					byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
@@ -144,8 +149,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 
 					expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
 					expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
-//                    expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-768");
-					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", "ML-KEM-512");
+					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", mlkemAlgorithm);
 				}
 			} catch (Exception mlkemEx) {
 				// ML-KEM key generation failed - log but continue without encryption
@@ -267,13 +271,13 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 
 	/**
 	 * Generate ML-KEM (Kyber) key pair for PQC encryption support. Uses Java 26's
-	 * built-in ML-KEM support (JEP 478). The KeyPairGenerator uses default
-	 * parameters (ML-KEM-768) when not explicitly initialized.
+	 * built-in ML-KEM support (JEP 478).
 	 *
+	 * @param algorithm ML-KEM algorithm name (e.g. "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024")
 	 * @return KeyPair containing ML-KEM public and private keys, or null if
 	 *         generation fails
 	 */
-	private KeyPair generateMLKEMKeyPair() {
+	private KeyPair generateMLKEMKeyPair(String algorithm) {
 		System.out.println("DEBUG: Starting ML-KEM key pair generation");
 		System.out.println("DEBUG: Java version: " + System.getProperty("java.version"));
 		System.out.println("DEBUG: Java vendor: " + System.getProperty("java.vendor"));
@@ -290,17 +294,10 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 				}
 			}
 
-			// Generate ML-KEM key pair using default SUN provider
-			// Note: Java 26 provides ML-KEM support via JEP 478
-			// The KeyPairGenerator works with default parameters (ML-KEM-768) without
-			// explicit initialization
 			System.out.println("DEBUG: Getting KeyPairGenerator instance for ML-KEM...");
-//			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("ML-KEM");
-			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("ML-KEM-512");
+			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance(algorithm);
 			System.out.println("DEBUG: KeyPairGenerator obtained, provider: " + keyGen.getProvider().getName());
-			// System.out.println("DEBUG: Using default parameters (ML-KEM-768) - no
-			// explicit initialization needed");
-			System.out.println("DEBUG: Using default parameters (ML-KEM-512) - no explicit initialization needed");
+			System.out.println("DEBUG: Using algorithm: " + algorithm);
 
 			System.out.println("DEBUG: Generating ML-KEM key pair...");
 			KeyPair keyPair = keyGen.generateKeyPair();
@@ -312,17 +309,18 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			System.out.println("DEBUG: Private key format: " + keyPair.getPrivate().getFormat());
 			System.out.println("DEBUG: Private key size: " + keyPair.getPrivate().getEncoded().length + " bytes");
 
-			// Validate key sizes (ML-KEM-768: public=1184 bytes, private=2400 bytes)
-			int publicKeySize = keyPair.getPublic().getEncoded().length;
+			// Validate key sizes against expected sizes for the chosen algorithm
+			// ML-KEM-512: public=800, private=1632  ML-KEM-768: public=1184, private=2400  ML-KEM-1024: public=1568, private=3168
+			int expectedPublicKeySize  = algorithm.contains("1024") ? 1568 : algorithm.contains("768") ? 1184 : 800;
+			int expectedPrivateKeySize = algorithm.contains("1024") ? 3168 : algorithm.contains("768") ? 2400 : 1632;
+			int publicKeySize  = keyPair.getPublic().getEncoded().length;
 			int privateKeySize = keyPair.getPrivate().getEncoded().length;
 
-			if (publicKeySize != 1184) {
-				System.err
-						.println("WARNING: ML-KEM public key size is " + publicKeySize + " bytes, expected 1184 bytes");
+			if (publicKeySize != expectedPublicKeySize) {
+				System.err.println("WARNING: ML-KEM public key size is " + publicKeySize + " bytes, expected " + expectedPublicKeySize + " bytes for " + algorithm);
 			}
-			if (privateKeySize != 2400) {
-				System.err.println(
-						"WARNING: ML-KEM private key size is " + privateKeySize + " bytes, expected 2400 bytes");
+			if (privateKeySize != expectedPrivateKeySize) {
+				System.err.println("WARNING: ML-KEM private key size is " + privateKeySize + " bytes, expected " + expectedPrivateKeySize + " bytes for " + algorithm);
 			}
 
 			return keyPair;

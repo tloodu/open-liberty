@@ -140,14 +140,20 @@ public class LTPAKeyInfoManager {
     @SuppressWarnings("deprecation")
     public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
                                                       @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys) throws Exception {
-        prepareLTPAKeyInfo(locService, primaryKeyImportFile, primaryKeyPassword, validationKeys, tryToReEncryptLtpaKeys, null);
+        prepareLTPAKeyInfo(locService, primaryKeyImportFile, primaryKeyPassword, validationKeys, tryToReEncryptLtpaKeys, null, null);
     }
 
     @SuppressWarnings("deprecation")
     public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
                                                       @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm) throws Exception {
+        prepareLTPAKeyInfo(locService, primaryKeyImportFile, primaryKeyPassword, validationKeys, tryToReEncryptLtpaKeys, mldsaAlgorithm, null);
+    }
+
+    @SuppressWarnings("deprecation")
+    public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
+                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
         if (!this.importFileCache.contains(primaryKeyImportFile)) {
-            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, mldsaAlgorithm);
+            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, mldsaAlgorithm, mlkemAlgorithm);
         }
         if (validationKeys != null && !validationKeys.isEmpty()) {
             ltpaValidationKeysInfos.clear();
@@ -229,11 +235,16 @@ public class LTPAKeyInfoManager {
      */
     private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
                                   OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys) throws IOException, Exception {
-        loadLtpaKeysFile(locService, keyImportFile, keyPassword, validationKey, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, null);
+        loadLtpaKeysFile(locService, keyImportFile, keyPassword, validationKey, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, null, null);
     }
 
     private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
                                   OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm) throws IOException, Exception {
+        loadLtpaKeysFile(locService, keyImportFile, keyPassword, validationKey, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, mldsaAlgorithm, null);
+    }
+
+    private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
+                                  OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm, String configuredMlkemAlgorithm) throws IOException, Exception {
         // Need to load the key import file
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             Tr.event(this, tc, "Loading LTPA " + (validationKey == true ? "validation" : "primary") + "Keys file: " + keyImportFile);
@@ -262,7 +273,7 @@ public class LTPAKeyInfoManager {
                         props = loadPropertiesFile(ltpaKeyFileResource);
                     } else {
                         //regenerate the primary key
-                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
+                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm, configuredMlkemAlgorithm);
                     }
                 }
             }
@@ -271,7 +282,7 @@ public class LTPAKeyInfoManager {
             Tr.error(tc, "LTPA_KEYS_FILE_DOES_NOT_EXIST", keyImportFile);
             return;
         } else { //Primary keys file does not exist so create the primary key
-            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
+            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm, configuredMlkemAlgorithm);
         }
 
         if (props == null || props.isEmpty()) {
@@ -398,9 +409,13 @@ public class LTPAKeyInfoManager {
                 
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                     Tr.debug(tc, "ML-KEM private key decrypted and cached, size: " + mlkemPrivateKey.length + " bytes");
-                    // Validate expected size for ML-KEM-768 (2400 bytes)
-                    if (mlkemPrivateKey.length != 2400) {
-                        Tr.debug(tc, "WARNING: ML-KEM private key size is " + mlkemPrivateKey.length + " bytes, expected 2400 bytes for ML-KEM-768");
+                    // Validate expected size based on the algorithm stored in the key file
+                    // ML-KEM-512: 1632  ML-KEM-768: 2400  ML-KEM-1024: 3168
+                    int expectedPrivateKeySize = (mlkemAlgorithm != null && mlkemAlgorithm.contains("1024")) ? 3168
+                                              : (mlkemAlgorithm != null && mlkemAlgorithm.contains("512"))  ? 1632
+                                              : 2400;
+                    if (mlkemPrivateKey.length != expectedPrivateKeySize) {
+                        Tr.debug(tc, "WARNING: ML-KEM private key size is " + mlkemPrivateKey.length + " bytes, expected " + expectedPrivateKeySize + " bytes for " + mlkemAlgorithm);
                     }
                 }
             } catch (Exception e) {
@@ -419,9 +434,13 @@ public class LTPAKeyInfoManager {
                 
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                     Tr.debug(tc, "ML-KEM public key loaded and cached, size: " + mlkemPublicKey.length + " bytes");
-                    // Validate expected size for ML-KEM-768 (1184 bytes)
-                    if (mlkemPublicKey.length != 1184) {
-                        Tr.debug(tc, "WARNING: ML-KEM public key size is " + mlkemPublicKey.length + " bytes, expected 1184 bytes for ML-KEM-768");
+                    // Validate expected size based on the algorithm stored in the key file
+                    // ML-KEM-512: 800  ML-KEM-768: 1184  ML-KEM-1024: 1568
+                    int expectedPublicKeySize = (mlkemAlgorithm != null && mlkemAlgorithm.contains("1024")) ? 1568
+                                             : (mlkemAlgorithm != null && mlkemAlgorithm.contains("512"))  ? 800
+                                             : 1184;
+                    if (mlkemPublicKey.length != expectedPublicKeySize) {
+                        Tr.debug(tc, "WARNING: ML-KEM public key size is " + mlkemPublicKey.length + " bytes, expected " + expectedPublicKeySize + " bytes for " + mlkemAlgorithm);
                     }
                 }
             } catch (Exception e) {
@@ -600,12 +619,12 @@ public class LTPAKeyInfoManager {
      * @return
      * @throws Exception
      */
-    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String mldsaAlgorithm) throws Exception {
+    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
         long start = System.currentTimeMillis();
         Tr.info(tc, "LTPA_CREATE_KEYS_START");
 
         LTPAKeyFileCreator creator = new LTPAKeyFileCreatorImpl();
-        Properties props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
+        Properties props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, mldsaAlgorithm, mlkemAlgorithm);
 
         Tr.audit(tc, "LTPA_CREATE_KEYS_COMPLETE", TimestampUtils.getElapsedTime(start), keyImportFile);
         return props;

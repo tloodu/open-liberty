@@ -118,9 +118,10 @@ public class LTPAToken2Factory implements TokenFactory {
          *
          * @param keyInfoMgr The key info manager
          * @param keyFile The key file name
+         * @param mlkemAlgorithm The ML-KEM algorithm name from configuration (e.g. "ML-KEM-768")
          * @return Array containing [PrivateKey, PublicKey, MLKEMAlgorithmType] or null if not available
          */
-        private Object[] loadMLKEMKeys(LTPAKeyInfoManager keyInfoMgr, String keyFile) {
+        private Object[] loadMLKEMKeys(LTPAKeyInfoManager keyInfoMgr, String keyFile, String mlkemAlgorithm) {
                 try {
                         byte[] privateKeyBytes = keyInfoMgr.getMLKEMPrivateKey(keyFile);
                         byte[] publicKeyBytes = keyInfoMgr.getMLKEMPublicKey(keyFile);
@@ -140,10 +141,7 @@ public class LTPAToken2Factory implements TokenFactory {
                         X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
                         PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-                        // Infer algorithm type from key size (ML-KEM-768 public key is ~1184 bytes)
-                        MLKEMAlgorithmType algorithmType = MLKEMAlgorithmType.fromString(
-                                publicKeyBytes.length <= 850 ? "ML-KEM-512" :
-                                publicKeyBytes.length <= 1200 ? "ML-KEM-768" : "ML-KEM-1024");
+                        MLKEMAlgorithmType algorithmType = MLKEMAlgorithmType.fromString(mlkemAlgorithm);
 
                         return new Object[] { privateKey, publicKey, algorithmType };
 
@@ -168,7 +166,7 @@ public class LTPAToken2Factory implements TokenFactory {
             // Try to load ML-DSA keys
             Object[] mldsaKeys = loadMLDSAKeys(keyInfoMgr, primaryKeyFile, null);
             // Try to load ML-KEM keys (for Token3-style encryption in pqc mode)
-            Object[] mlkemKeys = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) ? loadMLKEMKeys(keyInfoMgr, primaryKeyFile) : null;
+            Object[] mlkemKeys = PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode) ? loadMLKEMKeys(keyInfoMgr, primaryKeyFile, ltpaConfig.getMLKEMAlgorithm()) : null;
 
             if (mldsaKeys != null) {
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
@@ -237,7 +235,7 @@ public class LTPAToken2Factory implements TokenFactory {
             }
         }
         if (PQCConstants.CRYPTO_MODE_PQC.equals(cryptoMode)) {
-            mlkemKeys = loadMLKEMKeys(keyInfoMgr, primaryKeyFile);
+            mlkemKeys = loadMLKEMKeys(keyInfoMgr, primaryKeyFile, ltpaConfig != null ? ltpaConfig.getMLKEMAlgorithm() : null);
         }
 
         // primary key for create and validation
