@@ -19,9 +19,13 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
+import com.ibm.websphere.ras.annotation.Trivial;
 
 /**
  * Helper class for PQC signature operations using ML-DSA.
@@ -34,7 +38,90 @@ import com.ibm.websphere.ras.TraceComponent;
 public class PQCSignatureHelper {
     
     private static final TraceComponent tc = Tr.register(PQCSignatureHelper.class);
-    
+
+    // has to be greater than 0 and a multiple of 5
+    private static int MAX_CACHE = 500;
+
+    @Trivial
+    private static final class MLDSAVerifyCachingKey {
+
+        private long successfulUses;
+        private final byte[] keyEncoded;
+        private final byte[] data;
+        private final byte[] sig;
+        private final int hashcode;
+        boolean result;
+
+        @Trivial
+        private MLDSAVerifyCachingKey(byte[] keyEncoded, byte[] data, byte[] sig) {
+            this.keyEncoded = keyEncoded;
+            this.data = data;
+            this.sig = sig;
+            this.successfulUses = 0;
+
+            int h = 0;
+            if (keyEncoded != null && keyEncoded.length > 0) {
+                h += keyEncoded[0];
+            }
+            if (data != null) {
+                for (int i = 0; i < data.length && i < 10; i++) {
+                    h += data[i];
+                }
+                for (int i = data.length - 1; i >= 0 && i > data.length - 10; i--) {
+                    h += data[i];
+                }
+            }
+            h *= 2;
+            this.hashcode = h;
+        }
+
+        @Trivial
+        @Override
+        public boolean equals(Object to) {
+            if (!(to instanceof MLDSAVerifyCachingKey)) {
+                return false;
+            }
+            MLDSAVerifyCachingKey ck = (MLDSAVerifyCachingKey) to;
+            if (hashcode != ck.hashcode) {
+                return false;
+            }
+            if (!Arrays.equals(keyEncoded, ck.keyEncoded)) {
+                return false;
+            }
+            if (!Arrays.equals(data, ck.data)) {
+                return false;
+            }
+            if (!Arrays.equals(sig, ck.sig)) {
+                return false;
+            }
+            return true;
+        }
+
+        @Trivial
+        @Override
+        public int hashCode() {
+            return hashcode;
+        }
+    }
+
+    private static final ConcurrentHashMap<MLDSAVerifyCachingKey, MLDSAVerifyCachingKey> mldsaVerifyKeysMap =
+            new ConcurrentHashMap<MLDSAVerifyCachingKey, MLDSAVerifyCachingKey>();
+
+    private static final Comparator<MLDSAVerifyCachingKey> mldsaVerifyKeyComparator =
+            new Comparator<MLDSAVerifyCachingKey>() {
+        @Override
+        @Trivial
+        public int compare(MLDSAVerifyCachingKey o1, MLDSAVerifyCachingKey o2) {
+            if (o1.successfulUses < o2.successfulUses) {
+                return -1;
+            } else if (o1.successfulUses == o2.successfulUses) {
+                return 0;
+            } else {
+                return 1;
+            }
+        }
+    };
+
     /**
      * Sign data using ML-DSA private key.
      * 
@@ -113,13 +200,13 @@ public class PQCSignatureHelper {
      * @throws InvalidKeyException if public key is invalid
      * @throws SignatureException if verification fails
      */
-    public static boolean verifyMLDSA(byte[] data, byte[] signatureBytes, 
-                                      PublicKey publicKey, String provider) 
-            throws NoSuchAlgorithmException, NoSuchProviderException, 
+    public static boolean verifyMLDSA(byte[] data, byte[] signatureBytes,
+                                      PublicKey publicKey, String provider)
+            throws NoSuchAlgorithmException, NoSuchProviderException,
                    InvalidKeyException, SignatureException {
         
         if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled()) {
-            Tr.entry(tc, "verifyMLDSA", "dataLength=" + (data != null ? data.length : 0), 
+            Tr.entry(tc, "verifyMLDSA", "dataLength=" + (data != null ? data.length : 0),
                      "signatureLength=" + (signatureBytes != null ? signatureBytes.length : 0), provider);
         }
         
@@ -132,6 +219,42 @@ public class PQCSignatureHelper {
         }
         if (publicKey == null) {
             throw new IllegalArgumentException("Public key cannot be null");
+        }
+
+        // Cache lookup
+        byte[] keyEncoded = publicKey.getEncoded();
+        MLDSAVerifyCachingKey ck = new MLDSAVerifyCachingKey(keyEncoded, data, signatureBytes);
+        MLDSAVerifyCachingKey cached = mldsaVerifyKeysMap.get(ck);
+        if (cached != null) {
+            cached.successfulUses += 1;
+            if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled()) {
+                Tr.exit(tc, "verifyMLDSA", "cache hit: " + cached.result);
+            }
+            return cached.result;
+        }
+
+        // Evict bottom 20% if at capacity
+        if (mldsaVerifyKeysMap.size() >= MAX_CACHE) {
+            int mapSize = mldsaVerifyKeysMap.size();
+            MLDSAVerifyCachingKey[] keys = mldsaVerifyKeysMap.keySet().toArray(new MLDSAVerifyCachingKey[mapSize]);
+            Arrays.sort(keys, mldsaVerifyKeyComparator);
+            if (mldsaVerifyKeyComparator.compare(keys[0], keys[keys.length - 1]) < 0) {
+                for (int i = 0; i < mapSize / 5; i++) {
+                    mldsaVerifyKeysMap.remove(keys[i]);
+                    keys[i + 1 * mapSize / 5].successfulUses--;
+                    keys[i + 2 * mapSize / 5].successfulUses--;
+                    keys[i + 3 * mapSize / 5].successfulUses--;
+                    keys[i + 4 * mapSize / 5].successfulUses--;
+                }
+            } else { // TODO: consider removing bc this likely isn't used since we sort the keys above (except when all keys have the same num of uses)
+                for (int i = 0; i < mapSize / 5; i++) {
+                    mldsaVerifyKeysMap.remove(keys[keys.length - 1 - i]);
+                    keys[keys.length - 1 - i - 1 * mapSize / 5].successfulUses--;
+                    keys[keys.length - 1 - i - 2 * mapSize / 5].successfulUses--;
+                    keys[keys.length - 1 - i - 3 * mapSize / 5].successfulUses--;
+                    keys[keys.length - 1 - i - 4 * mapSize / 5].successfulUses--;
+                }
+            }
         }
         
         try {
@@ -147,6 +270,11 @@ public class PQCSignatureHelper {
             
             // Verify signature
             boolean isValid = signature.verify(signatureBytes);
+
+            // Store result in cache
+            mldsaVerifyKeysMap.put(ck, ck);
+            ck.result = isValid;
+            ck.successfulUses = 0;
             
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                 Tr.debug(tc, "ML-DSA signature verification result: " + isValid);
@@ -158,7 +286,7 @@ public class PQCSignatureHelper {
             
             return isValid;
             
-        } catch (NoSuchAlgorithmException | NoSuchProviderException | 
+        } catch (NoSuchAlgorithmException | NoSuchProviderException |
                  InvalidKeyException | SignatureException e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                 Tr.debug(tc, "ML-DSA verification failed: " + e.getMessage());
@@ -327,6 +455,16 @@ public class PQCSignatureHelper {
      * @param algorithm ML-DSA algorithm variant
      * @return Expected signature size in bytes
      */
+    @Trivial
+    public static int getMLDSAVerifyCacheSize() {
+        return mldsaVerifyKeysMap.size();
+    }
+
+    @Trivial
+    public static void emptyMLDSAVerifyCache() {
+        mldsaVerifyKeysMap.clear();
+    }
+
     public static int getMLDSASignatureSize(String algorithm) {
         if (PQCConstants.ALGORITHM_ML_DSA_44.equals(algorithm)) {
             return 2420; // ML-DSA-44 signature size
