@@ -117,44 +117,44 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			expProps.put(CREATION_DATE_PROPERTY, (new java.util.Date()).toString());
 
 			// Generate PQC (ML-DSA) keys for signatures
-			try {
-				KeyPair mldsaKeyPair = generateMLDSAKeyPair(mldsaAlgorithm);
-				if (mldsaKeyPair != null) {
-					byte[] mldsaPublicKeyBytes = mldsaKeyPair.getPublic().getEncoded();
-					byte[] mldsaPrivateKeyBytes = mldsaKeyPair.getPrivate().getEncoded();
-					byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encrypt(mldsaPrivateKeyBytes);
+			// try {
+			// 	KeyPair mldsaKeyPair = generateMLDSAKeyPair(mldsaAlgorithm);
+			// 	if (mldsaKeyPair != null) {
+			// 		byte[] mldsaPublicKeyBytes = mldsaKeyPair.getPublic().getEncoded();
+			// 		byte[] mldsaPrivateKeyBytes = mldsaKeyPair.getPrivate().getEncoded();
+			// 		byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encrypt(mldsaPrivateKeyBytes);
 
-					String tmpMLDSAPublic = Base64Coder.base64EncodeToString(mldsaPublicKeyBytes);
-					String tmpMLDSAPrivate = Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes);
+			// 		String tmpMLDSAPublic = Base64Coder.base64EncodeToString(mldsaPublicKeyBytes);
+			// 		String tmpMLDSAPrivate = Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes);
 
-					expProps.put("com.ibm.websphere.ltpa.pqc.PublicKey", tmpMLDSAPublic);
-					expProps.put("com.ibm.websphere.ltpa.pqc.PrivateKey", tmpMLDSAPrivate);
-					expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", mldsaAlgorithm);
-				}
-			} catch (Exception mldsaEx) {
-				// ML-DSA key generation failed - log but continue with classical keys only
-				System.err.println("Warning: ML-DSA key generation failed: " + mldsaEx.getMessage());
-			}
+			// 		expProps.put("com.ibm.websphere.ltpa.pqc.PublicKey", tmpMLDSAPublic);
+			// 		expProps.put("com.ibm.websphere.ltpa.pqc.PrivateKey", tmpMLDSAPrivate);
+			// 		expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", mldsaAlgorithm);
+			// 	}
+			// } catch (Exception mldsaEx) {
+			// 	// ML-DSA key generation failed - log but continue with classical keys only
+			// 	System.err.println("Warning: ML-DSA key generation failed: " + mldsaEx.getMessage());
+			// }
 
 			// Generate PQC (ML-KEM) keys for encryption (Phase 4)
-			try {
-				KeyPair mlkemKeyPair = generateMLKEMKeyPair(mlkemAlgorithm);
-				if (mlkemKeyPair != null) {
-					byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
-					byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
-					byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
+			// try {
+			// 	KeyPair mlkemKeyPair = generateMLKEMKeyPair(mlkemAlgorithm);
+			// 	if (mlkemKeyPair != null) {
+			// 		byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
+			// 		byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
+			// 		byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
 
-					String tmpMLKEMPublic = Base64Coder.base64EncodeToString(mlkemPublicKeyBytes);
-					String tmpMLKEMPrivate = Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes);
+			// 		String tmpMLKEMPublic = Base64Coder.base64EncodeToString(mlkemPublicKeyBytes);
+			// 		String tmpMLKEMPrivate = Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes);
 
-					expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
-					expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
-					expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", mlkemAlgorithm);
-				}
-			} catch (Exception mlkemEx) {
-				// ML-KEM key generation failed - log but continue without encryption
-				System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
-			}
+			// 		expProps.put("com.ibm.websphere.ltpa.mlkem.PublicKey", tmpMLKEMPublic);
+			// 		expProps.put("com.ibm.websphere.ltpa.mlkem.PrivateKey", tmpMLKEMPrivate);
+			// 		expProps.put("com.ibm.websphere.ltpa.mlkem.Algorithm", mlkemAlgorithm);
+			// 	}
+			// } catch (Exception mlkemEx) {
+			// 	// ML-KEM key generation failed - log but continue without encryption
+			// 	System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
+			// }
 		} catch (Exception e) {
 			throw e;
 		}

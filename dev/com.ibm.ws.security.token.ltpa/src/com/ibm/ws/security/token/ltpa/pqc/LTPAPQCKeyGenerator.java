@@ -81,8 +81,8 @@ public class LTPAPQCKeyGenerator {
                 Tr.debug(tc, "Generating RSA-2048 key pair for signatures");
             }
             LTPAKeyPair rsaKeyPair = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.generateLTPAKeyPair();
-            byte[] rsaPrivateKeyBytes = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.getRawKey(rsaKeyPair.getPrivate())[0];
-            byte[] rsaPublicKeyBytes = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.getRawKey(rsaKeyPair.getPublic())[0];
+            byte[] rsaPrivateKeyBytes = rsaKeyPair.getPrivate().getEncoded();
+            byte[] rsaPublicKeyBytes = rsaKeyPair.getPublic().getEncoded();
             
             // 2. Generate ML-KEM keys (new - for encryption)
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {

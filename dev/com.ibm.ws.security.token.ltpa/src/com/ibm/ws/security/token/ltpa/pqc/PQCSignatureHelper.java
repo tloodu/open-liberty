@@ -327,10 +327,6 @@ public class PQCSignatureHelper {
         if (mldsaPrivateKey == null) {
             throw new IllegalArgumentException("ML-DSA private key cannot be null");
         }
-        if (provider == null || provider.isEmpty()) {
-            throw new IllegalArgumentException("Provider cannot be null or empty");
-        }
-
         try {
             // 1. Sign with RSA using existing Liberty LTPA code
             byte[] rsaSignature = signRSA(data, rsaPrivateKey);
@@ -402,10 +398,6 @@ public class PQCSignatureHelper {
         if (mldsaPublicKey == null) {
             throw new IllegalArgumentException("ML-DSA public key cannot be null");
         }
-        if (provider == null || provider.isEmpty()) {
-            throw new IllegalArgumentException("Provider cannot be null or empty");
-        }
-
         try {
             // 1. Split combined signature into RSA and ML-DSA parts
             byte[][] signatures = splitSignatures(hybridSignature);
@@ -488,13 +480,8 @@ public class PQCSignatureHelper {
     private static byte[] signRSA(byte[] data, Object rsaPrivateKey) throws Exception {
         java.security.MessageDigest md = com.ibm.ws.common.crypto.CryptoUtils.getMessageDigestForLTPA();
         byte[] digest = md.digest(data);
-
-        byte[][] rsaPrivKey = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.getRawKey(
-            (com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey) rsaPrivateKey);
-        com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.setRSAKey(rsaPrivKey);
-
         return com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.signISO9796(
-            rsaPrivKey, digest, 0, digest.length);
+            (com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey) rsaPrivateKey, digest);
     }
 
    /**
@@ -503,12 +490,8 @@ public class PQCSignatureHelper {
     private static boolean verifyRSA(byte[] data, byte[] signature, Object rsaPublicKey) throws Exception {
         java.security.MessageDigest md = com.ibm.ws.common.crypto.CryptoUtils.getMessageDigestForLTPA();
         byte[] digest = md.digest(data);
-
-        byte[][] rsaPubKey = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.getRawKey(
-            (com.ibm.ws.crypto.ltpakeyutil.LTPAPublicKey) rsaPublicKey);
-
         return com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.verifyISO9796(
-            rsaPubKey, digest, 0, digest.length, signature, 0, signature.length);
+            (com.ibm.ws.crypto.ltpakeyutil.LTPAPublicKey) rsaPublicKey, digest, signature);
     }
 
     /**

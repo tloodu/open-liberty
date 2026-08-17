@@ -13,7 +13,6 @@
 package com.ibm.ws.security.token.ltpa.internal;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -21,7 +20,6 @@ import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
-import java.security.spec.RSAPrivateCrtKeySpec;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -360,34 +358,10 @@ public class LTPAToken3 implements Token, Serializable {
             signData.putLong(expirationInMilliseconds);
             byte[] dataToSign = signData.array();
             
-            // Get LTPAPrivateKey and extract raw key components
+            // Get RSA private key via LTPAKeyUtil facade — no manual BigInteger reconstruction needed
             com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey ltpaPrivKey = hybridKeys.getRsaPrivateKey();
-            byte[][] rawKey = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.getRawKey(ltpaPrivKey);
-            
-            // Reconstruct standard RSA private key from raw components
-            // rawKey[1] = private exponent (d)
-            // rawKey[2] = public exponent (e)
-            // rawKey[3] = prime P
-            // rawKey[4] = prime Q
-            BigInteger privateExponent = new BigInteger(1, rawKey[1]);
-            BigInteger publicExponent = new BigInteger(1, rawKey[2]);
-            BigInteger primeP = new BigInteger(1, rawKey[3]);
-            BigInteger primeQ = new BigInteger(1, rawKey[4]);
-            BigInteger modulus = primeP.multiply(primeQ);
-            
-            // Calculate CRT parameters
-            BigInteger primeExponentP = privateExponent.mod(primeP.subtract(BigInteger.ONE));
-            BigInteger primeExponentQ = privateExponent.mod(primeQ.subtract(BigInteger.ONE));
-            BigInteger crtCoefficient = primeQ.modInverse(primeP);
-            
-            RSAPrivateCrtKeySpec rsaKeySpec = new RSAPrivateCrtKeySpec(
-                modulus, publicExponent, privateExponent,
-                primeP, primeQ, primeExponentP, primeExponentQ, crtCoefficient
-            );
-            
-            KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
-            PrivateKey rsaPrivateKey = rsaKeyFactory.generatePrivate(rsaKeySpec);
-            
+            PrivateKey rsaPrivateKey = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.getRawKey(ltpaPrivKey);
+
             // Sign with RSA-2048
             Signature rsaSigner = Signature.getInstance("SHA256withRSA");
             rsaSigner.initSign(rsaPrivateKey);

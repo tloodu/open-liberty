@@ -12,7 +12,10 @@
  *******************************************************************************/
 package com.ibm.ws.crypto.ltpakeyutil;
 
+import java.security.KeyPair;
 import java.security.MessageDigest;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPublicKey;
 
 import com.ibm.ws.common.crypto.CryptoUtils;
 
@@ -20,8 +23,6 @@ final class LTPADigSignature {
 
 	static int keySize = (CryptoUtils.isFips140_3Enabled() ? 256 : 128);
 
-	static byte[][] testRawPubKey = null;
-	static byte[][] testRawPrivKey = null;
 	static MessageDigest md1 = CryptoUtils.getMessageDigestForLTPA();
 	static private Object lockObj1 = new Object();
 	static long created = 0;
@@ -31,37 +32,18 @@ final class LTPADigSignature {
 		super();
 	}
 
-	static void generateRSAKeys(byte[][] rsaPubKey, byte[][] rsaPrivKey) {
-		byte[][] rsaKey = LTPACrypto.rsaKey(keySize, true, true); // 64 is 512, 128
-																	// is 1024
-
-		rsaPrivKey[0] = rsaKey[0];
-		rsaPrivKey[2] = rsaKey[2];
-		rsaPrivKey[4] = rsaKey[3];
-		rsaPrivKey[3] = rsaKey[4];
-		rsaPrivKey[5] = rsaKey[5];
-		rsaPrivKey[6] = rsaKey[6];
-		rsaPrivKey[7] = rsaKey[7];
-
-		rsaPubKey[0] = rsaKey[0];
-		rsaPubKey[1] = rsaKey[2];
-	}
-
 	static boolean verify(byte[] mesg, byte[] signature, LTPAPublicKey pubKey) throws Exception {
-		byte[][] rsaPubKey = pubKey.getRawKey();
 		byte[] data;
 		synchronized (lockObj1) {
 			data = md1.digest(mesg);
 		}
-		return LTPACrypto.verifyISO9796(rsaPubKey, data, 0, data.length, signature, 0, signature.length);
+		return LTPACrypto.verifyRSA(pubKey.getRawKey(), data, signature);
 	}
 
 	static LTPAKeyPair generateLTPAKeyPair() {
-		byte[][] rsaPubKey = new byte[2][];
-		byte[][] rsaPrivKey = new byte[8][];
-		generateRSAKeys(rsaPubKey, rsaPrivKey);
-		LTPAPublicKey pubKey = new LTPAPublicKey(rsaPubKey);
-		LTPAPrivateKey privKey = new LTPAPrivateKey(rsaPrivKey);
+		KeyPair pair = LTPACrypto.rsaKey();
+		LTPAPublicKey pubKey = new LTPAPublicKey((RSAPublicKey) pair.getPublic());
+		LTPAPrivateKey privKey = new LTPAPrivateKey((RSAPrivateCrtKey) pair.getPrivate());
 		return new LTPAKeyPair(pubKey, privKey);
 	}
 }

@@ -15,7 +15,6 @@ package com.ibm.ws.crypto.ltpakeyutil;
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -24,11 +23,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
-import java.security.interfaces.RSAPrivateCrtKey;
-import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPrivateCrtKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,37 +56,29 @@ final class LTPACrypto {
 
         private boolean reused = false;
         private long successfulUses;
-        private final byte[][] key;
+        private final byte[] key;
         private final byte[] data;
-        private final int off;
-        private final int len;
         private int hashcode;
         private byte[] result;
 
         @Trivial
-        private CachingKey(byte[][] key, byte[] data, int off, int len) {
+        private CachingKey(byte[] key, byte[] data) {
             this.key = key;
             this.data = data;
-            this.off = off;
-            this.len = len;
             this.successfulUses = 0;
             this.reused = false;
 
             this.hashcode = 0;
             if (key != null && key.length > 0) {
-                if (key[0] != null && key[0].length > 0) {
-                    hashcode += key[0][0];
-                }
+                hashcode += key[0];
             }
             if (data != null) {
-                for (int i = 0; i < data.length; i++) {
+                for (int i = 0; i < data.length && i < 10; i++) {
                     hashcode += data[i];
                 }
-            }
-
-            hashcode += off + len;
-            if (off != 0) {
-                hashcode *= off;
+                for (int i = data.length - 1; i >= 0 && i > data.length - 10; i--) {
+                    this.hashcode += data[i];
+                }
             }
             hashcode *= 2;
         }
@@ -102,71 +89,14 @@ final class LTPACrypto {
             if (!(to instanceof CachingKey)) {
                 return false;
             }
-
             CachingKey ck = (CachingKey) to;
-
             if (hashcode != ck.hashcode) {
                 return false;
             }
-
-            if (len != ck.len) {
+            if (!Arrays.equals(key, ck.key)) {
                 return false;
             }
-
-            if (key != null) {
-                if (ck.key == null) {
-                    return false;
-                } else {
-                    if (key.length != ck.key.length) {
-                        return false;
-                    }
-                }
-                for (int i = 0; i < key.length; i++) {
-                    if (key[i] != null) {
-                        if (ck.key[i] == null) {
-                            return false;
-                        } else {
-                            if (key[i].length != ck.key[i].length) {
-                                return false;
-                            }
-                        }
-                        for (int o = 0; o < key[i].length; o++) {
-                            if (key[i][o] != ck.key[i][o]) {
-                                return false;
-                            }
-                        }
-                    } else {
-                        if (ck.key[i] != null) {
-                            return false;
-                        }
-                    }
-                }
-            } else {
-                if (ck.key != null) {
-                    return false;
-                }
-            }
-
-            if (data != null) {
-                if (ck.data == null) {
-                    return false;
-                } else {
-                    if (data.length != ck.data.length) {
-                        return false;
-                    }
-                }
-                for (int i = 0; i < data.length; i++) {
-                    if (data[i] != ck.data[i]) {
-                        return false;
-                    }
-                }
-            } else {
-                if (ck.data != null) {
-                    return false;
-                }
-            }
-
-            if (off != ck.off) {
+            if (!Arrays.equals(data, ck.data)) {
                 return false;
             }
 
@@ -184,17 +114,17 @@ final class LTPACrypto {
     private static final ConcurrentHashMap<CachingKey, CachingKey> cryptoKeysMap = new ConcurrentHashMap<CachingKey, CachingKey>();
 
     /**
-     * Sign the data.
+     * Sign a pre-computed digest with the given RSA private key.
      *
-     * @param key  The key used to sign the data
-     * @param data The byte representation of the data
-     * @param off  The offset of the data
-     * @param len  The length of the data
-     * @return The signature of the data
+     * Results are cached by (privateKey.getEncoded(), digest),
+     * mirroring the verify cache structure.
+     * @param privateKey JCA RSA private key (from {@link LTPAPrivateKey#getRawKey()})
+     * @param digest     Pre-computed message digest (SHA-1 or SHA-512)
+     * @return RSA signature bytes
      */
     @Trivial
-    protected static final byte[] signISO9796(byte[][] key, byte[] data, int off, int len) throws Exception {
-        CachingKey ck = new CachingKey(key, data, off, len);
+    protected static final byte[] signRSA(PrivateKey privKey, byte[] data) throws Exception {
+        CachingKey ck = new CachingKey(privKey.getEncoded(), data);
         CachingKey result = cryptoKeysMap.get(ck);
 
         if (result != null) {
@@ -233,30 +163,13 @@ final class LTPACrypto {
             }
         }
 
-        /** Invoked by LTPADigSignature **/
-        BigInteger n = new BigInteger(key[0]);
-        BigInteger e = new BigInteger(key[2]);
-        BigInteger p = new BigInteger(key[3]);
-        BigInteger q = new BigInteger(key[4]);
-        BigInteger d = e.modInverse((p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE)));
-        KeyFactory kFact = null;
-
-        kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
-                : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-
-        BigInteger pep = new BigInteger(key[5]);
-        BigInteger peq = new BigInteger(key[6]);
-        BigInteger crtC = new BigInteger(key[7]);
-        RSAPrivateCrtKeySpec privCrtKeySpec = new RSAPrivateCrtKeySpec(n, e, d, p, q, pep, peq, crtC);
-        PrivateKey privKey = kFact.generatePrivate(privCrtKeySpec);
-
         Signature rsaSig = null;
 
         rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
                 : Signature.getInstance(signatureAlgorithm, provider);
 
         rsaSig.initSign(privKey);
-        rsaSig.update(data, off, len);
+        rsaSig.update(data);
         byte[] sig = rsaSig.sign();
 
         cryptoKeysMap.put(ck, ck);
@@ -283,32 +196,22 @@ final class LTPACrypto {
     private static class CachingVerifyKey {
 
         private long successfulUses;
-        private final byte[][] key;
+        private final byte[] key;
         private final byte[] data;
-        private final int off;
-        private final int len;
         private final byte[] sig;
-        private final int sigOff;
-        private final int sigLen;
         private int hashcode;
         private boolean result;
 
         @Trivial
-        private CachingVerifyKey(byte[][] key, byte[] data, int off, int len, byte[] sig, int sigOff, int sigLen) {
+        private CachingVerifyKey(byte[] key, byte[] data, byte[] sig) {
             this.key = key;
             this.data = data;
-            this.off = off;
-            this.len = len;
             this.sig = sig;
-            this.sigOff = sigOff;
-            this.sigLen = sigLen;
             this.successfulUses = 0;
 
             this.hashcode = 0;
             if (key != null && key.length > 0) {
-                if (key[0] != null && key[0].length > 0) {
-                    this.hashcode += key[0][0];
-                }
+                this.hashcode += key[0];
             }
             if (data != null) {
                 for (int i = 0; i < data.length && i < 10; i++) {
@@ -317,11 +220,6 @@ final class LTPACrypto {
                 for (int i = data.length - 1; i >= 0 && i > data.length - 10; i--) {
                     this.hashcode += data[i];
                 }
-            }
-
-            this.hashcode += off;
-            if (off != 0) {
-                this.hashcode *= off;
             }
             this.hashcode *= 2;
         }
@@ -332,98 +230,17 @@ final class LTPACrypto {
             if (!(to instanceof CachingVerifyKey)) {
                 return false;
             }
-
             CachingVerifyKey ck = (CachingVerifyKey) to;
-
             if (this.hashcode != ck.hashcode) {
                 return false;
             }
-
-            if (this.len != ck.len) {
+            if (!Arrays.equals(key, ck.key)) {
                 return false;
             }
-
-            if (this.key != null) {
-                if (ck.key == null) {
-                    return false;
-                } else {
-                    if (this.key.length != ck.key.length) {
-                        return false;
-                    }
-                }
-                for (int i = 0; i < this.key.length; i++) {
-                    if (this.key[i] != null) {
-                        if (ck.key[i] == null) {
-                            return false;
-                        } else {
-                            if (this.key[i].length != ck.key[i].length) {
-                                return false;
-                            }
-                        }
-                        for (int o = 0; o < this.key[i].length; o++) {
-                            if (this.key[i][o] != ck.key[i][o]) {
-                                return false;
-                            }
-                        }
-                    } else {
-                        if (ck.key[i] != null) {
-                            return false;
-                        }
-                    }
-                }
-            } else {
-                if (ck.key != null) {
-                    return false;
-                }
-            }
-
-            if (this.data != null) {
-                if (ck.data == null) {
-                    return false;
-                } else {
-                    if (this.data.length != ck.data.length) {
-                        return false;
-                    }
-                }
-                for (int i = 0; i < this.data.length; i++) {
-                    if (this.data[i] != ck.data[i]) {
-                        return false;
-                    }
-                }
-            } else {
-                if (ck.data != null) {
-                    return false;
-                }
-            }
-
-            if (this.sig != null) {
-                if (ck.sig == null) {
-                    return false;
-                } else {
-                    if (this.sig.length != ck.sig.length) {
-                        return false;
-                    }
-                }
-                for (int i = 0; i < this.sig.length; i++) {
-                    if (this.sig[i] != ck.sig[i]) {
-                        return false;
-                    }
-                }
-            } else {
-                if (ck.sig != null) {
-                    return false;
-                }
-            }
-
-            if (this.off != ck.off) {
+            if (!Arrays.equals(data, ck.data)) {
                 return false;
             }
-
-            if (this.sigOff != ck.sigOff) {
-                return false;
-            }
-
-            if (this.sigLen != ck.sigLen) {
+            if (!Arrays.equals(sig, ck.sig)) {
                 return false;
             }
 
@@ -475,21 +292,18 @@ final class LTPACrypto {
     };
 
     /**
-     * Verify if the signature of the data is correct.
+     * Verify an RSA signature over a pre-computed digest.
+     * Results are cached by (publicKey.getEncoded(), digest, signature),
+     * mirroring the ML-DSA verify cache in PQCSignatureHelper.
      *
-     * @param key  The key used to verify the data
-     * @param data The byte representation of the data
-     * @param off  The offset of the data
-     * @param len  The length of the data
-     * @param sig  The signature of the data
-     * @param off  The offset of the signature
-     * @param len  The length of the signature
-     * @return True if the signature of the data is correct
+     * @param publicKey JCA RSA public key (from {@link LTPAPublicKey#getRawKey()})
+     * @param digest    Pre-computed message digest (SHA-1 or SHA-512)
+     * @param signature Signature bytes to verify
+     * @return {@code true} if the signature is valid
      */
     @Trivial
-    protected static final boolean verifyISO9796(byte[][] key, byte[] data, int off, int len, byte[] sig, int sigOff,
-            int sigLen) throws Exception {
-        CachingVerifyKey ck = new CachingVerifyKey(key, data, off, len, sig, sigOff, sigLen);
+    protected static final boolean verifyRSA(PublicKey pubKey, byte[] data, byte[] sig) throws Exception {
+        CachingVerifyKey ck = new CachingVerifyKey(pubKey.getEncoded(), data, sig);
         CachingVerifyKey result = verifyKeysMap.get(ck);
 
         if (result != null) {
@@ -521,24 +335,12 @@ final class LTPACrypto {
         }
 
         boolean verified = false;
-
-        BigInteger n = new BigInteger(key[0]);
-        BigInteger e = new BigInteger(key[1]);
-
-        KeyFactory kFact = null;
         Signature rsaSig = null;
-
-        kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
-                : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-
-        RSAPublicKeySpec pubKeySpec = new RSAPublicKeySpec(n, e);
-        PublicKey pubKey = kFact.generatePublic(pubKeySpec);
-
         rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
                 : Signature.getInstance(signatureAlgorithm, provider);
 
         rsaSig.initVerify(pubKey);
-        rsaSig.update(data, off, len);
+        rsaSig.update(data);
         verified = rsaSig.verify(sig);
 
         verifyKeysMap.put(ck, ck);
@@ -557,51 +359,6 @@ final class LTPACrypto {
     @Trivial
     protected static void emptyVerifyCache() {
         verifyKeysMap.clear();
-    }
-
-    /**
-     * Set the key for RSA algorithms.
-     *
-     * @param key The key
-     */
-    @Trivial
-    protected static final void setRSAKey(byte[][] key) {
-        BigInteger[] k = new BigInteger[8];
-        for (int i = 0; i < 8; i++) {
-            if (key[i] != null) {
-                k[i] = new BigInteger(1, key[i]);
-            }
-        }
-
-        if (k[3].compareTo(k[4]) < 0) {
-            BigInteger tmp;
-            tmp = k[3];
-            k[3] = k[4];
-            k[4] = tmp;
-            tmp = k[5];
-            k[5] = k[6];
-            k[6] = tmp;
-            k[7] = null;
-        }
-        if (k[7] == null) {
-            k[7] = k[4].modInverse(k[3]);
-        }
-        if (k[0] == null) {
-            k[0] = k[3].multiply(k[4]);
-        }
-        if (k[1] == null) {
-            k[1] = k[2].modInverse(k[3].subtract(BigInteger.valueOf(1)).multiply(k[4].subtract(BigInteger.valueOf(1))));
-        }
-        if (k[5] == null) {
-            k[5] = k[1].remainder(k[3].subtract(BigInteger.valueOf(1)));
-        }
-        if (k[6] == null) {
-            k[6] = k[1].remainder(k[4].subtract(BigInteger.valueOf(1)));
-        }
-        for (int i = 0; i < 8; i++) {
-            key[i] = k[i].toByteArray();
-        }
-
     }
 
     /**
@@ -815,108 +572,17 @@ final class LTPACrypto {
     }
 
     @Trivial
-    static final byte[][] rsaKey(int len, boolean crt, boolean f4) {
-        byte[][] key = new byte[crt ? 8 : 3][];
-        KeyPair pair = null;
+    static final KeyPair rsaKey() {
         KeyPairGenerator keyGen = null;
+        int keySizeBits = CryptoUtils.isFips140_3Enabled() ? 256 * 8 : 128 * 8;
         try {
-
             keyGen = (provider == null) ? KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
                     : KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-
-            keyGen.initialize(len * 8, new SecureRandom());
-            pair = keyGen.generateKeyPair();
-            RSAPublicKey rsaPubKey = (RSAPublicKey) pair.getPublic();
-            RSAPrivateCrtKey rsaPrivKey = (RSAPrivateCrtKey) pair.getPrivate();
-
-            BigInteger e = rsaPubKey.getPublicExponent();
-            BigInteger n = rsaPubKey.getModulus();
-            BigInteger pe = rsaPrivKey.getPrivateExponent();
-            key[0] = n.toByteArray();
-            key[1] = crt ? null : pe.toByteArray();
-            key[2] = e.toByteArray();
-
-            if (crt) {
-                BigInteger p = rsaPrivKey.getPrimeP();
-                BigInteger q = rsaPrivKey.getPrimeQ();
-                BigInteger ep = rsaPrivKey.getPrimeExponentP();
-                BigInteger eq = rsaPrivKey.getPrimeExponentQ();
-                BigInteger c = rsaPrivKey.getCrtCoefficient();
-                key[3] = p.toByteArray();
-                key[4] = q.toByteArray();
-                key[5] = ep.toByteArray();
-                key[6] = eq.toByteArray();
-                key[7] = c.toByteArray();
-            }
-        } catch (java.security.NoSuchAlgorithmException e) {
-            // instrumented ffdc
-        } catch (java.security.NoSuchProviderException e) {
-            // instrumented ffdc
-        } catch (java.lang.UnsupportedOperationException uoe) {
-            // This is when hard ware crypto provider is at the top of java.security
-            // Using the different key creation routines.
-            System.out.println(
-                    "DEBUG: UnsupportedOperationException is caught!! Going back to the previous hardware crypto routine for evaluation.");
-            BigInteger p, q, n, d;
-            BigInteger e = BigInteger.valueOf(f4 ? 0x10001 : 3);
-            BigInteger one = BigInteger.valueOf(1), two = BigInteger.valueOf(2);
-            byte[] b = new byte[(len /= 2) + 1];
-
-            for (p = null;;) {
-                for (q = null;;) {
-                    if (q == null) {
-                        byte[] seed = CryptoUtils.generateRandomBytes(len);
-                        System.arraycopy(seed, 0, b, 1, len);
-                        b[1] |= 0xC0;
-                        b[len] |= 1;
-                        q = new BigInteger(b);
-                    } else {
-                        q = q.add(two);
-                        if (q.bitLength() > len * 8) {
-                            q = null;
-                            continue;
-                        }
-                    }
-
-                    if (q.isProbablePrime(32) && e.gcd(q.subtract(one)).equals(one))
-                        break;
-                }
-
-                if (p == null)
-                    p = q;
-                else {
-                    n = p.multiply(q);
-                    if (n.bitLength() == len * 2 * 8) {
-
-                        d = e.modInverse((p.subtract(one)).multiply(q.subtract(one)));
-
-                        if (((p.modPow(e, n)).modPow(d, n)).equals(p))
-                            break;
-                    }
-                    p = null;
-                }
-            }
-
-            key[0] = n.toByteArray(); // modulus
-            key[1] = crt ? null : d.toByteArray(); // private exponent if a CRT key
-            key[2] = e.toByteArray(); // public exponent
-
-            if (crt) {
-                if (p.compareTo(q) < 0) {
-                    e = p;
-                    p = q;
-                    q = e;
-                }
-                key[3] = p.toByteArray(); // PrimeP
-                key[4] = q.toByteArray(); // PrimeQ
-                key[5] = d.remainder(p.subtract(one)).toByteArray(); // PrimeExponentP \
-                key[6] = d.remainder(q.subtract(one)).toByteArray(); // PrimeExponentQ - looks like JCE sets these to
-                                                                     // zero. You could calculate these if you want
-                                                                     // to.
-                key[7] = q.modInverse(p).toByteArray(); // getCrtCoefficient /
-            }
+            keyGen.initialize(keySizeBits, new SecureRandom());
+            return keyGen.generateKeyPair();
+        } catch (Exception e) {
+            // instrumented ffdc or handled unsupport operation exception
+            return null;
         }
-
-        return key;
     }
 }
