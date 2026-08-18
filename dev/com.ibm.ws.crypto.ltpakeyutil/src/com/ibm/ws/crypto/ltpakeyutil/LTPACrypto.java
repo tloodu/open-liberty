@@ -234,21 +234,33 @@ final class LTPACrypto {
         }
 
         /** Invoked by LTPADigSignature **/
+        long startkf = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] signISO9796: start keyfactory getInstance=" + startkf + " ms");
+        KeyFactory kFact = null;
+        kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
+                : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
+        long endkf = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] signISO9796: end keyfactory getInstance=" + endkf + " ms, elapsed=" + (endkf - startkf) + " ms");
+
+        long startdeserialization = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] signISO9796: start deserialization=" + startdeserialization + " ms");
         BigInteger n = new BigInteger(key[0]);
         BigInteger e = new BigInteger(key[2]);
         BigInteger p = new BigInteger(key[3]);
         BigInteger q = new BigInteger(key[4]);
         BigInteger d = e.modInverse((p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE)));
-        KeyFactory kFact = null;
-
-        kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
-                : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-
         BigInteger pep = new BigInteger(key[5]);
         BigInteger peq = new BigInteger(key[6]);
         BigInteger crtC = new BigInteger(key[7]);
+        long enddeserialization = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] signISO9796: end deserialization=" + enddeserialization + " ms");
+
+        long startdecode = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] signISO9796: start generatePrivate" + startdecode + " ms");
         RSAPrivateCrtKeySpec privCrtKeySpec = new RSAPrivateCrtKeySpec(n, e, d, p, q, pep, peq, crtC);
         PrivateKey privKey = kFact.generatePrivate(privCrtKeySpec);
+        long enddecode = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] signISO9796: end generatePrivate=" + enddecode + " ms, elapsed=" + (enddecode - startdecode) + " ms");
 
         Signature rsaSig = null;
 
@@ -522,17 +534,28 @@ final class LTPACrypto {
 
         boolean verified = false;
 
-        BigInteger n = new BigInteger(key[0]);
-        BigInteger e = new BigInteger(key[1]);
-
+        long startkf = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] verifyISO9796: start keyfactory getInstance=" + startkf + " ms");
         KeyFactory kFact = null;
-        Signature rsaSig = null;
-
         kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
                 : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
+        long endkf = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] verifyISO9796: end keyfactory getInstance=" + endkf + " ms, elapsed=" + (endkf - startkf) + " ms");
 
+        long startdeserialization = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] verifyISO9796: start deserialization=" + startdeserialization + " ms");
+        Signature rsaSig = null;
+        BigInteger n = new BigInteger(key[0]);
+        BigInteger e = new BigInteger(key[1]);
+        long enddeserialization = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] verifyISO9796: end deserialization=" + enddeserialization + " ms");
+
+        long startdecode = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] verifyISO9796: start generatePublic" + startdecode + " ms");
         RSAPublicKeySpec pubKeySpec = new RSAPublicKeySpec(n, e);
         PublicKey pubKey = kFact.generatePublic(pubKeySpec);
+        long enddecode = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] verifyISO9796: end generatePublic=" + enddecode + " ms, elapsed=" + (enddecode - startdecode) + " ms");
 
         rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
                 : Signature.getInstance(signatureAlgorithm, provider);

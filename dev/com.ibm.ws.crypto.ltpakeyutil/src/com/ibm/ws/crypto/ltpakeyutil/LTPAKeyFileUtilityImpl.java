@@ -72,21 +72,43 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
         try {
             KeyEncryptor encryptor = new KeyEncryptor(keyPasswordBytes);
 
+            long startgenerate = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] generateLTPAKeyPair: start=" + startgenerate + " ms");
             if (publicKeyBytes == null && privateKeyBytes == null) {
                 LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair();
                 publicKeyBytes = pair.getPublic().getEncoded();
                 privateKeyBytes = pair.getPrivate().getEncoded();
             }
-            byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
+            long endgenerate = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] generateLTPAKeyPair: end=" + endgenerate + " ms, elapsed=" + (endgenerate - startgenerate) + " ms");
 
+            long startencrypt = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] encrypt private: start=" + startencrypt + " ms");
+            byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
+            long endencrypt = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] encrypt private: end=" + endencrypt + " ms, elapsed=" + (endencrypt - startencrypt) + " ms");
+
+            long startshared = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] generateShared: start=" + startshared + " ms");
             if (sharedKeyBytes == null) {
                 sharedKeyBytes = LTPACrypto.generateSharedKey(); // key length is 32 bytes (256 bits) for FIPS (AES), 24 bytes (192 bits) for non-FIPS (3DES)
             }
-            byte[] encryptedSharedKeyBytes = encryptor.encrypt(sharedKeyBytes);
+            long endshared = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] generateShared: end=" + endshared + " ms, elapsed=" + (endshared - startshared) + " ms");
 
+            long startsharedencrypt = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] encrypt shared: start=" + startsharedencrypt + " ms");
+            byte[] encryptedSharedKeyBytes = encryptor.encrypt(sharedKeyBytes);
+            long endsharedencrypt = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] encrypt shared: end=" + endsharedencrypt + " ms, elapsed=" + (endsharedencrypt - startsharedencrypt) + " ms");
+
+            long startencode = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] encode: start=" + startencode + " ms");
             String tmpShared = Base64Coder.base64EncodeToString(encryptedSharedKeyBytes);
             String tmpPrivate = Base64Coder.base64EncodeToString(encryptedPrivateKeyBytes);
             String tmpPublic = Base64Coder.base64EncodeToString(publicKeyBytes);
+            long endencode = System.currentTimeMillis();
+		    System.out.println("[ltpakeyfileutilityimpl] encode: end=" + endencode + " ms, elapsed=" + (endencode - startencode) + " ms");
 
             expProps = new Properties();
 

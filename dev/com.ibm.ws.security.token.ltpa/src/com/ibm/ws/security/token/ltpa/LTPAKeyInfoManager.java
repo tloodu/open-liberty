@@ -328,8 +328,12 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startDecodeDecryptSecret = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt secret: start=" + startDecodeDecryptSecret + " ms");
             byte[] keyEncoded = Base64Coder.base64DecodeString(secretKeyStr);
             secretKey = encryptor.decrypt(keyEncoded);
+            long endDecodeDecryptSecret = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt secret: end=" + endDecodeDecryptSecret + " ms, elapsed=" + (endDecodeDecryptSecret - startDecodeDecryptSecret) + " ms");
         }
         // Private key
         if ((privateKeyStr == null) || (privateKeyStr.length() == 0)) {
@@ -337,8 +341,12 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PRIVATEKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startDecodeDecryptPrivate = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt private: start=" + startDecodeDecryptPrivate + " ms");
             byte[] keyEncoded = Base64Coder.base64DecodeString(privateKeyStr);
             privateKey = encryptor.decrypt(keyEncoded);
+            long endDecodeDecryptPrivate = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt private: end=" + endDecodeDecryptPrivate + " ms, elapsed=" + (endDecodeDecryptPrivate - startDecodeDecryptPrivate) + " ms");
         }
         // Public key
         if ((publicKeyStr == null) || (publicKeyStr.length() == 0)) {
@@ -346,8 +354,12 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startDecodePublic = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode public: start=" + startDecodePublic + " ms");
             byte[] keyEncoded = Base64Coder.base64DecodeString(publicKeyStr);
             publicKey = keyEncoded;
+            long endDecodePublic = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode public: end=" + endDecodePublic + " ms, elapsed=" + (endDecodePublic - startDecodePublic) + " ms");
         }
         return new byte[][] { secretKey, privateKey, publicKey };
     }

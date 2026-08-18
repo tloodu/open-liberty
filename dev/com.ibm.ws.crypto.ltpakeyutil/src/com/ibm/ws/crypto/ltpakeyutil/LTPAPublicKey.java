@@ -49,19 +49,28 @@ public final class LTPAPublicKey implements PublicKey {
 	 * @param encodedPublicKey The encoded key
 	 */
 	private byte[][] decode(byte[] encodedPublicKey) {
+
+		long start = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] LTPAPublicKey.decode: start=" + start + " ms");
 		byte[][] decodedKey = new byte[2][];
 		decodedKey[MODULUS] = new byte[MODULUS_LENGTH];
 		decodedKey[EXPONENT] = new byte[EXPONENT_LENGTH];
 		System.arraycopy(encodedPublicKey, 0, decodedKey[MODULUS], 0, MODULUS_LENGTH);
 		System.arraycopy(encodedPublicKey, MODULUS_LENGTH, decodedKey[EXPONENT], 0, EXPONENT_LENGTH);
+		long end = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] LTPAPublicKey.decode: end=" + end + " ms, elapsed=" + (end - start) + " ms");
 		return decodedKey;
 	}
 
 	private byte[] encode() {
+		long start = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] LTPAPublicKey.encode: start=" + start + " ms");
 		int publicKeyLength = MODULUS_LENGTH + EXPONENT_LENGTH;
 		byte[] encodedPublicKey = new byte[publicKeyLength];
 		System.arraycopy(rawKey[MODULUS], 0, encodedPublicKey, 0, MODULUS_LENGTH);
 		System.arraycopy(rawKey[EXPONENT], 0, encodedPublicKey, MODULUS_LENGTH, EXPONENT_LENGTH);
+		long end = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] LTPAPublicKey.encode: end=" + end + " ms, elapsed=" + (end - start) + " ms");
 		return encodedPublicKey;
 	}
 
