@@ -42,13 +42,21 @@ public final class LTPAPrivateKey implements PrivateKey {
 
 	private static PrivateKey decode(byte[] encodedPrivateKey) {
 		try {
+			long startkf = System.currentTimeMillis();
+			System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: start keyfactory getInstance=" + startkf + " ms");
 			String provider = CryptoUtils.getProvider();
 			KeyFactory kf = (provider == null)
 					? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
 					: KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-			long start = System.currentTimeMillis();
+			long endkf = System.currentTimeMillis();
+			System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: end keyfactory getInstance=" + endkf + " ms, elapsed=" + (endkf - startkf) + " ms");
+			
+			long startdecode = System.currentTimeMillis();
+			System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: start generatePrivate" + startdecode + " ms");
 			PrivateKey key = kf.generatePrivate(new PKCS8EncodedKeySpec(encodedPrivateKey));
-			System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: " + (System.currentTimeMillis() - start) + " ms");
+			long enddecode = System.currentTimeMillis();
+			System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: end generatePrivate=" + enddecode + " ms, elapsed=" + (enddecode - startdecode) + " ms");
+			
 			return key;
 		} catch (Exception ex) {
 			throw new RuntimeException("Failed to build RSA private key from encoded bytes", ex);
@@ -57,8 +65,10 @@ public final class LTPAPrivateKey implements PrivateKey {
 
 	private byte[] encode() {
 		long start = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] LTPAPrivateKey.encode: start getEncoded=" + start + " ms");
 		byte[] encoded = rawKey.getEncoded();
-		System.out.println("[ltpakeyutil] LTPAPrivateKey.encode: " + (System.currentTimeMillis() - start) + " ms");
+		long end = System.currentTimeMillis();
+		System.out.println("[ltpakeyutil] LTPAPrivateKey.encode: end getEncoded=" + end + " ms, elapsed=" + (end - start) + " ms");
 		return encoded;
 	}
 
