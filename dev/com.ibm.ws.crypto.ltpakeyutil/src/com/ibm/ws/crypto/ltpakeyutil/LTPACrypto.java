@@ -451,9 +451,11 @@ final class LTPACrypto {
     }
 
     /**
-     * Encrypt the data using AES-GCM (authenticated encryption).
-     * PQC Issue #35556 - Task 2.6: AES-GCM provides authenticated encryption,
-     * preventing tampering attacks that are possible with AES-CBC.
+     * Encrypt data using AES-GCM, generating a random IV and prepending it to the result.
+     * Returns [IV (12 bytes)][Ciphertext+Tag]. Used for token encryption where the IV
+     * travels with the ciphertext.
+     *
+     * Encryption of token prepends ciphtext with IV
      *
      * @param data The byte representation of the data
      * @param key  The key used to encrypt the data
@@ -466,8 +468,26 @@ final class LTPACrypto {
         SecureRandom random = new SecureRandom();
         byte[] iv = new byte[12];
         random.nextBytes(iv);
-        
-        // Create AES key
+
+        byte[] ciphertext = encryptGCM(data, key, iv);
+        byte[] result = new byte[12 + ciphertext.length];
+        System.arraycopy(iv, 0, result, 0, 12);
+        System.arraycopy(ciphertext, 0, result, 12, ciphertext.length);
+        return result;
+    }
+
+    /**
+     * Encrypt the data using AES-GCM (authenticated encryption).
+     * PQC Issue #35556 - Task 2.6: AES-GCM provides authenticated encryption,
+     * preventing tampering attacks that are possible with AES-CBC.
+     *
+     * @param data The plaintext to encrypt
+     * @param key  The AES key bytes
+     * @param iv The IV bytest to use in AES encryption
+     * @return [Ciphertext+Tag]
+     * @throws Exception if encryption fails
+     */
+    protected static final byte[] encryptGCM(byte[] data, byte[] key, byte[] iv) throws Exception {
         int keyLength = fipsEnabled ? CryptoUtils.AES_256_KEY_LENGTH_BYTES : CryptoUtils.AES_128_KEY_LENGTH_BYTES;
         SecretKeySpec keySpec = new SecretKeySpec(key, 0, keyLength, CryptoUtils.ENCRYPT_ALGORITHM_AES);
         
@@ -478,22 +498,13 @@ final class LTPACrypto {
         
         GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv); // 128-bit auth tag
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
-        
-        // Encrypt data (includes authentication tag)
-        byte[] ciphertext = cipher.doFinal(data);
-        
-        // Combine IV and ciphertext: [IV][Ciphertext+Tag]
-        byte[] result = new byte[iv.length + ciphertext.length];
-        System.arraycopy(iv, 0, result, 0, iv.length);
-        System.arraycopy(ciphertext, 0, result, iv.length, ciphertext.length);
-        
-        return result;
+        return cipher.doFinal(data);
     }
 
     /**
-     * Decrypt the data using AES-GCM (authenticated encryption).
-     * PQC Issue #35556 - Task 2.6: AES-GCM verifies authentication tag,
-     * ensuring data has not been tampered with.
+     * Decrypt data using AES-GCM, extracting the IV from the first 12 bytes.
+     * Expects [IV (12 bytes)][Ciphertext+Tag]. Used for token decryption where
+     * the IV travels with the ciphertext.
      *
      * @param encryptedData The encrypted data with format: [IV (12 bytes)][Ciphertext][Auth Tag (16 bytes)]
      * @param key           The key used to decrypt the data
@@ -509,11 +520,24 @@ final class LTPACrypto {
         // Extract ciphertext + auth tag (remaining bytes)
         byte[] ciphertext = new byte[encryptedData.length - 12];
         System.arraycopy(encryptedData, 12, ciphertext, 0, ciphertext.length);
-        
-        // Create AES key
+        return decryptGCM(ciphertext, key, iv);
+    }
+
+    /**
+     * Decrypt data using AES-GCM with a caller-supplied IV.
+     * Expects ciphertext+tag only — no IV prefix.
+     *
+     * @param ciphertext Ciphertext+tag bytes
+     * @param key        The AES key bytes
+     * @param iv         The 12-byte GCM IV
+     * @return The decrypted plaintext
+     * @throws Exception if decryption fails or the authentication tag is invalid
+     */
+    @Trivial
+    protected static final byte[] decryptGCM(byte[] ciphertext, byte[] key, byte[] iv) throws Exception {
         int keyLength = fipsEnabled ? CryptoUtils.AES_256_KEY_LENGTH_BYTES : CryptoUtils.AES_128_KEY_LENGTH_BYTES;
         SecretKeySpec keySpec = new SecretKeySpec(key, 0, keyLength, CryptoUtils.ENCRYPT_ALGORITHM_AES);
-        
+
         // Initialize cipher with GCM mode
         Cipher cipher = (provider == null)
             ? Cipher.getInstance("AES/GCM/NoPadding")

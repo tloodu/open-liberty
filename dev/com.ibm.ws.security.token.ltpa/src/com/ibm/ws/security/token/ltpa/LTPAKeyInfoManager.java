@@ -292,6 +292,7 @@ public class LTPAKeyInfoManager {
         String secretKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
         String privateKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_PRIVATEKEY);
         String publicKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
+        String encryptionIVStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_INITIALIZATION_VECTOR);
         // PQC: Load ML-DSA keys if present (Issue #35556 - Task 2.3)
         // Try new property names first, fall back to legacy names for backward compatibility
         String mldsaPrivateKeyStr = props.getProperty("com.ibm.websphere.ltpa.pqc.PrivateKey");
@@ -321,7 +322,7 @@ public class LTPAKeyInfoManager {
         byte[][] keys;
 
         try {
-            keys = decryptKeys(keyPassword, secretKeyStr, privateKeyStr, publicKeyStr);
+            keys = decryptKeys(keyPassword, secretKeyStr, privateKeyStr, publicKeyStr, encryptionIVStr);
         } catch (BadPaddingException e) {
             // only try to re-encrypt if it failed with keystore_password and it's not a configured validationKeys
             if (!tryToReEncryptLtpaKeys || (validationKey && isConfiguredValidationKey)) {
@@ -333,6 +334,7 @@ public class LTPAKeyInfoManager {
 
             keys = reEncryptLtpaKey(locService, "WebAS".getBytes(), keyPassword,
                                     secretKeyStr, privateKeyStr, publicKeyStr,
+                                    encryptionIVStr,
                                     keyImportFile, ltpaKeyFileResource, e);
         } catch (Exception e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
@@ -357,9 +359,7 @@ public class LTPAKeyInfoManager {
         if (mldsaPrivateKeyStr != null && !mldsaPrivateKeyStr.isEmpty()) {
                 try {
                          KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
-                         byte[] encryptedMldsaPrivateKey = Base64Coder.base64DecodeString(mldsaPrivateKeyStr);
-                         // Decrypt ML-DSA private key using the same password as RSA keys
-                         byte[] mldsaPrivateKey = encryptor.decrypt(encryptedMldsaPrivateKey);
+                         byte[] mldsaPrivateKey = encryptor.decrypt(Base64Coder.base64DecodeString(mldsaPrivateKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
                          this.keyCache.put(keyImportFile + MLDSA_PRIVATEKEY, mldsaPrivateKey);
 
                          if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
@@ -402,9 +402,7 @@ public class LTPAKeyInfoManager {
         if (mlkemPrivateKeyStr != null && !mlkemPrivateKeyStr.isEmpty()) {
             try {
                 KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
-                byte[] encryptedMlkemPrivateKey = Base64Coder.base64DecodeString(mlkemPrivateKeyStr);
-                // Decrypt ML-KEM private key using the same password as RSA keys
-                byte[] mlkemPrivateKey = encryptor.decrypt(encryptedMlkemPrivateKey);
+                byte[] mlkemPrivateKey = encryptor.decrypt(Base64Coder.base64DecodeString(mlkemPrivateKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
                 this.keyCache.put(keyImportFile + MLKEM_PRIVATEKEY, mlkemPrivateKey);
                 
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
@@ -467,7 +465,7 @@ public class LTPAKeyInfoManager {
 
     @Sensitive
     private byte[][] decryptKeys(@Sensitive byte[] keyPassword, @Sensitive String secretKeyStr, @Sensitive String privateKeyStr,
-                                 @Sensitive String publicKeyStr) throws Exception {
+                                 @Sensitive String publicKeyStr, @Sensitive String encryptionIVStr) throws Exception {
         KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
         byte[] secretKey, privateKey, publicKey;
         // Secret key
@@ -476,8 +474,11 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
-            byte[] keyEncoded = Base64Coder.base64DecodeString(secretKeyStr);
-            secretKey = encryptor.decrypt(keyEncoded);
+            long startDecodeDecryptSecret = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt secret: start=" + startDecodeDecryptSecret + " ms");
+            secretKey = encryptor.decrypt(Base64Coder.base64DecodeString(secretKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
+            long endDecodeDecryptSecret = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt secret: end=" + endDecodeDecryptSecret + " ms, elapsed=" + (endDecodeDecryptSecret - startDecodeDecryptSecret) + " ms");
         }
         // Private key
         if ((privateKeyStr == null) || (privateKeyStr.length() == 0)) {
@@ -485,8 +486,11 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PRIVATEKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
-            byte[] keyEncoded = Base64Coder.base64DecodeString(privateKeyStr);
-            privateKey = encryptor.decrypt(keyEncoded);
+            long startDecodeDecryptPrivate = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt private: start=" + startDecodeDecryptPrivate + " ms");
+            privateKey = encryptor.decrypt(Base64Coder.base64DecodeString(privateKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
+            long endDecodeDecryptPrivate = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode+decrypt private: end=" + endDecodeDecryptPrivate + " ms, elapsed=" + (endDecodeDecryptPrivate - startDecodeDecryptPrivate) + " ms");
         }
         // Public key
         if ((publicKeyStr == null) || (publicKeyStr.length() == 0)) {
@@ -494,8 +498,12 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startDecodePublic = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode public: start=" + startDecodePublic + " ms");
             byte[] keyEncoded = Base64Coder.base64DecodeString(publicKeyStr);
             publicKey = keyEncoded;
+            long endDecodePublic = System.currentTimeMillis();
+            System.out.println("[ltpakeyinfomanager] decode public: end=" + endDecodePublic + " ms, elapsed=" + (endDecodePublic - startDecodePublic) + " ms");
         }
         return new byte[][] { secretKey, privateKey, publicKey };
     }
@@ -503,10 +511,11 @@ public class LTPAKeyInfoManager {
     @Sensitive
     private byte[][] reEncryptLtpaKey(WsLocationAdmin locService, @Sensitive byte[] keyPasswordToTry, @Sensitive byte[] keyPasswordToReEncryptWith,
                                       @Sensitive String secretKeyStr, @Sensitive String privateKeyStr, @Sensitive String publicKeyStr,
+                                      @Sensitive String encryptionIVStr,
                                       String keyImportFile, WsResource ltpaKeyFileResource, Exception originalException) throws Exception {
         try {
             // failed with keystore_password... let's try again with the legacy default password
-            byte[][] keys = decryptKeys(keyPasswordToTry, secretKeyStr, privateKeyStr, publicKeyStr);
+            byte[][] keys = decryptKeys(keyPasswordToTry, secretKeyStr, privateKeyStr, publicKeyStr, encryptionIVStr);
 
             // successfully decrypted keys; backup and re-encrypt the keys using keystore_password
             Tr.info(tc, "LTPA_KEYS_REENCRYPT", keyImportFile);
