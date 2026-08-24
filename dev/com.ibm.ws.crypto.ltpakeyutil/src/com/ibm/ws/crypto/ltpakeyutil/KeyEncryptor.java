@@ -56,7 +56,11 @@ public class KeyEncryptor {
 	 * @return The decrypted key
 	 */
 	public byte[] decrypt(byte[] encryptedKey, byte[] iv) throws Exception {
-		return LTPACrypto.decryptGCM(encryptedKey, key, iv);
+		if (iv != null) {
+			return LTPACrypto.decryptGCM(encryptedKey, key, iv);
+		} else {
+			return LTPACrypto.decrypt(encryptedKey, key, CryptoUtils.getCipher());
+		}
 	}
 
 	/**

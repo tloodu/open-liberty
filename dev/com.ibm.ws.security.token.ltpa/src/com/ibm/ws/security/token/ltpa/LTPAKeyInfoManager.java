@@ -468,6 +468,7 @@ public class LTPAKeyInfoManager {
                                  @Sensitive String publicKeyStr, @Sensitive String encryptionIVStr) throws Exception {
         KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
         byte[] secretKey, privateKey, publicKey;
+        byte[] iv = (encryptionIVStr != null && !encryptionIVStr.isEmpty()) ? Base64Coder.base64DecodeString(encryptionIVStr) : null;
         // Secret key
         if ((secretKeyStr == null) || (secretKeyStr.length() == 0)) {
             Tr.error(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
@@ -476,7 +477,7 @@ public class LTPAKeyInfoManager {
         } else {
             long startDecodeDecryptSecret = System.currentTimeMillis();
             System.out.println("[ltpakeyinfomanager] decode+decrypt secret: start=" + startDecodeDecryptSecret + " ms");
-            secretKey = encryptor.decrypt(Base64Coder.base64DecodeString(secretKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
+            secretKey = encryptor.decrypt(Base64Coder.base64DecodeString(secretKeyStr), iv);
             long endDecodeDecryptSecret = System.currentTimeMillis();
             System.out.println("[ltpakeyinfomanager] decode+decrypt secret: end=" + endDecodeDecryptSecret + " ms, elapsed=" + (endDecodeDecryptSecret - startDecodeDecryptSecret) + " ms");
         }
@@ -488,7 +489,7 @@ public class LTPAKeyInfoManager {
         } else {
             long startDecodeDecryptPrivate = System.currentTimeMillis();
             System.out.println("[ltpakeyinfomanager] decode+decrypt private: start=" + startDecodeDecryptPrivate + " ms");
-            privateKey = encryptor.decrypt(Base64Coder.base64DecodeString(privateKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
+            privateKey = encryptor.decrypt(Base64Coder.base64DecodeString(privateKeyStr), iv);
             long endDecodeDecryptPrivate = System.currentTimeMillis();
             System.out.println("[ltpakeyinfomanager] decode+decrypt private: end=" + endDecodeDecryptPrivate + " ms, elapsed=" + (endDecodeDecryptPrivate - startDecodeDecryptPrivate) + " ms");
         }
@@ -500,8 +501,7 @@ public class LTPAKeyInfoManager {
         } else {
             long startDecodePublic = System.currentTimeMillis();
             System.out.println("[ltpakeyinfomanager] decode public: start=" + startDecodePublic + " ms");
-            byte[] keyEncoded = Base64Coder.base64DecodeString(publicKeyStr);
-            publicKey = keyEncoded;
+            publicKey = Base64Coder.base64DecodeString(publicKeyStr);
             long endDecodePublic = System.currentTimeMillis();
             System.out.println("[ltpakeyinfomanager] decode public: end=" + endDecodePublic + " ms, elapsed=" + (endDecodePublic - startDecodePublic) + " ms");
         }
