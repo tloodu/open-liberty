@@ -122,8 +122,6 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
     @Sensitive
     private String mldsaKeystorePassword;
 
-    // ML-KEM (Encryption) Configuration
-    private String mlkemAlgorithm = "ML-KEM-512"; // Default: NIST Level 1
     private String pqcKeystoreFile;
     @Sensitive
     private String pqcKeystorePassword;
@@ -267,15 +265,6 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
 
         mldsaKeystoreFile = (String) props.get(CFG_KEY_MLDSA_KEYSTORE_FILE);
         mldsaKeystorePassword = resolveMLDSAKeystorePassword(props);
-
-        // ML-KEM Configuration (Encryption)
-        Object mlkemAlgorithmObj = props.get(CFG_KEY_MLKEM_ALGORITHM);
-        if (mlkemAlgorithmObj != null) {
-            mlkemAlgorithm = (String) mlkemAlgorithmObj;
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "ML-KEM algorithm: " + mlkemAlgorithm);
-            }
-        }
 
         pqcKeystoreFile = (String) props.get(CFG_KEY_PQC_KEYSTORE_FILE);
         pqcKeystorePassword = resolvePQCKeystorePassword(props);
@@ -991,11 +980,6 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
     @Sensitive
     public String getMLDSAKeystorePassword() {
         return mldsaKeystorePassword;
-    }
-
-    @Override
-    public String getMLKEMAlgorithm() {
-        return mlkemAlgorithm;
     }
 
     @Override

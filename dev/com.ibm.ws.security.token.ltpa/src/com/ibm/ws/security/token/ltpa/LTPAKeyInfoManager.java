@@ -86,9 +86,6 @@ public class LTPAKeyInfoManager {
     // PQC key cache identifiers (Issue #35556 - Task 2.3)
     private static final String MLDSA_PRIVATEKEY = "mldsaprivatekey";
     private static final String MLDSA_PUBLICKEY = "mldsapublickey";
-    // ML-KEM key cache identifiers (Phase 4)
-    private static final String MLKEM_PRIVATEKEY = "mlkemprivatekey";
-    private static final String MLKEM_PUBLICKEY = "mlkempublickey";
     private static final String LTPA_KEYS_BACKUP_EXTENSION = ".defaultpassword.backup";
 
     private final List<String> importFileCache = new ArrayList<String>();
@@ -152,8 +149,14 @@ public class LTPAKeyInfoManager {
     @SuppressWarnings("deprecation")
     public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
                                                       @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
+        prepareLTPAKeyInfo(locService, primaryKeyImportFile, primaryKeyPassword, validationKeys, tryToReEncryptLtpaKeys, mldsaAlgorithm);
+    }
+
+    @SuppressWarnings("deprecation")
+    public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
+                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm) throws Exception {
         if (!this.importFileCache.contains(primaryKeyImportFile)) {
-            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, mldsaAlgorithm, mlkemAlgorithm);
+            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, mldsaAlgorithm);
         }
         if (validationKeys != null && !validationKeys.isEmpty()) {
             ltpaValidationKeysInfos.clear();
@@ -235,16 +238,11 @@ public class LTPAKeyInfoManager {
      */
     private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
                                   OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys) throws IOException, Exception {
-        loadLtpaKeysFile(locService, keyImportFile, keyPassword, validationKey, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, null, null);
+        loadLtpaKeysFile(locService, keyImportFile, keyPassword, validationKey, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, null);
     }
 
     private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
                                   OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm) throws IOException, Exception {
-        loadLtpaKeysFile(locService, keyImportFile, keyPassword, validationKey, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, mldsaAlgorithm, null);
-    }
-
-    private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
-                                  OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm, String configuredMlkemAlgorithm) throws IOException, Exception {
         // Need to load the key import file
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             Tr.event(this, tc, "Loading LTPA " + (validationKey == true ? "validation" : "primary") + "Keys file: " + keyImportFile);
@@ -273,7 +271,7 @@ public class LTPAKeyInfoManager {
                         props = loadPropertiesFile(ltpaKeyFileResource);
                     } else {
                         //regenerate the primary key
-                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm, configuredMlkemAlgorithm);
+                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
                     }
                 }
             }
@@ -282,7 +280,7 @@ public class LTPAKeyInfoManager {
             Tr.error(tc, "LTPA_KEYS_FILE_DOES_NOT_EXIST", keyImportFile);
             return;
         } else { //Primary keys file does not exist so create the primary key
-            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm, configuredMlkemAlgorithm);
+            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
         }
 
         if (props == null || props.isEmpty()) {
@@ -388,66 +386,6 @@ public class LTPAKeyInfoManager {
                  }
           }
         
-        // PQC: Load ML-KEM keys if present (Phase 4)
-        String mlkemPrivateKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_MLKEM_PRIVATEKEY);
-        String mlkemPublicKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_MLKEM_PUBLICKEY);
-        String mlkemAlgorithm = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_MLKEM_ALGORITHM);
-        
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(tc, "ML-KEM keys present: " + (mlkemPrivateKeyStr != null && mlkemPublicKeyStr != null));
-            Tr.debug(tc, "ML-KEM algorithm: " + mlkemAlgorithm);
-        }
-        
-        // Decrypt and cache ML-KEM private key if present
-        if (mlkemPrivateKeyStr != null && !mlkemPrivateKeyStr.isEmpty()) {
-            try {
-                KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
-                byte[] mlkemPrivateKey = encryptor.decrypt(Base64Coder.base64DecodeString(mlkemPrivateKeyStr), Base64Coder.base64DecodeString(encryptionIVStr));
-                this.keyCache.put(keyImportFile + MLKEM_PRIVATEKEY, mlkemPrivateKey);
-                
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "ML-KEM private key decrypted and cached, size: " + mlkemPrivateKey.length + " bytes");
-                    // Validate expected size based on the algorithm stored in the key file
-                    // ML-KEM-512: 1632  ML-KEM-768: 2400  ML-KEM-1024: 3168
-                    int expectedPrivateKeySize = (mlkemAlgorithm != null && mlkemAlgorithm.contains("1024")) ? 3168
-                                              : (mlkemAlgorithm != null && mlkemAlgorithm.contains("512"))  ? 1632
-                                              : 2400;
-                    if (mlkemPrivateKey.length != expectedPrivateKeySize) {
-                        Tr.debug(tc, "WARNING: ML-KEM private key size is " + mlkemPrivateKey.length + " bytes, expected " + expectedPrivateKeySize + " bytes for " + mlkemAlgorithm);
-                    }
-                }
-            } catch (Exception e) {
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "Error loading ML-KEM private key: " + e.getMessage());
-                }
-                throw e;
-            }
-        }
-        
-        // Load and cache ML-KEM public key if present
-        if (mlkemPublicKeyStr != null && !mlkemPublicKeyStr.isEmpty()) {
-            try {
-                byte[] mlkemPublicKey = Base64Coder.base64DecodeString(mlkemPublicKeyStr);
-                this.keyCache.put(keyImportFile + MLKEM_PUBLICKEY, mlkemPublicKey);
-                
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "ML-KEM public key loaded and cached, size: " + mlkemPublicKey.length + " bytes");
-                    // Validate expected size based on the algorithm stored in the key file
-                    // ML-KEM-512: 800  ML-KEM-768: 1184  ML-KEM-1024: 1568
-                    int expectedPublicKeySize = (mlkemAlgorithm != null && mlkemAlgorithm.contains("1024")) ? 1568
-                                             : (mlkemAlgorithm != null && mlkemAlgorithm.contains("512"))  ? 800
-                                             : 1184;
-                    if (mlkemPublicKey.length != expectedPublicKeySize) {
-                        Tr.debug(tc, "WARNING: ML-KEM public key size is " + mlkemPublicKey.length + " bytes, expected " + expectedPublicKeySize + " bytes for " + mlkemAlgorithm);
-                    }
-                }
-            } catch (Exception e) {
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "Error loading ML-KEM public key: " + e.getMessage());
-                }
-            }
-        }
-
         if (realm != null) {
             this.realmCache.put(keyImportFile, realm); //TODO: REALM? to support different realm name
         }
@@ -628,12 +566,12 @@ public class LTPAKeyInfoManager {
      * @return
      * @throws Exception
      */
-    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
+    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String mldsaAlgorithm) throws Exception {
         long start = System.currentTimeMillis();
         Tr.info(tc, "LTPA_CREATE_KEYS_START");
 
         LTPAKeyFileCreator creator = new LTPAKeyFileCreatorImpl();
-        Properties props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, mldsaAlgorithm, mlkemAlgorithm);
+        Properties props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
 
         Tr.audit(tc, "LTPA_CREATE_KEYS_COMPLETE", TimestampUtils.getElapsedTime(start), keyImportFile);
         return props;
@@ -724,26 +662,6 @@ public class LTPAKeyInfoManager {
          */
         public byte[] getMLDSAPublicKey(String keyImportFile) {
                 return this.keyCache.get(keyImportFile + MLDSA_PUBLICKEY);
-        }
-
-        /**
-         * Get ML-KEM private key from cache (Phase 4).
-         *
-         * @param keyImportFile The key file name
-         * @return ML-KEM private key bytes or null if not present
-         */
-        public byte[] getMLKEMPrivateKey(String keyImportFile) {
-                return this.keyCache.get(keyImportFile + MLKEM_PRIVATEKEY);
-        }
-
-        /**
-         * Get ML-KEM public key from cache (Phase 4).
-         *
-         * @param keyImportFile The key file name
-         * @return ML-KEM public key bytes or null if not present
-         */
-        public byte[] getMLKEMPublicKey(String keyImportFile) {
-                return this.keyCache.get(keyImportFile + MLKEM_PUBLICKEY);
         }
 
 }

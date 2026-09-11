@@ -12,8 +12,6 @@
  *******************************************************************************/
 package com.ibm.ws.security.token.ltpa.pqc;
 
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.Arrays;
 
 import com.ibm.websphere.ras.annotation.Sensitive;
@@ -44,13 +42,7 @@ public class LTPAPQCKeys {
     private final byte[] rsaPrivateKeyBytes;
     private final byte[] rsaPublicKeyBytes;
     
-    // PQC keys (for encryption)
-    @Sensitive
-    private final PrivateKey mlkemPrivateKey;
-    private final PublicKey mlkemPublicKey;
-    
     // Metadata
-    private final MLKEMAlgorithmType mlkemAlgorithm;
     private final int tokenVersion;
     private final boolean pqcEnabled;
     
@@ -59,17 +51,10 @@ public class LTPAPQCKeys {
      * 
      * @param rsaPrivateKeyBytes The RSA private key bytes (for signatures)
      * @param rsaPublicKeyBytes The RSA public key bytes (for signatures)
-     * @param mlkemPrivateKey The ML-KEM private key (for encryption)
-     * @param mlkemPublicKey The ML-KEM public key (for encryption)
-     * @param mlkemAlgorithm The ML-KEM algorithm type
      */
     public LTPAPQCKeys(@Sensitive byte[] rsaPrivateKeyBytes, 
-                       byte[] rsaPublicKeyBytes,
-                       @Sensitive PrivateKey mlkemPrivateKey,
-                       PublicKey mlkemPublicKey,
-                       MLKEMAlgorithmType mlkemAlgorithm) {
-        this(rsaPrivateKeyBytes, rsaPublicKeyBytes, mlkemPrivateKey, mlkemPublicKey, 
-             mlkemAlgorithm, 3, true);
+                       byte[] rsaPublicKeyBytes) {
+        this(rsaPrivateKeyBytes, rsaPublicKeyBytes, 3, true);
     }
     
     /**
@@ -77,17 +62,11 @@ public class LTPAPQCKeys {
      * 
      * @param rsaPrivateKeyBytes The RSA private key bytes (for signatures)
      * @param rsaPublicKeyBytes The RSA public key bytes (for signatures)
-     * @param mlkemPrivateKey The ML-KEM private key (for encryption)
-     * @param mlkemPublicKey The ML-KEM public key (for encryption)
-     * @param mlkemAlgorithm The ML-KEM algorithm type
      * @param tokenVersion The LTPA token version (3 = hybrid PQC)
      * @param pqcEnabled Whether PQC encryption is enabled
      */
     public LTPAPQCKeys(@Sensitive byte[] rsaPrivateKeyBytes, 
                        byte[] rsaPublicKeyBytes,
-                       @Sensitive PrivateKey mlkemPrivateKey,
-                       PublicKey mlkemPublicKey,
-                       MLKEMAlgorithmType mlkemAlgorithm,
                        int tokenVersion,
                        boolean pqcEnabled) {
         
@@ -98,24 +77,10 @@ public class LTPAPQCKeys {
         if (rsaPublicKeyBytes == null || rsaPublicKeyBytes.length == 0) {
             throw new IllegalArgumentException("RSA public key bytes cannot be null or empty");
         }
-        if (pqcEnabled) {
-            if (mlkemPrivateKey == null) {
-                throw new IllegalArgumentException("ML-KEM private key cannot be null when PQC is enabled");
-            }
-            if (mlkemPublicKey == null) {
-                throw new IllegalArgumentException("ML-KEM public key cannot be null when PQC is enabled");
-            }
-            if (mlkemAlgorithm == null) {
-                throw new IllegalArgumentException("ML-KEM algorithm cannot be null when PQC is enabled");
-            }
-        }
         
         // Clone arrays to prevent external modification
         this.rsaPrivateKeyBytes = rsaPrivateKeyBytes.clone();
         this.rsaPublicKeyBytes = rsaPublicKeyBytes.clone();
-        this.mlkemPrivateKey = mlkemPrivateKey;
-        this.mlkemPublicKey = mlkemPublicKey;
-        this.mlkemAlgorithm = mlkemAlgorithm != null ? mlkemAlgorithm : MLKEMAlgorithmType.getDefault();
         this.tokenVersion = tokenVersion;
         this.pqcEnabled = pqcEnabled;
     }
@@ -139,36 +104,6 @@ public class LTPAPQCKeys {
         return rsaPublicKeyBytes.clone();
     }
     
-    /**
-     * Get the ML-KEM private key (for encryption).
-     * 
-     * @return The ML-KEM private key
-     */
-    @Sensitive
-    public PrivateKey getMlkemPrivateKey() {
-        return mlkemPrivateKey;
-    }
-    
-    /**
-     * Get the ML-KEM public key (for encryption).
-     * 
-     * @return The ML-KEM public key
-     */
-    public PublicKey getMlkemPublicKey() {
-        return mlkemPublicKey;
-    }
-    /**
-     * Get the RSA private key as a PrivateKey object (for signatures).
-     * This method reconstructs the PrivateKey from the stored byte array.
-     * 
-     * @return The RSA private key
-     * @throws Exception if key reconstruction fails
-     */
-    @Sensitive
-    public java.security.PrivateKey getRsaPrivateKey() throws Exception {
-        // Use LTPAPrivateKey to reconstruct the key from encoded bytes
-        return new com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey(rsaPrivateKeyBytes.clone());
-    }
     
     /**
      * Get the RSA public key as a PublicKey object (for signatures).
@@ -182,15 +117,6 @@ public class LTPAPQCKeys {
         return new com.ibm.ws.crypto.ltpakeyutil.LTPAPublicKey(rsaPublicKeyBytes.clone());
     }
     
-    
-    /**
-     * Get the ML-KEM algorithm type.
-     * 
-     * @return The ML-KEM algorithm type
-     */
-    public MLKEMAlgorithmType getMlkemAlgorithm() {
-        return mlkemAlgorithm;
-    }
     
     /**
      * Get the LTPA token version.
@@ -208,15 +134,6 @@ public class LTPAPQCKeys {
      */
     public boolean isPqcEnabled() {
         return pqcEnabled;
-    }
-    
-    /**
-     * Check if this key set has ML-KEM keys.
-     * 
-     * @return true if ML-KEM keys are present, false otherwise
-     */
-    public boolean hasMlkemKeys() {
-        return mlkemPrivateKey != null && mlkemPublicKey != null;
     }
     
     /**
@@ -239,9 +156,7 @@ public class LTPAPQCKeys {
         sb.append("LTPAPQCKeys{");
         sb.append("tokenVersion=").append(tokenVersion);
         sb.append(", pqcEnabled=").append(pqcEnabled);
-        sb.append(", mlkemAlgorithm=").append(mlkemAlgorithm);
         sb.append(", hasRsaKeys=").append(rsaPrivateKeyBytes != null && rsaPublicKeyBytes != null);
-        sb.append(", hasMlkemKeys=").append(hasMlkemKeys());
         sb.append('}');
         return sb.toString();
     }

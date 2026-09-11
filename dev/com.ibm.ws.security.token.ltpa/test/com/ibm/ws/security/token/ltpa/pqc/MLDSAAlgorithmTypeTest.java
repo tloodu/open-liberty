@@ -58,54 +58,6 @@ public class MLDSAAlgorithmTypeTest {
     }
 
     @Test
-    public void testGetRecommendedMLKEM() {
-        assertEquals("ML-DSA-44 should recommend ML-KEM-512",
-                MLKEMAlgorithmType.ML_KEM_512, 
-                MLDSAAlgorithmType.ML_DSA_44.getRecommendedMLKEM());
-
-        assertEquals("ML-DSA-65 should recommend ML-KEM-768",
-                MLKEMAlgorithmType.ML_KEM_768, 
-                MLDSAAlgorithmType.ML_DSA_65.getRecommendedMLKEM());
-
-        assertEquals("ML-DSA-87 should recommend ML-KEM-1024",
-                MLKEMAlgorithmType.ML_KEM_1024, 
-                MLDSAAlgorithmType.ML_DSA_87.getRecommendedMLKEM());
-    }
-
-    @Test
-    public void testIsCompatibleWith_MatchingLevels() {
-        assertTrue("ML-DSA-44 should be compatible with ML-KEM-512",
-                MLDSAAlgorithmType.ML_DSA_44.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_512));
-
-        assertTrue("ML-DSA-65 should be compatible with ML-KEM-768",
-                MLDSAAlgorithmType.ML_DSA_65.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_768));
-
-        assertTrue("ML-DSA-87 should be compatible with ML-KEM-1024",
-                MLDSAAlgorithmType.ML_DSA_87.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_1024));
-    }
-
-    @Test
-    public void testIsCompatibleWith_MismatchedLevels() {
-        assertFalse("ML-DSA-44 should not be compatible with ML-KEM-768",
-                MLDSAAlgorithmType.ML_DSA_44.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_768));
-
-        assertFalse("ML-DSA-44 should not be compatible with ML-KEM-1024",
-                MLDSAAlgorithmType.ML_DSA_44.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_1024));
-
-        assertFalse("ML-DSA-65 should not be compatible with ML-KEM-512",
-                MLDSAAlgorithmType.ML_DSA_65.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_512));
-
-        assertFalse("ML-DSA-65 should not be compatible with ML-KEM-1024",
-                MLDSAAlgorithmType.ML_DSA_65.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_1024));
-
-        assertFalse("ML-DSA-87 should not be compatible with ML-KEM-512",
-                MLDSAAlgorithmType.ML_DSA_87.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_512));
-
-        assertFalse("ML-DSA-87 should not be compatible with ML-KEM-768",
-                MLDSAAlgorithmType.ML_DSA_87.isCompatibleWith(MLKEMAlgorithmType.ML_KEM_768));
-    }
-
-    @Test
     public void testFromSecurityLevel() {
         assertEquals("Security level 1 should return ML-DSA-44",
                 MLDSAAlgorithmType.ML_DSA_44, 
@@ -225,17 +177,6 @@ public class MLDSAAlgorithmTypeTest {
     @Test(expected = IllegalArgumentException.class)
     public void testEnumValueOf_Invalid() {
         MLDSAAlgorithmType.valueOf("INVALID");
-    }
-
-    @Test
-    public void testAllAlgorithmsHaveRecommendedMLKEM() {
-        for (MLDSAAlgorithmType algo : MLDSAAlgorithmType.values()) {
-            assertNotNull("All ML-DSA algorithms should have recommended ML-KEM",
-                    algo.getRecommendedMLKEM());
-            
-            assertTrue("Recommended ML-KEM should be compatible",
-                    algo.isCompatibleWith(algo.getRecommendedMLKEM()));
-        }
     }
 
     @Test

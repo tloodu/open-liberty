@@ -147,31 +147,17 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			// 		byte[] mldsaPrivateKeyBytes = mldsaKeyPair.getPrivate().getEncoded();
 			// 		byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encrypt(mldsaPrivateKeyBytes);
 
-			// 		expProps.put(KEYIMPORT_MLDSA_PUBLICKEY, Base64Coder.base64EncodeToString(mldsaPublicKeyBytes));
-			// 		expProps.put(KEYIMPORT_MLDSA_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes));
-			// 		expProps.put(KEYIMPORT_PQC_ALGORITHM, mldsaAlgorithm);
-			// 	}
-			// } catch (Exception mldsaEx) {
-			// 	// ML-DSA key generation failed - log but continue with classical keys only
-			// 	System.err.println("Warning: ML-DSA key generation failed: " + mldsaEx.getMessage());
-			// }
+					String tmpMLDSAPublic = Base64Coder.base64EncodeToString(mldsaPublicKeyBytes);
+					String tmpMLDSAPrivate = Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes);
 
-			// Generate PQC (ML-KEM) keys for encryption (Phase 4)
-			// try {
-			// 	KeyPair mlkemKeyPair = generateMLKEMKeyPair(mlkemAlgorithm);
-			// 	if (mlkemKeyPair != null) {
-			// 		byte[] mlkemPublicKeyBytes = mlkemKeyPair.getPublic().getEncoded();
-			// 		byte[] mlkemPrivateKeyBytes = mlkemKeyPair.getPrivate().getEncoded();
-			// 		byte[] encryptedMLKEMPrivateKeyBytes = encryptor.encrypt(mlkemPrivateKeyBytes);
-
-			// 		expProps.put(KEYIMPORT_MLKEM_PUBLICKEY, Base64Coder.base64EncodeToString(mlkemPublicKeyBytes));
-			// 		expProps.put(KEYIMPORT_MLKEM_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedMLKEMPrivateKeyBytes));
-			// 		expProps.put(KEYIMPORT_MLKEM_ALGORITHM, mlkemAlgorithm);
-			// 	}
-			// } catch (Exception mlkemEx) {
-			// 	// ML-KEM key generation failed - log but continue without encryption
-			// 	System.err.println("Warning: ML-KEM key generation failed: " + mlkemEx.getMessage());
-			// }
+					expProps.put("com.ibm.websphere.ltpa.pqc.PublicKey", tmpMLDSAPublic);
+					expProps.put("com.ibm.websphere.ltpa.pqc.PrivateKey", tmpMLDSAPrivate);
+					expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", mldsaAlgorithm);
+				}
+			} catch (Exception mldsaEx) {
+				// ML-DSA key generation failed - log but continue with classical keys only
+				System.err.println("Warning: ML-DSA key generation failed: " + mldsaEx.getMessage());
+			}
 		} catch (Exception e) {
 			throw e;
 		}
@@ -280,75 +266,6 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			return null;
 		} catch (Exception e) {
 			System.err.println("ERROR: ML-DSA key generation failed");
-			System.err.println("ERROR: Exception: " + e.getClass().getName() + ": " + e.getMessage());
-			e.printStackTrace(System.err);
-			return null;
-		}
-	}
-
-	/**
-	 * Generate ML-KEM (Kyber) key pair for PQC encryption support. Uses Java 26's
-	 * built-in ML-KEM support (JEP 478).
-	 *
-	 * @param algorithm ML-KEM algorithm name (e.g. "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024")
-	 * @return KeyPair containing ML-KEM public and private keys, or null if
-	 *         generation fails
-	 */
-	private KeyPair generateMLKEMKeyPair(String algorithm) {
-		System.out.println("DEBUG: Starting ML-KEM key pair generation");
-		System.out.println("DEBUG: Java version: " + System.getProperty("java.version"));
-		System.out.println("DEBUG: Java vendor: " + System.getProperty("java.vendor"));
-
-		try {
-			// List all available security providers
-			System.out.println("DEBUG: Available security providers:");
-			java.security.Provider[] providers = java.security.Security.getProviders();
-			for (java.security.Provider provider : providers) {
-				System.out.println("DEBUG:   - " + provider.getName() + " (version " + provider.getVersion() + ")");
-				// Check if provider supports ML-KEM
-				if (provider.getService("KeyPairGenerator", "ML-KEM") != null) {
-					System.out.println("DEBUG:     * Supports ML-KEM KeyPairGenerator");
-				}
-			}
-
-			System.out.println("DEBUG: Getting KeyPairGenerator instance for ML-KEM...");
-			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance(algorithm);
-			System.out.println("DEBUG: KeyPairGenerator obtained, provider: " + keyGen.getProvider().getName());
-			System.out.println("DEBUG: Using algorithm: " + algorithm);
-
-			System.out.println("DEBUG: Generating ML-KEM key pair...");
-			KeyPair keyPair = keyGen.generateKeyPair();
-			System.out.println("DEBUG: ML-KEM key pair generated successfully!");
-			System.out.println("DEBUG: Public key algorithm: " + keyPair.getPublic().getAlgorithm());
-			System.out.println("DEBUG: Public key format: " + keyPair.getPublic().getFormat());
-			System.out.println("DEBUG: Public key size: " + keyPair.getPublic().getEncoded().length + " bytes");
-			System.out.println("DEBUG: Private key algorithm: " + keyPair.getPrivate().getAlgorithm());
-			System.out.println("DEBUG: Private key format: " + keyPair.getPrivate().getFormat());
-			System.out.println("DEBUG: Private key size: " + keyPair.getPrivate().getEncoded().length + " bytes");
-
-			// Validate key sizes against expected sizes for the chosen algorithm
-			// ML-KEM-512: public=800, private=1632  ML-KEM-768: public=1184, private=2400  ML-KEM-1024: public=1568, private=3168
-			int expectedPublicKeySize  = algorithm.contains("1024") ? 1568 : algorithm.contains("768") ? 1184 : 800;
-			int expectedPrivateKeySize = algorithm.contains("1024") ? 3168 : algorithm.contains("768") ? 2400 : 1632;
-			int publicKeySize  = keyPair.getPublic().getEncoded().length;
-			int privateKeySize = keyPair.getPrivate().getEncoded().length;
-
-			if (publicKeySize != expectedPublicKeySize) {
-				System.err.println("WARNING: ML-KEM public key size is " + publicKeySize + " bytes, expected " + expectedPublicKeySize + " bytes for " + algorithm);
-			}
-			if (privateKeySize != expectedPrivateKeySize) {
-				System.err.println("WARNING: ML-KEM private key size is " + privateKeySize + " bytes, expected " + expectedPrivateKeySize + " bytes for " + algorithm);
-			}
-
-			return keyPair;
-		} catch (java.security.NoSuchAlgorithmException e) {
-			System.err.println("ERROR: ML-KEM algorithm not available in any security provider");
-			System.err.println("ERROR: This requires Java 26+ with JEP 478 support");
-			System.err.println("ERROR: Exception: " + e.getClass().getName() + ": " + e.getMessage());
-			e.printStackTrace(System.err);
-			return null;
-		} catch (Exception e) {
-			System.err.println("ERROR: ML-KEM key generation failed");
 			System.err.println("ERROR: Exception: " + e.getClass().getName() + ": " + e.getMessage());
 			e.printStackTrace(System.err);
 			return null;

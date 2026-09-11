@@ -35,11 +35,6 @@ public interface LTPAKeyFileUtility {
 	       public static final String KEYIMPORT_MLDSA_PUBLICKEY = "com.ibm.websphere.ltpa.pqc.PublicKey";
 	       public static final String KEYIMPORT_PQC_ALGORITHM = "com.ibm.websphere.ltpa.PQCAlgorithm";
 	       public static final String KEYIMPORT_CRYPTO_MODE = "com.ibm.websphere.ltpa.CryptoMode";
-	       // ML-KEM key properties (Phase 4)
-	       public static final String KEYIMPORT_MLKEM_PRIVATEKEY = "com.ibm.websphere.ltpa.mlkem.PrivateKey";
-	       public static final String KEYIMPORT_MLKEM_PUBLICKEY = "com.ibm.websphere.ltpa.mlkem.PublicKey";
-	       public static final String KEYIMPORT_MLKEM_ALGORITHM = "com.ibm.websphere.ltpa.mlkem.Algorithm";
-	       public static final String KEYIMPORT_INITIALIZATION_VECTOR = "com.ibm.websphere.ltpa.InitializationVector";
 
 	/**
 	 * Create the LTPA keys file at the specified location using the specified

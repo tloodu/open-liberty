@@ -60,8 +60,7 @@ class LTPAKeyCreateTask implements Runnable {
                                           getKeyPasswordBytes(),
                                           config.getValidationKeys(),
                                           config.getTryToReEncryptLtpaKeys(),
-                                          config.getMLDSAAlgorithm(),
-                                          config.getMLKEMAlgorithm());
+                                          config.getMLDSAAlgorithm());
         return keyInfoManager;
     }
 
@@ -102,25 +101,17 @@ class LTPAKeyCreateTask implements Runnable {
             }
             
             if (mldsaPrivateKey != null && mldsaPublicKey != null) {
-                // Retrieve ML-KEM keys (Phase 4)
-                byte[] mlkemPrivateKey = keyInfoManager.getMLKEMPrivateKey(primaryKeyFile);
-                byte[] mlkemPublicKey = keyInfoManager.getMLKEMPublicKey(primaryKeyFile);
-                
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "ML-KEM private key retrieved: " + (mlkemPrivateKey != null ? mlkemPrivateKey.length + " bytes" : "null"));
-                    Tr.debug(tc, "ML-KEM public key retrieved: " + (mlkemPublicKey != null ? mlkemPublicKey.length + " bytes" : "null"));
-                }
-                
-                // Create hybrid keys object with RSA + ML-DSA + ML-KEM keys
+                // Retrieve shared AES key for GCM token encryption
+                byte[] sharedKey = keyInfoManager.getSecretKey(primaryKeyFile);
+
+                // Create hybrid keys object with RSA + ML-DSA + shared AES key
                 LTPAHybridKeys hybridKeys = new LTPAHybridKeys(
                     primaryPrivateKey.getEncoded(),  // RSA private key
                     primaryPublicKey.getEncoded(),   // RSA public key
                     mldsaPrivateKey,                 // ML-DSA private key
                     mldsaPublicKey,                  // ML-DSA public key
                     config.getMLDSAAlgorithm(),      // ML-DSA algorithm (e.g., "ML-DSA-65")
-                    mlkemPrivateKey,                 // ML-KEM private key (Phase 4)
-                    mlkemPublicKey,                  // ML-KEM public key (Phase 4)
-                    config.getMLKEMAlgorithm()       // ML-KEM algorithm (e.g., "ML-KEM-768")
+                    sharedKey                        // shared AES key for GCM encryption
                 );
                 
                 tokenFactoryMap.put(LTPAConstants.PRIMARY_HYBRID_KEYS, hybridKeys);

@@ -167,24 +167,6 @@ public enum MLDSAAlgorithmType {
     }
 
     /**
-     * Get the recommended ML-KEM algorithm for this ML-DSA level.
-     * 
-     * @return corresponding ML-KEM algorithm type
-     */
-    public MLKEMAlgorithmType getRecommendedMLKEM() {
-        switch (this) {
-            case ML_DSA_44:
-                return MLKEMAlgorithmType.ML_KEM_512;
-            case ML_DSA_65:
-                return MLKEMAlgorithmType.ML_KEM_768;
-            case ML_DSA_87:
-                return MLKEMAlgorithmType.ML_KEM_1024;
-            default:
-                return MLKEMAlgorithmType.ML_KEM_768; // Default to Level 3
-        }
-    }
-
-    /**
      * Get the default ML-DSA algorithm (Level 1).
      *
      * @return ML-DSA-44 (recommended for optimal performance and smaller tokens)
@@ -223,19 +205,6 @@ public enum MLDSAAlgorithmType {
      */
     public static MLDSAAlgorithmType fromAlgorithmName(String algorithmName) {
         return fromString(algorithmName);
-    }
-
-    /**
-     * Check if this algorithm is compatible with a given ML-KEM algorithm.
-     * 
-     * @param mlkemType ML-KEM algorithm type
-     * @return true if security levels match
-     */
-    public boolean isCompatibleWith(MLKEMAlgorithmType mlkemType) {
-        if (mlkemType == null) {
-            return false;
-        }
-        return this.securityLevel == mlkemType.getSecurityLevel();
     }
 
     /**

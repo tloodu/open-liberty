@@ -10,8 +10,6 @@
 package com.ibm.ws.security.token.ltpa;
 
 import java.io.Serializable;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.Arrays;
 
 import com.ibm.websphere.ras.Tr;
@@ -21,23 +19,21 @@ import com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey;
 import com.ibm.ws.crypto.ltpakeyutil.LTPAPublicKey;
 
 /**
- * Hybrid key container for LTPA v3 tokens with full PQC support.
- * 
- * This class manages three key pairs for maximum security:
+ * Hybrid key container for LTPA v3 tokens with PQC support.
+ *
+ * This class manages two key pairs plus a shared AES key:
  * 1. RSA-2048: Classical encryption (backward compatibility)
  * 2. ML-DSA: Post-quantum digital signatures (FIPS 204)
- * 3. ML-KEM: Post-quantum key encapsulation (FIPS 203)
- * 
+ * 3. Shared AES key: for AES-256-GCM token encryption (same role as in LTPAToken2)
+ *
  * Key Format:
  * - RSA keys: PKCS#8 encoded (DER format)
  * - ML-DSA keys: Raw key bytes (FIPS 204 format)
- * - ML-KEM keys: Raw key bytes (FIPS 203 format)
- * 
+ *
  * Security Properties:
  * - Hybrid approach provides defense-in-depth
  * - Quantum-resistant signatures prevent token forgery
- * - Quantum-resistant encryption protects token confidentiality
- * - RSA fallback ensures compatibility with non-PQC systems
+ * - AES-256-GCM authenticated encryption protects token confidentiality
  * 
  * Thread Safety: Immutable after construction
  * 
@@ -56,26 +52,23 @@ public class LTPAHybridKeys implements Serializable {
     private final byte[] mldsaPublicKeyBytes;
     private final String mldsaAlgorithm; // "ML-DSA-44", "ML-DSA-65", or "ML-DSA-87"
 
-    // ML-KEM keys (post-quantum encryption - FIPS 203)
-    private final byte[] mlkemPrivateKeyBytes;
-    private final byte[] mlkemPublicKeyBytes;
-    private final String mlkemAlgorithm; // "ML-KEM-512", "ML-KEM-768", or "ML-KEM-1024"
+    // Shared AES key for token encryption (used by LTPAToken3 via LTPAKeyUtil.encryptGCM/decryptGCM)
+    @Sensitive
+    private final byte[] sharedKey;
 
     // Key metadata
     private final long creationTime;
     private final String keyVersion; // "3.0" for hybrid PQC
 
     /**
-     * Construct hybrid keys with all three key pairs.
-     * 
+     * Construct hybrid keys with RSA, ML-DSA, and a shared AES key.
+     *
      * @param rsaPrivateKeyBytes RSA-2048 private key (PKCS#8 encoded)
      * @param rsaPublicKeyBytes RSA-2048 public key (X.509 encoded)
      * @param mldsaPrivateKeyBytes ML-DSA private key (raw bytes)
      * @param mldsaPublicKeyBytes ML-DSA public key (raw bytes)
      * @param mldsaAlgorithm ML-DSA algorithm identifier
-     * @param mlkemPrivateKeyBytes ML-KEM private key (raw bytes)
-     * @param mlkemPublicKeyBytes ML-KEM public key (raw bytes)
-     * @param mlkemAlgorithm ML-KEM algorithm identifier
+     * @param sharedKey 32-byte AES key for GCM token encryption
      * @throws IllegalArgumentException if any key is null or invalid
      */
     public LTPAHybridKeys(@Sensitive byte[] rsaPrivateKeyBytes,
@@ -83,9 +76,7 @@ public class LTPAHybridKeys implements Serializable {
                           @Sensitive byte[] mldsaPrivateKeyBytes,
                           byte[] mldsaPublicKeyBytes,
                           String mldsaAlgorithm,
-                          @Sensitive byte[] mlkemPrivateKeyBytes,
-                          byte[] mlkemPublicKeyBytes,
-                          String mlkemAlgorithm) {
+                          @Sensitive byte[] sharedKey) {
         
         // Validate RSA keys
         if (rsaPrivateKeyBytes == null || rsaPrivateKeyBytes.length == 0) {
@@ -106,22 +97,8 @@ public class LTPAHybridKeys implements Serializable {
             throw new IllegalArgumentException("ML-DSA algorithm cannot be null or empty");
         }
 
-        // Validate ML-KEM keys (optional - may be null if not yet implemented)
-        // If ML-KEM keys are provided, they must be valid
-        boolean hasMLKEMKeys = (mlkemPrivateKeyBytes != null && mlkemPrivateKeyBytes.length > 0) ||
-                               (mlkemPublicKeyBytes != null && mlkemPublicKeyBytes.length > 0);
-        
-        if (hasMLKEMKeys) {
-            // If any ML-KEM key is provided, all must be provided
-            if (mlkemPrivateKeyBytes == null || mlkemPrivateKeyBytes.length == 0) {
-                throw new IllegalArgumentException("ML-KEM private key cannot be null or empty when ML-KEM is enabled");
-            }
-            if (mlkemPublicKeyBytes == null || mlkemPublicKeyBytes.length == 0) {
-                throw new IllegalArgumentException("ML-KEM public key cannot be null or empty when ML-KEM is enabled");
-            }
-            if (mlkemAlgorithm == null || mlkemAlgorithm.isEmpty()) {
-                throw new IllegalArgumentException("ML-KEM algorithm cannot be null or empty when ML-KEM is enabled");
-            }
+        if (sharedKey == null || sharedKey.length == 0) {
+            throw new IllegalArgumentException("Shared key cannot be null or empty");
         }
 
         // Store defensive copies
@@ -130,17 +107,13 @@ public class LTPAHybridKeys implements Serializable {
         this.mldsaPrivateKeyBytes = mldsaPrivateKeyBytes.clone();
         this.mldsaPublicKeyBytes = mldsaPublicKeyBytes.clone();
         this.mldsaAlgorithm = mldsaAlgorithm;
-        
-        // ML-KEM keys are optional - only clone if not null
-        this.mlkemPrivateKeyBytes = (mlkemPrivateKeyBytes != null) ? mlkemPrivateKeyBytes.clone() : null;
-        this.mlkemPublicKeyBytes = (mlkemPublicKeyBytes != null) ? mlkemPublicKeyBytes.clone() : null;
-        this.mlkemAlgorithm = mlkemAlgorithm;
+        this.sharedKey = sharedKey.clone();
 
         this.creationTime = System.currentTimeMillis();
         this.keyVersion = "3.0";
 
         if (tc.isDebugEnabled()) {
-            Tr.debug(tc, "Created hybrid keys: RSA-2048 + " + mldsaAlgorithm + " + " + mlkemAlgorithm);
+            Tr.debug(tc, "Created hybrid keys: RSA-2048 + " + mldsaAlgorithm);
         }
     }
 
@@ -202,7 +175,7 @@ public class LTPAHybridKeys implements Serializable {
 
     /**
      * Get ML-DSA algorithm identifier.
-     * 
+     *
      * @return ML-DSA algorithm (e.g., "ML-DSA-65")
      */
     public String getMldsaAlgorithm() {
@@ -210,31 +183,13 @@ public class LTPAHybridKeys implements Serializable {
     }
 
     /**
-     * Get ML-KEM private key bytes.
-     * 
-     * @return defensive copy of ML-KEM private key bytes
+     * Get the shared AES key for GCM token encryption.
+     *
+     * @return defensive copy of the shared key
      */
     @Sensitive
-    public byte[] getMlkemPrivateKeyBytes() {
-        return mlkemPrivateKeyBytes.clone();
-    }
-
-    /**
-     * Get ML-KEM public key bytes.
-     *
-     * @return defensive copy of ML-KEM public key bytes, or null if not available
-     */
-    public byte[] getMlkemPublicKeyBytes() {
-        return mlkemPublicKeyBytes != null ? mlkemPublicKeyBytes.clone() : null;
-    }
-
-    /**
-     * Get ML-KEM algorithm identifier.
-     * 
-     * @return ML-KEM algorithm (e.g., "ML-KEM-768")
-     */
-    public String getMlkemAlgorithm() {
-        return mlkemAlgorithm;
+    public byte[] getSharedKey() {
+        return sharedKey.clone();
     }
 
     /**
@@ -256,23 +211,13 @@ public class LTPAHybridKeys implements Serializable {
     }
 
     /**
-     * Check if this key set supports full PQC (both ML-DSA and ML-KEM).
-     * 
-     * @return true if both ML-DSA and ML-KEM keys are present
-     */
-    public boolean isFullPQC() {
-        return mldsaPrivateKeyBytes != null && mldsaPrivateKeyBytes.length > 0 &&
-               mlkemPrivateKeyBytes != null && mlkemPrivateKeyBytes.length > 0;
-    }
-
-    /**
-     * Get security level based on algorithm parameters.
-     * 
+     * Get security level based on ML-DSA algorithm.
+     *
      * Security levels:
-     * - Level 1: ML-DSA-44 + ML-KEM-512 (128-bit quantum security)
-     * - Level 3: ML-DSA-65 + ML-KEM-768 (192-bit quantum security)
-     * - Level 5: ML-DSA-87 + ML-KEM-1024 (256-bit quantum security)
-     * 
+     * - Level 1: ML-DSA-44 (128-bit quantum security)
+     * - Level 3: ML-DSA-65 (192-bit quantum security)
+     * - Level 5: ML-DSA-87 (256-bit quantum security)
+     *
      * @return security level (1, 3, or 5)
      */
     public int getSecurityLevel() {
@@ -288,27 +233,13 @@ public class LTPAHybridKeys implements Serializable {
     }
 
     /**
-     * Validate key consistency (matching security levels).
-     * 
-     * @return true if ML-DSA and ML-KEM algorithms have matching security levels
-     */
-    public boolean isConsistent() {
-        // Check if ML-DSA and ML-KEM security levels match
-        boolean level1 = "ML-DSA-44".equals(mldsaAlgorithm) && "ML-KEM-512".equals(mlkemAlgorithm);
-        boolean level3 = "ML-DSA-65".equals(mldsaAlgorithm) && "ML-KEM-768".equals(mlkemAlgorithm);
-        boolean level5 = "ML-DSA-87".equals(mldsaAlgorithm) && "ML-KEM-1024".equals(mlkemAlgorithm);
-        
-        return level1 || level3 || level5;
-    }
-
-    /**
      * Clear sensitive key material from memory.
      * Should be called when keys are no longer needed.
      */
     public void clear() {
         Arrays.fill(rsaPrivateKeyBytes, (byte) 0);
         Arrays.fill(mldsaPrivateKeyBytes, (byte) 0);
-        Arrays.fill(mlkemPrivateKeyBytes, (byte) 0);
+        Arrays.fill(sharedKey, (byte) 0);
         
         if (tc.isDebugEnabled()) {
             Tr.debug(tc, "Cleared sensitive key material");
@@ -320,7 +251,6 @@ public class LTPAHybridKeys implements Serializable {
         return "LTPAHybridKeys[version=" + keyVersion +
                ", rsa=RSA-2048" +
                ", mldsa=" + mldsaAlgorithm +
-               ", mlkem=" + mlkemAlgorithm +
                ", securityLevel=" + getSecurityLevel() +
                ", created=" + creationTime + "]";
     }

@@ -114,11 +114,6 @@ public interface LTPAConfiguration {
     public static final String CFG_KEY_MLDSA_KEYSTORE_PASSWORD = "mldsaKeystorePassword";
     
     /**
-     * The ML-KEM algorithm variant for quantum-resistant encryption.
-     */
-    public static final String CFG_KEY_MLKEM_ALGORITHM = "mlkemAlgorithm";
-    
-    /**
      * The PQC keystore file path (for ML-KEM keys).
      */
     public static final String CFG_KEY_PQC_KEYSTORE_FILE = "pqcKeystoreFile";
@@ -228,13 +223,6 @@ public interface LTPAConfiguration {
      * @return Password for the ML-DSA keystore
      */
     String getMLDSAKeystorePassword();
-    
-    /**
-     * Get the ML-KEM algorithm variant for quantum-resistant encryption.
-     *
-     * @return The ML-KEM algorithm: "ML-KEM-512", "ML-KEM-768", or "ML-KEM-1024"
-     */
-    String getMLKEMAlgorithm();
     
     /**
      * Get the PQC keystore file path (for ML-KEM keys).

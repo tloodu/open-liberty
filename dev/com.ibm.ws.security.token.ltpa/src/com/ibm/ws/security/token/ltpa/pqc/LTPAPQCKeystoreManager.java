@@ -19,10 +19,6 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
 import java.util.Arrays;
 
 import com.ibm.websphere.ras.Tr;
@@ -40,8 +36,6 @@ import com.ibm.ws.security.token.ltpa.LTPAKeystoreException;
  * <ul>
  *   <li><b>ltpaRsaPrivateKey</b>: RSA-2048 private key (for signatures)</li>
  *   <li><b>ltpaRsaPublicKey</b>: RSA-2048 certificate (for signatures)</li>
- *   <li><b>ltpaMlkemPrivateKey</b>: ML-KEM private key (for encryption)</li>
- *   <li><b>ltpaMlkemPublicKey</b>: ML-KEM certificate (for encryption)</li>
  * </ul>
  * 
  * <p>Security:
@@ -62,8 +56,6 @@ public class LTPAPQCKeystoreManager {
     // Key aliases
     private static final String RSA_PRIVATE_KEY_ALIAS = "ltpaRsaPrivateKey";
     private static final String RSA_PUBLIC_KEY_ALIAS = "ltpaRsaPublicKey";
-    private static final String MLKEM_PRIVATE_KEY_ALIAS = "ltpaMlkemPrivateKey";
-    private static final String MLKEM_PUBLIC_KEY_ALIAS = "ltpaMlkemPublicKey";
     
     // Certificate constants
     private static final String CERT_SUBJECT_DN = "CN=LTPA PQC Keys, O=IBM, C=US";
@@ -98,10 +90,6 @@ public class LTPAPQCKeystoreManager {
             // 2. Store RSA keys (for signatures)
             storeRSAKeys(keystore, pqcKeys, keystorePassword);
             
-            // 3. Store ML-KEM keys (for encryption)
-            if (pqcKeys.hasMlkemKeys()) {
-                storeMLKEMKeys(keystore, pqcKeys, keystorePassword);
-            }
             
             // 4. Save keystore to file
             fos = new FileOutputStream(keystoreFile);
@@ -163,26 +151,11 @@ public class LTPAPQCKeystoreManager {
             byte[] rsaPrivateKeyBytes = loadRSAPrivateKey(keystore, keystorePassword);
             byte[] rsaPublicKeyBytes = loadRSAPublicKey(keystore);
             
-            // 3. Load ML-KEM keys (if present)
-            PrivateKey mlkemPrivateKey = null;
-            PublicKey mlkemPublicKey = null;
-            MLKEMAlgorithmType mlkemAlgorithm = null;
-            
-            if (keystore.containsAlias(MLKEM_PRIVATE_KEY_ALIAS)) {
-                mlkemPrivateKey = loadMLKEMPrivateKey(keystore, keystorePassword);
-                mlkemPublicKey = loadMLKEMPublicKey(keystore);
-                mlkemAlgorithm = detectMLKEMAlgorithm(mlkemPublicKey);
-            }
-            
             // 4. Create LTPAPQCKeys object
             LTPAPQCKeys pqcKeys = new LTPAPQCKeys(
                 rsaPrivateKeyBytes,
                 rsaPublicKeyBytes,
-                mlkemPrivateKey,
-                mlkemPublicKey,
-                mlkemAlgorithm != null ? mlkemAlgorithm : MLKEMAlgorithmType.getDefault(),
-                3, // Token version
-                mlkemPrivateKey != null // PQC enabled if ML-KEM keys present
+                3 // Token version
             );
             
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
@@ -238,30 +211,6 @@ public class LTPAPQCKeystoreManager {
     }
     
     /**
-     * Store ML-KEM keys in the keystore.
-     */
-    private void storeMLKEMKeys(KeyStore keystore, LTPAPQCKeys pqcKeys, @Sensitive char[] password) 
-            throws Exception {
-        
-        // Store ML-KEM private key
-        PrivateKey mlkemPrivateKey = pqcKeys.getMlkemPrivateKey();
-        KeyStore.PrivateKeyEntry privateKeyEntry = new KeyStore.PrivateKeyEntry(
-            mlkemPrivateKey, 
-            new Certificate[0] // No certificate chain needed for ML-KEM
-        );
-        keystore.setEntry(MLKEM_PRIVATE_KEY_ALIAS, privateKeyEntry, 
-                         new KeyStore.PasswordProtection(password));
-        
-        // Store ML-KEM public key (as a self-signed certificate)
-        PublicKey mlkemPublicKey = pqcKeys.getMlkemPublicKey();
-        // Note: In production, create a proper X509Certificate for the public key
-        // For now, store as a trusted certificate entry
-        keystore.setEntry(MLKEM_PUBLIC_KEY_ALIAS, 
-                         new KeyStore.TrustedCertificateEntry(null), 
-                         null);
-    }
-    
-    /**
      * Load RSA private key from keystore.
      */
     @Sensitive
@@ -285,47 +234,6 @@ public class LTPAPQCKeystoreManager {
             return secretKey.getEncoded();
         }
         throw new KeyStoreException("RSA public key not found or invalid type");
-    }
-    
-    /**
-     * Load ML-KEM private key from keystore.
-     */
-    @Sensitive
-    private PrivateKey loadMLKEMPrivateKey(KeyStore keystore, @Sensitive char[] password) throws Exception {
-        KeyStore.Entry entry = keystore.getEntry(MLKEM_PRIVATE_KEY_ALIAS, 
-                                                 new KeyStore.PasswordProtection(password));
-        if (entry instanceof KeyStore.PrivateKeyEntry) {
-            return ((KeyStore.PrivateKeyEntry) entry).getPrivateKey();
-        }
-        throw new KeyStoreException("ML-KEM private key not found or invalid type");
-    }
-    
-    /**
-     * Load ML-KEM public key from keystore.
-     */
-    private PublicKey loadMLKEMPublicKey(KeyStore keystore) throws Exception {
-        Certificate cert = keystore.getCertificate(MLKEM_PUBLIC_KEY_ALIAS);
-        if (cert != null) {
-            return cert.getPublicKey();
-        }
-        throw new KeyStoreException("ML-KEM public key not found");
-    }
-    
-    /**
-     * Detect ML-KEM algorithm type from public key size.
-     */
-    private MLKEMAlgorithmType detectMLKEMAlgorithm(PublicKey publicKey) {
-        byte[] encoded = publicKey.getEncoded();
-        int size = encoded.length;
-        
-        // Approximate sizes (may vary slightly due to encoding)
-        if (size < 1000) {
-            return MLKEMAlgorithmType.ML_KEM_512;
-        } else if (size < 1400) {
-            return MLKEMAlgorithmType.ML_KEM_768;
-        } else {
-            return MLKEMAlgorithmType.ML_KEM_1024;
-        }
     }
     
     /**

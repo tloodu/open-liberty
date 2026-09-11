@@ -32,32 +32,29 @@ import com.ibm.websphere.ras.annotation.Sensitive;
 import com.ibm.websphere.security.auth.InvalidTokenException;
 import com.ibm.websphere.security.auth.TokenExpiredException;
 import com.ibm.ws.common.encoder.Base64Coder;
+import com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil;
 import com.ibm.ws.ffdc.annotation.FFDCIgnore;
 import com.ibm.ws.security.token.ltpa.LTPAHybridKeys;
-import com.ibm.ws.security.token.ltpa.pqc.LTPAPQCCrypto;
 import com.ibm.ws.security.token.ltpa.pqc.LTPAPQCSignature;
 import com.ibm.ws.security.token.ltpa.pqc.MLDSAAlgorithmType;
-import com.ibm.ws.security.token.ltpa.pqc.MLKEMAlgorithmType;
 import com.ibm.wsspi.security.ltpa.Token;
 import com.ibm.wsspi.security.token.AttributeNameConstants;
 
 /**
  * Represents an LTPA Token Version 3 with Post-Quantum Cryptography (PQC) support.
  *
- * This token uses a hybrid cryptographic approach combining three cryptographic systems:
+ * This token uses a hybrid cryptographic approach:
  * - RSA-2048 for digital signatures (classical security)
  * - ML-DSA for quantum-resistant digital signatures (NIST FIPS 204)
- * - ML-KEM for quantum-resistant key encapsulation (NIST FIPS 203)
- * - AES-256-GCM for authenticated encryption of token data
+ * - AES-256-GCM for authenticated encryption of token data (via LTPAKeyUtil)
  *
  * Token Format (Base64-encoded):
- * [version:1][userData][expiration:8][rsaSignature:256][mldsaSignature:variable][mlkemEncapsulation:variable][iv:12][encryptedData:variable][authTag:16]
+ * [version:1][rsaSignature:256][mldsaSignatureSize:2][mldsaSignature:variable][iv:12][encryptedData:variable][authTag:16]
  *
  * Security Properties:
- * - Provides quantum-resistant security via ML-DSA + ML-KEM (NIST Level 1/3/5)
+ * - Provides quantum-resistant security via ML-DSA (NIST Level 1/3/5)
  * - Maintains classical security via RSA-2048 signatures
  * - Defense-in-depth: Both RSA and ML-DSA signatures must verify
- * - Forward secrecy through ephemeral ML-KEM key encapsulation
  * - Authenticated encryption prevents tampering
  *
  * @since Liberty 26.0.0.1
@@ -163,14 +160,14 @@ public class LTPAToken3 implements Token, Serializable {
     }
     
     /**
-     * Encrypts the token data using ML-KEM key encapsulation and AES-256-GCM.
+     * Encrypts the token data using AES-256-GCM via LTPAKeyUtil.
      *
      * Token Structure:
      * 1. Version byte (1 byte)
      * 2. RSA signature (256 bytes)
      * 3. ML-DSA signature size (2 bytes)
      * 4. ML-DSA signature (variable length)
-     * 5. ML-KEM encapsulation + IV + encrypted data + auth tag
+     * 5. AES-256-GCM encrypted data: IV (12 bytes) + ciphertext + auth tag (16 bytes)
      *
      * @throws Exception if encryption fails
      */
@@ -182,79 +179,35 @@ public class LTPAToken3 implements Token, Serializable {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
                 Tr.event(this, tc, "encrypt: userData=" + ud);
             }
-            
+
             byte[] userDataBytes = ud.getBytes(StandardCharsets.UTF_8);
-            
-            // Check if ML-KEM keys are available for encryption
-            boolean hasMLKEMKeys = (hybridKeys.getMlkemPublicKeyBytes() != null &&
-                                   hybridKeys.getMlkemAlgorithm() != null);
-            
-            if (hasMLKEMKeys) {
-                // Build plaintext: userData + expiration
-                ByteBuffer plaintext = ByteBuffer.allocate(userDataBytes.length + EXPIRATION_SIZE);
-                plaintext.put(userDataBytes);
-                plaintext.putLong(expirationInMilliseconds);
-                byte[] plaintextBytes = plaintext.array();
-                
-                // Reconstruct ML-KEM public key from bytes
-                MLKEMAlgorithmType mlkemAlgo = MLKEMAlgorithmType.fromString(hybridKeys.getMlkemAlgorithm());
-                PublicKey mlkemPublicKey = reconstructMLKEMPublicKey(
-                    hybridKeys.getMlkemPublicKeyBytes(),
-                    mlkemAlgo
-                );
-                
-                // Encrypt using ML-KEM + AES-256-GCM
-                byte[] encryptedData = LTPAPQCCrypto.encryptToken(
-                    plaintextBytes,
-                    mlkemPublicKey,
-                    mlkemAlgo
-                );
-                
-                // Build final token: version + rsaSignature + mldsaSignatureSize + mldsaSignature + encryptedData
-                int mldsaSignatureSize = mldsaSignature.length;
-                ByteBuffer tokenBuffer = ByteBuffer.allocate(
-                    VERSION_SIZE + RSA_SIGNATURE_SIZE + MLDSA_SIGNATURE_SIZE_OFFSET + mldsaSignatureSize + encryptedData.length
-                );
-                tokenBuffer.put((byte) VERSION);
-                tokenBuffer.put(rsaSignature);
-                tokenBuffer.putShort((short) mldsaSignatureSize);
-                tokenBuffer.put(mldsaSignature);
-                tokenBuffer.put(encryptedData);
-                
-                encryptedBytes = tokenBuffer.array();
-                
-                if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-                    Tr.event(this, tc, "Token encrypted with ML-KEM successfully, size=" + encryptedBytes.length);
-                }
-            } else {
-                // ML-KEM keys not available - create unencrypted token with signatures only
-                // Format: version + rsaSignature + mldsaSignatureSize + mldsaSignature + userData + expiration
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "ML-KEM keys not available, creating token without encryption");
-                }
-                
-                ByteBuffer plaintext = ByteBuffer.allocate(userDataBytes.length + EXPIRATION_SIZE);
-                plaintext.put(userDataBytes);
-                plaintext.putLong(expirationInMilliseconds);
-                byte[] plaintextBytes = plaintext.array();
-                
-                int mldsaSignatureSize = mldsaSignature.length;
-                ByteBuffer tokenBuffer = ByteBuffer.allocate(
-                    VERSION_SIZE + RSA_SIGNATURE_SIZE + MLDSA_SIGNATURE_SIZE_OFFSET + mldsaSignatureSize + plaintextBytes.length
-                );
-                tokenBuffer.put((byte) VERSION);
-                tokenBuffer.put(rsaSignature);
-                tokenBuffer.putShort((short) mldsaSignatureSize);
-                tokenBuffer.put(mldsaSignature);
-                tokenBuffer.put(plaintextBytes);
-                
-                encryptedBytes = tokenBuffer.array();
-                
-                if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-                    Tr.event(this, tc, "Token created without encryption (ML-KEM not available), size=" + encryptedBytes.length);
-                }
+
+            // Build plaintext: userData + expiration
+            ByteBuffer plaintext = ByteBuffer.allocate(userDataBytes.length + EXPIRATION_SIZE);
+            plaintext.put(userDataBytes);
+            plaintext.putLong(expirationInMilliseconds);
+            byte[] plaintextBytes = plaintext.array();
+
+            // Encrypt using AES-256-GCM with the shared key (delegates to LTPACrypto)
+            byte[] encryptedData = LTPAKeyUtil.encryptGCM(plaintextBytes, hybridKeys.getSharedKey());
+
+            // Build final token: version + rsaSignature + mldsaSignatureSize + mldsaSignature + encryptedData
+            int mldsaSignatureSize = mldsaSignature.length;
+            ByteBuffer tokenBuffer = ByteBuffer.allocate(
+                VERSION_SIZE + RSA_SIGNATURE_SIZE + MLDSA_SIGNATURE_SIZE_OFFSET + mldsaSignatureSize + encryptedData.length
+            );
+            tokenBuffer.put((byte) VERSION);
+            tokenBuffer.put(rsaSignature);
+            tokenBuffer.putShort((short) mldsaSignatureSize);
+            tokenBuffer.put(mldsaSignature);
+            tokenBuffer.put(encryptedData);
+
+            encryptedBytes = tokenBuffer.array();
+
+            if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
+                Tr.event(this, tc, "Token encrypted with AES-256-GCM successfully, size=" + encryptedBytes.length);
             }
-            
+
         } catch (Exception e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
                 Tr.event(this, tc, "Error encrypting token", e);
@@ -264,7 +217,7 @@ public class LTPAToken3 implements Token, Serializable {
     }
     
     /**
-     * Decrypts the encrypted token bytes.
+     * Decrypts the encrypted token bytes using AES-256-GCM via LTPAKeyUtil.
      *
      * @throws InvalidTokenException if decryption fails or token is malformed
      */
@@ -272,67 +225,55 @@ public class LTPAToken3 implements Token, Serializable {
     private void decrypt() throws InvalidTokenException {
         try {
             ByteBuffer buffer = ByteBuffer.wrap(encryptedBytes);
-            
+
             // Read version
             byte version = buffer.get();
             if (version != VERSION) {
                 throw new InvalidTokenException("Invalid token version: " + version);
             }
-            
+
             // Read RSA signature
             byte[] rsaSig = new byte[RSA_SIGNATURE_SIZE];
             buffer.get(rsaSig);
             this.rsaSignature = rsaSig;
-            
+
             // Read ML-DSA signature size
             short mldsaSigSize = buffer.getShort();
             if (mldsaSigSize < 0 || mldsaSigSize > 10000) { // Sanity check
                 throw new InvalidTokenException("Invalid ML-DSA signature size: " + mldsaSigSize);
             }
-            
+
             // Read ML-DSA signature
             byte[] mldsaSig = new byte[mldsaSigSize];
             buffer.get(mldsaSig);
             this.mldsaSignature = mldsaSig;
-            
-            // Read encrypted data (ML-KEM encapsulation + IV + ciphertext + tag)
+
+            // Read encrypted data (IV + ciphertext + auth tag)
             byte[] encryptedData = new byte[buffer.remaining()];
             buffer.get(encryptedData);
-            
-            // Reconstruct ML-KEM private key from bytes
-            MLKEMAlgorithmType mlkemAlgo = MLKEMAlgorithmType.fromString(hybridKeys.getMlkemAlgorithm());
-            PrivateKey mlkemPrivateKey = reconstructMLKEMPrivateKey(
-                hybridKeys.getMlkemPrivateKeyBytes(),
-                mlkemAlgo
-            );
-            
-            // Decrypt using ML-KEM + AES-256-GCM
-            byte[] decryptedData = LTPAPQCCrypto.decryptToken(
-                encryptedData,
-                mlkemPrivateKey,
-                mlkemAlgo
-            );
-            
-            // Parse decrypted data
+
+            // Decrypt using AES-256-GCM with the shared key (delegates to LTPACrypto)
+            byte[] decryptedData = LTPAKeyUtil.decryptGCM(encryptedData, hybridKeys.getSharedKey());
+
+            // Parse decrypted data: userData bytes + 8-byte expiration
             ByteBuffer plaintext = ByteBuffer.wrap(decryptedData);
-            
-            // Extract user data (everything except last 8 bytes)
+
             byte[] userDataBytes = new byte[decryptedData.length - EXPIRATION_SIZE];
             plaintext.get(userDataBytes);
-            
+
             // Extract expiration
             expirationInMilliseconds = plaintext.getLong();
-            
+
             // Parse user data
             String userDataStr = new String(userDataBytes, StandardCharsets.UTF_8);
             String[] userFields = LTPATokenizer.parseToken(userDataStr);
             Map<String, ArrayList<String>> attribs = LTPATokenizer.parseUserData(userFields[0]);
             userData = new UserData(attribs);
-            
+
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
                 Tr.event(this, tc, "Token decrypted successfully");
             }
-            
+
         } catch (Exception e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
                 Tr.event(this, tc, "Error decrypting token", e);
@@ -597,48 +538,6 @@ public class LTPAToken3 implements Token, Serializable {
         if (userData != null) {
             userData.addAttribute(AttributeNameConstants.WSTOKEN_EXPIRATION,
                                 Long.toString(expirationInMilliseconds));
-        }
-    }
-    
-    /**
-     * Reconstruct ML-KEM public key from byte array.
-     *
-     * @param keyBytes The public key bytes
-     * @param algorithm The ML-KEM algorithm type
-     * @return The reconstructed public key
-     * @throws Exception if reconstruction fails
-     */
-    private PublicKey reconstructMLKEMPublicKey(byte[] keyBytes, MLKEMAlgorithmType algorithm) throws Exception {
-        try {
-            java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("ML-KEM");
-            java.security.spec.X509EncodedKeySpec keySpec = new java.security.spec.X509EncodedKeySpec(keyBytes);
-            return keyFactory.generatePublic(keySpec);
-        } catch (Exception e) {
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(this, tc, "Failed to reconstruct ML-KEM public key", e);
-            }
-            throw e;
-        }
-    }
-    
-    /**
-     * Reconstruct ML-KEM private key from byte array.
-     *
-     * @param keyBytes The private key bytes
-     * @param algorithm The ML-KEM algorithm type
-     * @return The reconstructed private key
-     * @throws Exception if reconstruction fails
-     */
-    private PrivateKey reconstructMLKEMPrivateKey(byte[] keyBytes, MLKEMAlgorithmType algorithm) throws Exception {
-        try {
-            java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("ML-KEM");
-            java.security.spec.PKCS8EncodedKeySpec keySpec = new java.security.spec.PKCS8EncodedKeySpec(keyBytes);
-            return keyFactory.generatePrivate(keySpec);
-        } catch (Exception e) {
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(this, tc, "Failed to reconstruct ML-KEM private key", e);
-            }
-            throw e;
         }
     }
     
