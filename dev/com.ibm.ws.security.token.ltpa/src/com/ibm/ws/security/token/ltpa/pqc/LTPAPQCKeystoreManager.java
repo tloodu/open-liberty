@@ -154,8 +154,7 @@ public class LTPAPQCKeystoreManager {
             // 4. Create LTPAPQCKeys object
             LTPAPQCKeys pqcKeys = new LTPAPQCKeys(
                 rsaPrivateKeyBytes,
-                rsaPublicKeyBytes,
-                3 // Token version
+                rsaPublicKeyBytes
             );
             
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {

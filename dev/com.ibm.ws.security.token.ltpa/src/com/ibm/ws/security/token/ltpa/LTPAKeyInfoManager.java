@@ -149,12 +149,6 @@ public class LTPAKeyInfoManager {
     @SuppressWarnings("deprecation")
     public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
                                                       @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
-        prepareLTPAKeyInfo(locService, primaryKeyImportFile, primaryKeyPassword, validationKeys, tryToReEncryptLtpaKeys, mldsaAlgorithm);
-    }
-
-    @SuppressWarnings("deprecation")
-    public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
-                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String mldsaAlgorithm) throws Exception {
         if (!this.importFileCache.contains(primaryKeyImportFile)) {
             loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, mldsaAlgorithm);
         }
