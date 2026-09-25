@@ -39,12 +39,31 @@ public interface LTPAKeyFileCreator extends LTPAKeyFileUtility {
 
     /**
      * Create the LTPA keys file at the specified location using the specified
-     * password bytes and ML-DSA algorithm.
+     * password bytes and classical RSA key size.
+     * <p>
+     * RSA keys are always generated. {@code classicalKeySize} sets the RSA key size
+     * explicitly instead of using the FIPS-aware default.
      *
      * @param locService
      * @param keyFile
      * @param keyPasswordBytes
-     * @param mldsaAlgorithm ML-DSA algorithm to use (e.g. "ML-DSA-65")
+     * @param classicalKeySize
+     * @return A Properties object containing the various attributes created for the LTPA keys
+     * @throws Exception
+     */
+    public Properties createLTPAKeysFile(WsLocationAdmin locService, String keyFile, @Sensitive byte[] keyPasswordBytes, int classicalKeySize) throws Exception;
+
+    /**
+     * Create the LTPA keys file at the specified location using the specified
+     * password bytes and ML-DSA algorithm (PQC mode).
+     * <p>
+     * RSA keys are always generated alongside the ML-DSA keys using the FIPS-aware
+     * default key size.
+     *
+     * @param locService
+     * @param keyFile
+     * @param keyPasswordBytes
+     * @param mldsaAlgorithm
      * @return A Properties object containing the various attributes created for the LTPA keys
      * @throws Exception
      */

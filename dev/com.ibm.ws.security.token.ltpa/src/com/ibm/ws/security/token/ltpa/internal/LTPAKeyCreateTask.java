@@ -60,72 +60,50 @@ class LTPAKeyCreateTask implements Runnable {
                                           getKeyPasswordBytes(),
                                           config.getValidationKeys(),
                                           config.getTryToReEncryptLtpaKeys(),
-                                          config.getMLDSAAlgorithm());
+                                          config.getSigningMode(),
+                                          config.getPqcSignatureAlgorithm(),
+                                          config.getClassicalKeySize() / 8);
         return keyInfoManager;
     }
 
     @Sensitive
     private Map<String, Object> createTokenFactoryMap() {
         LTPAKeyInfoManager keyInfoManager = config.getLTPAKeyInfoManager();
-        LTPAPrivateKey primaryPrivateKey = new LTPAPrivateKey(keyInfoManager.getPrivateKey(config.getPrimaryKeyFile()));
-        LTPAPublicKey primaryPublicKey = new LTPAPublicKey(keyInfoManager.getPublicKey(config.getPrimaryKeyFile()));
-        byte[] primarySharedKey = keyInfoManager.getSecretKey(config.getPrimaryKeyFile());
+        String primaryKeyFile = config.getPrimaryKeyFile();
+        byte[] primarySharedKey = keyInfoManager.getSecretKey(primaryKeyFile);
+        String signingMode = config.getSigningMode();
         List<LTPAValidationKeysInfo> validationKeys = keyInfoManager.getValidationLTPAKeys();
         long expDiffAllowed = config.getExpirationDifferenceAllowed();
+        boolean isPqc = "pqc".equals(signingMode);
 
         Map<String, Object> tokenFactoryMap = new HashMap<String, Object>();
         tokenFactoryMap.put(LTPAConstants.EXPIRATION, config.getTokenExpiration());
         tokenFactoryMap.put(LTPAConstants.PRIMARY_SECRET_KEY, primarySharedKey);
-        tokenFactoryMap.put(LTPAConstants.PRIMARY_PUBLIC_KEY, primaryPublicKey);
-        tokenFactoryMap.put(LTPAConstants.PRIMARY_PRIVATE_KEY, primaryPrivateKey);
         tokenFactoryMap.put(LTPAConstants.VALIDATION_KEYS, validationKeys);
         tokenFactoryMap.put(LTPAConfigurationImpl.KEY_EXP_DIFF_ALLOWED, expDiffAllowed);
-        tokenFactoryMap.put("ltpaConfiguration", config);
         tokenFactoryMap.put("keyInfoManager", keyInfoManager);
-        tokenFactoryMap.put("primaryKeyFile", config.getPrimaryKeyFile());
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_SIGNING_MODE, signingMode);
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_CLASSICAL_SIG_ALG, config.getClassicalSignatureAlgorithm());
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_CLASSICAL_KEY_SIZE, config.getClassicalKeySize());
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_PQC_SIG_ALG, config.getPqcSignatureAlgorithm());
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_ENCRYPTION_ALG, config.getEncryptionAlgorithm());
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_RESOLVED_CIPHER, config.getResolvedCipher());
+        tokenFactoryMap.put(LTPAConstants.CONFIGURED_RESOLVED_KEY_LENGTH, config.getResolvedKeyLength());
 
-        // Add hybrid PQC keys for Token Version 3
-        String tokenVersion = config.getTokenVersion();
-        if ("3".equals(tokenVersion)) {
-            String primaryKeyFile = config.getPrimaryKeyFile();
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Attempting to retrieve ML-DSA keys for: " + primaryKeyFile);
-            }
-            
+        if (isPqc) {
+            // PQC mode — ML-DSA keys only, no RSA keys in the key file.
             byte[] mldsaPrivateKey = keyInfoManager.getMLDSAPrivateKey(primaryKeyFile);
-            byte[] mldsaPublicKey = keyInfoManager.getMLDSAPublicKey(primaryKeyFile);
-            
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "ML-DSA private key retrieved: " + (mldsaPrivateKey != null ? mldsaPrivateKey.length + " bytes" : "null"));
-                Tr.debug(tc, "ML-DSA public key retrieved: " + (mldsaPublicKey != null ? mldsaPublicKey.length + " bytes" : "null"));
-            }
-            
-            if (mldsaPrivateKey != null && mldsaPublicKey != null) {
-                // Retrieve shared AES key for GCM token encryption
-                byte[] sharedKey = keyInfoManager.getSecretKey(primaryKeyFile);
-
-                // Create hybrid keys object with RSA + ML-DSA + shared AES key
-                LTPAHybridKeys hybridKeys = new LTPAHybridKeys(
-                    primaryPrivateKey.getEncoded(),  // RSA private key
-                    primaryPublicKey.getEncoded(),   // RSA public key
-                    mldsaPrivateKey,                 // ML-DSA private key
-                    mldsaPublicKey,                  // ML-DSA public key
-                    config.getMLDSAAlgorithm(),      // ML-DSA algorithm (e.g., "ML-DSA-65")
-                    sharedKey                        // shared AES key for GCM encryption
-                );
-                
-                tokenFactoryMap.put(LTPAConstants.PRIMARY_HYBRID_KEYS, hybridKeys);
-                
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "Added hybrid PQC keys to token factory map");
-                }
-            } else {
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "ML-DSA keys not found, Token3Factory will not have hybrid keys");
-                }
-            }
+            byte[] mldsaPublicKey  = keyInfoManager.getMLDSAPublicKey(primaryKeyFile);
+            tokenFactoryMap.put(LTPAConstants.PRIMARY_MLDSA_PRIVATE_KEY, mldsaPrivateKey);
+            tokenFactoryMap.put(LTPAConstants.PRIMARY_MLDSA_PUBLIC_KEY, mldsaPublicKey);
+        } else {
+            // Classical mode — RSA keys only.
+            LTPAPrivateKey primaryPrivateKey = new LTPAPrivateKey(keyInfoManager.getPrivateKey(primaryKeyFile));
+            LTPAPublicKey primaryPublicKey   = new LTPAPublicKey(keyInfoManager.getPublicKey(primaryKeyFile));
+            tokenFactoryMap.put(LTPAConstants.PRIMARY_PRIVATE_KEY, primaryPrivateKey);
+            tokenFactoryMap.put(LTPAConstants.PRIMARY_PUBLIC_KEY, primaryPublicKey);
         }
-        
+
         return tokenFactoryMap;
     }
 
@@ -143,9 +121,9 @@ class LTPAKeyCreateTask implements Runnable {
             }
             tokenFactory = new LTPAToken3Factory();
         } else {
-            // LTPA Token Version 2 - RSA only (default)
+            // LTPA Token Version 2
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Creating LTPAToken2Factory for RSA-only support");
+                Tr.debug(tc, "Creating LTPAToken2Factory");
             }
             tokenFactory = new LTPAToken2Factory();
         }

@@ -39,6 +39,7 @@ import org.osgi.service.component.ComponentContext;
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.websphere.ras.annotation.Sensitive;
+import com.ibm.ws.common.crypto.CryptoUtils;
 import com.ibm.ws.config.xml.nester.Nester;
 import com.ibm.ws.security.filemonitor.FileBasedActionable;
 import com.ibm.ws.security.filemonitor.LTPAFileMonitor;
@@ -111,20 +112,18 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
     private static final Collection<File> allKeysFiles = new HashSet<File>();
 
     // ========== PQC Configuration Fields (Issue #35556 - Task 2.8) ==========
-    private String tokenVersion = "2"; // Default to Token Version 2 (RSA-only)
-    private String cryptoMode = PQCConstants.DEFAULT_CRYPTO_MODE;
-    private String pqcAlgorithm = PQCConstants.DEFAULT_PQC_ALGORITHM;
-    private boolean enablePQC = PQCConstants.DEFAULT_ENABLE_PQC;
+    private String tokenVersion = "2"; // Default to Token Version 2
 
-    // ML-DSA (Signatures) Configuration
-    private String mldsaAlgorithm = PQCConstants.DEFAULT_PQC_ALGORITHM; // Default: ML-DSA-44
-    private String mldsaKeystoreFile;
-    @Sensitive
-    private String mldsaKeystorePassword;
-
-    private String pqcKeystoreFile;
-    @Sensitive
-    private String pqcKeystorePassword;
+    // ========== LTPA Signing Config Fields ==========
+    // All defaults are applied in resolveSigningConfig(), which is called from loadConfig().
+    private String signingMode = "classical";
+    private String classicalSignatureAlgorithm = null;
+    private int classicalKeySize = 0;
+    private String pqcSignatureAlgorithm = null;
+    private String encryptionAlgorithm = null;
+    // Resolved cipher string and key length derived from encryptionAlgorithm by resolveSigningConfig()
+    private String resolvedCipher = null;
+    private int resolvedKeyLength = 0;
 
     boolean isValidationKeysFileConfigured = false;
 
@@ -230,44 +229,48 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
             }
         }
 
-        Object cryptoModeObj = props.get(CFG_KEY_CRYPTO_MODE);
-        if (cryptoModeObj != null) {
-            cryptoMode = (String) cryptoModeObj;
+        Object signingModeObj = props.get(CFG_KEY_SIGNING_MODE);
+        if (signingModeObj != null) {
+            signingMode = (String) signingModeObj;
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "PQC crypto mode: " + cryptoMode);
+                Tr.debug(tc, "Signing mode: " + signingMode);
             }
         }
 
-        Object pqcAlgorithmObj = props.get(CFG_KEY_PQC_ALGORITHM);
-        if (pqcAlgorithmObj != null) {
-            pqcAlgorithm = (String) pqcAlgorithmObj;
+        Object classicalSigAlgObj = props.get(CFG_KEY_CLASSICAL_SIGNATURE_ALGORITHM);
+        if (classicalSigAlgObj != null) {
+            classicalSignatureAlgorithm = (String) classicalSigAlgObj;
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "PQC algorithm: " + pqcAlgorithm);
+                Tr.debug(tc, "Classical signature algorithm: " + classicalSignatureAlgorithm);
             }
         }
 
-        Object enablePQCObj = props.get(CFG_KEY_ENABLE_PQC);
-        if (enablePQCObj != null) {
-            enablePQC = (Boolean) enablePQCObj;
+        Integer classicalKeySizeVal = (Integer) props.get(CFG_KEY_CLASSICAL_KEY_SIZE);
+        if (classicalKeySizeVal != null) {
+            classicalKeySize = classicalKeySizeVal;
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "PQC enabled: " + enablePQC);
+                Tr.debug(tc, "Classical key size: " + classicalKeySize);
             }
         }
 
-        // ML-DSA Configuration (Signatures)
-        Object mldsaAlgorithmObj = props.get(CFG_KEY_MLDSA_ALGORITHM);
-        if (mldsaAlgorithmObj != null) {
-            mldsaAlgorithm = (String) mldsaAlgorithmObj;
+        Object pqcSigAlgObj = props.get(CFG_KEY_PQC_SIGNATURE_ALGORITHM);
+        if (pqcSigAlgObj != null) {
+            pqcSignatureAlgorithm = (String) pqcSigAlgObj;
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "ML-DSA algorithm: " + mldsaAlgorithm);
+                Tr.debug(tc, "PQC signature algorithm: " + pqcSignatureAlgorithm);
             }
         }
 
-        mldsaKeystoreFile = (String) props.get(CFG_KEY_MLDSA_KEYSTORE_FILE);
-        mldsaKeystorePassword = resolveMLDSAKeystorePassword(props);
+        Object encryptionAlgorithmObj = props.get(CFG_KEY_ENCRYPTION_ALGORITHM);
+        if (encryptionAlgorithmObj != null) {
+            encryptionAlgorithm = (String) encryptionAlgorithmObj;
+            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                Tr.debug(tc, "Encryption algorithm: " + encryptionAlgorithm);
+            }
+        }
 
-        pqcKeystoreFile = (String) props.get(CFG_KEY_PQC_KEYSTORE_FILE);
-        pqcKeystorePassword = resolvePQCKeystorePassword(props);
+        // Perform cross validation
+        resolveSigningConfig();
 
         authFilterRef = (String) props.get(KEY_AUTH_FILTER_REF);
         // expirationDifferenceAllowed is set to 3 seconds (3000ms) by default.
@@ -335,49 +338,78 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
     }
 
     /**
-     * Resolve the ML-DSA keystore password from configuration or environment variables.
+     * Applies cross-validation and FIPS-aware defaulting rules to the five raw hybrid
+     * signing config fields, overwriting them with effective values.
      *
-     * @param props Configuration properties
-     * @return The resolved password, or null if not configured
-     */
-    @Sensitive
-    private String resolveMLDSAKeystorePassword(Map<String, Object> props) {
-        SerializableProtectedString sps = (SerializableProtectedString) props.get(CFG_KEY_MLDSA_KEYSTORE_PASSWORD);
-        String password = sps == null ? null : new String(sps.getChars());
-        if (password != null && !password.isEmpty()) {
-            return password;
-        }
-
-        String envPassword = System.getenv("mldsa_keystore_password");
-        if (envPassword != null && !envPassword.isEmpty()) {
-            return envPassword;
-        }
-
-        // Return null if not configured (ML-DSA is optional)
-        return null;
-    }
-
-    /**
-     * Resolve the PQC (ML-KEM) keystore password from configuration or environment variables.
+     * Rules (signingMode drives which fields are relevant):
+     *   classical : classicalSignatureAlgorithm + classicalKeySize + encryptionAlgorithm
+     *   pqc       : pqcSignatureAlgorithm + encryptionAlgorithm
+     *   none      : encryptionAlgorithm only (AES-CBC-256); none+none is ignored with warning
      *
-     * @param props Configuration properties
-     * @return The resolved password, or null if not configured
      */
-    @Sensitive
-    private String resolvePQCKeystorePassword(Map<String, Object> props) {
-        SerializableProtectedString sps = (SerializableProtectedString) props.get(CFG_KEY_PQC_KEYSTORE_PASSWORD);
-        String password = sps == null ? null : new String(sps.getChars());
-        if (password != null && !password.isEmpty()) {
-            return password;
+    private void resolveSigningConfig() {
+        boolean fips = CryptoUtils.isFips140_3Enabled();
+
+        switch (signingMode) {
+            case "classical":
+                if (classicalSignatureAlgorithm == null || classicalSignatureAlgorithm.isEmpty()) {
+                    classicalSignatureAlgorithm = fips ? CryptoUtils.SIGNATURE_ALGORITHM_SHA512WITHRSA : CryptoUtils.SIGNATURE_ALGORITHM_SHA1WITHRSA;
+                }
+                if (classicalKeySize <= 0) {
+                    classicalKeySize = fips ? 2048 : 1024;
+                }
+                if (encryptionAlgorithm == null || encryptionAlgorithm.isEmpty()) {
+                    encryptionAlgorithm = fips ? "AES-CBC-256" : "AES-CBC-128";
+                }
+                break;
+
+            case "pqc":
+                if (pqcSignatureAlgorithm == null || pqcSignatureAlgorithm.isEmpty()) {
+                    pqcSignatureAlgorithm = PQCConstants.ALGORITHM_ML_DSA_65;
+                }
+                if (encryptionAlgorithm == null || encryptionAlgorithm.isEmpty()) {
+                    encryptionAlgorithm = "AES-GCM-256";
+                }
+                break;
+
+            case "none":
+                if ("none".equalsIgnoreCase(encryptionAlgorithm)) {
+                    // none signing + none encryption is invalid — warn and fall back to AES-GCM-256
+                    Tr.warning(tc, "LTPA_CONFIG_INVALID", "signingMode=none and encryptionAlgorithm=none cannot both be set; defaulting encryptionAlgorithm to AES-GCM-256");
+                    encryptionAlgorithm = "AES-GCM-256";
+                }
+                break;
+
         }
 
-        String envPassword = System.getenv("pqc_keystore_password");
-        if (envPassword != null && !envPassword.isEmpty()) {
-            return envPassword;
+        switch (encryptionAlgorithm) {
+            case "AES-CBC-128":
+                resolvedCipher = CryptoUtils.AES_CBC_CIPHER;
+                resolvedKeyLength = CryptoUtils.AES_128_KEY_LENGTH_BYTES;
+                break;
+            case "AES-CBC-256":
+                resolvedCipher = CryptoUtils.AES_CBC_CIPHER;
+                resolvedKeyLength = CryptoUtils.AES_256_KEY_LENGTH_BYTES;
+                break;
+            case "AES-GCM-256":
+                resolvedCipher = CryptoUtils.AES_GCM_CIPHER;
+                resolvedKeyLength = CryptoUtils.AES_256_KEY_LENGTH_BYTES;
+                break;
+            case "none":
+                resolvedCipher = null;
+                resolvedKeyLength = 0;
+                break;
         }
 
-        // Return null if not configured (PQC is optional)
-        return null;
+        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+            Tr.debug(tc, "Resolved signing config: signingMode=" + signingMode
+                    + " classicalSigAlg=" + classicalSignatureAlgorithm
+                    + " classicalKeySize=" + classicalKeySize
+                    + " pqcSigAlg=" + pqcSignatureAlgorithm
+                    + " encryptionAlg=" + encryptionAlgorithm
+                    + " cipher=" + resolvedCipher
+                    + " keyLength=" + resolvedKeyLength);
+        }
     }
 
     /**
@@ -952,45 +984,38 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
     }
 
     @Override
-    public String getCryptoMode() {
-        return cryptoMode;
+    public String getSigningMode() {
+        return signingMode;
     }
 
     @Override
-    public String getPQCAlgorithm() {
-        return pqcAlgorithm;
+    public String getClassicalSignatureAlgorithm() {
+        return classicalSignatureAlgorithm;
     }
 
     @Override
-    public boolean isEnablePQC() {
-        return enablePQC;
+    public int getClassicalKeySize() {
+        return classicalKeySize;
     }
 
     @Override
-    public String getMLDSAAlgorithm() {
-        return mldsaAlgorithm;
+    public String getPqcSignatureAlgorithm() {
+        return pqcSignatureAlgorithm;
     }
 
     @Override
-    public String getMLDSAKeystoreFile() {
-        return mldsaKeystoreFile;
+    public String getEncryptionAlgorithm() {
+        return encryptionAlgorithm;
     }
 
     @Override
-    @Sensitive
-    public String getMLDSAKeystorePassword() {
-        return mldsaKeystorePassword;
+    public String getResolvedCipher() {
+        return resolvedCipher;
     }
 
     @Override
-    public String getPQCKeystoreFile() {
-        return pqcKeystoreFile;
-    }
-
-    @Override
-    @Sensitive
-    public String getPQCKeystorePassword() {
-        return pqcKeystorePassword;
+    public int getResolvedKeyLength() {
+        return resolvedKeyLength;
     }
 
     /**

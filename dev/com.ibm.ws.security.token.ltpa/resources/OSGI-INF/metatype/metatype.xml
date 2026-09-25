@@ -56,33 +56,37 @@
             <Option label="%tokenVersion.v2" value="2"/>
             <Option label="%tokenVersion.v3" value="3"/>
         </AD>
-        <AD id="pqcEnabled" name="%pqcEnabled" description="%pqcEnabled.desc"
-            required="false" type="Boolean"
-            default="false"/>
-        <AD id="pqcKeystoreFile" name="%pqcKeystoreFile" description="%pqcKeystoreFile.desc"
-            required="false" type="String" ibm:type="location(file)"
-            default="${server.output.dir}/resources/security/ltpa-pqc.p12"/>
-        <AD id="pqcKeystorePassword" name="%pqcKeystorePassword" description="%pqcKeystorePassword.desc"
-            required="false" type="String" ibm:type="password"/>
-        <AD id="cryptoMode" name="%cryptoMode" description="%cryptoMode.desc"
+        <AD id="signingMode" name="%signingMode" description="%signingMode.desc"
             required="false" type="String"
             default="classical">
-            <Option label="%cryptoMode.classical" value="classical"/>
-            <Option label="%cryptoMode.pqc" value="pqc"/>
-            <Option label="%cryptoMode.hybrid" value="hybrid"/>
+            <Option label="%signingMode.classical" value="classical"/>
+            <Option label="%signingMode.pqc" value="pqc"/>
+            <Option label="%signingMode.none" value="none"/>
         </AD>
-        <AD id="mldsaAlgorithm" name="%mldsaAlgorithm" description="%mldsaAlgorithm.desc"
-            required="false" type="String"
-            default="ML-DSA-65">
-            <Option label="%mldsaAlgorithm.44" value="ML-DSA-44"/>
-            <Option label="%mldsaAlgorithm.65" value="ML-DSA-65"/>
-            <Option label="%mldsaAlgorithm.87" value="ML-DSA-87"/>
+        <AD id="classicalSignatureAlgorithm" name="%classicalSignatureAlgorithm" description="%classicalSignatureAlgorithm.desc"
+            required="false" type="String">
+            <Option label="%classicalSignatureAlgorithm.sha1" value="SHA1withRSA"/>
+            <Option label="%classicalSignatureAlgorithm.sha512" value="SHA512withRSA"/>
         </AD>
-        <AD id="mldsaKeystoreFile" name="%mldsaKeystoreFile" description="%mldsaKeystoreFile.desc"
-            required="false" type="String" ibm:type="location(file)"
-            default="${server.output.dir}/resources/security/ltpa-mldsa.p12"/>
-        <AD id="mldsaKeystorePassword" name="%mldsaKeystorePassword" description="%mldsaKeystorePassword.desc"
-            required="false" type="String" ibm:type="password"/>
+        <AD id="classicalKeySize" name="%classicalKeySize" description="%classicalKeySize.desc"
+            required="false" type="Integer">
+            <Option label="%classicalKeySize.1024" value="1024"/>
+            <Option label="%classicalKeySize.2048" value="2048"/>
+            <Option label="%classicalKeySize.4096" value="4096"/>
+        </AD>
+        <AD id="pqcSignatureAlgorithm" name="%pqcSignatureAlgorithm" description="%pqcSignatureAlgorithm.desc"
+            required="false" type="String">
+            <Option label="%pqcSignatureAlgorithm.44" value="ML-DSA-44"/>
+            <Option label="%pqcSignatureAlgorithm.65" value="ML-DSA-65"/>
+            <Option label="%pqcSignatureAlgorithm.87" value="ML-DSA-87"/>
+        </AD>
+        <AD id="encryptionAlgorithm" name="%encryptionAlgorithm" description="%encryptionAlgorithm.desc"
+            required="false" type="String">
+            <Option label="%encryptionAlgorithm.aes128cbc" value="AES-CBC-128"/>
+            <Option label="%encryptionAlgorithm.aes256cbc" value="AES-CBC-256"/>
+            <Option label="%encryptionAlgorithm.aes256gcm" value="AES-GCM-256"/>
+            <Option label="%encryptionAlgorithm.none" value="none"/>
+        </AD>
     </OCD>
 
     <Designate pid="com.ibm.ws.security.token.ltpa.LTPAConfiguration">

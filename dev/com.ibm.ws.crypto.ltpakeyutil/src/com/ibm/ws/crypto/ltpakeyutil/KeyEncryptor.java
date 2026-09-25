@@ -13,7 +13,6 @@
 package com.ibm.ws.crypto.ltpakeyutil;
 
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 
 import com.ibm.ws.common.crypto.CryptoUtils;
 
@@ -24,10 +23,9 @@ import com.ibm.ws.common.crypto.CryptoUtils;
 public class KeyEncryptor {
 
 	private static final boolean fipsEnabled = CryptoUtils.isFips140_3Enabled();
-	private static final int size = 32;
-	public static final int GCM_IV_LENGTH = 12;
+	private static final int size = (fipsEnabled ? 32 : 24);
+	private static final String CIPHER = CryptoUtils.getCipher();
 	private final byte[] key;
-	private final byte[] iv;
 
 	/**
 	 * A KeyEncryptor constructor.
@@ -45,8 +43,6 @@ public class KeyEncryptor {
 			key[22] = (byte) 0x00;
 			key[23] = (byte) 0x00;
 		}
-		iv = new byte[GCM_IV_LENGTH];
-		new SecureRandom().nextBytes(iv);
 	}
 
 	/**
@@ -55,12 +51,8 @@ public class KeyEncryptor {
 	 * @param encryptedKey The encrypted key
 	 * @return The decrypted key
 	 */
-	public byte[] decrypt(byte[] encryptedKey, byte[] iv) throws Exception {
-		if (iv != null) {
-			return LTPACrypto.decryptGCM(encryptedKey, key, iv);
-		} else {
-			return LTPACrypto.decrypt(encryptedKey, key, CryptoUtils.getCipher());
-		}
+	public byte[] decrypt(byte[] encryptedKey) throws Exception {
+		return LTPACrypto.decrypt(encryptedKey, key, CIPHER);
 	}
 
 	/**
@@ -70,15 +62,6 @@ public class KeyEncryptor {
 	 * @return The encrypted key
 	 */
 	public byte[] encrypt(byte[] key) throws Exception {
-		return LTPACrypto.encryptGCM(key, this.key, iv);
-	}
-
-	/**
-	 * Get IV used for encryption
-	 * 
-	 * @return The 12-byte AES-GCM IV
-	 */
-	public byte[] getIV() {
-		return iv;
+		return LTPACrypto.encrypt(key, this.key, CIPHER);
 	}
 }

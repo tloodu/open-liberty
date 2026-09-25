@@ -46,4 +46,11 @@ final class LTPADigSignature {
 		LTPAPrivateKey privKey = new LTPAPrivateKey((RSAPrivateCrtKey) pair.getPrivate());
 		return new LTPAKeyPair(pubKey, privKey);
 	}
+
+	static LTPAKeyPair generateLTPAKeyPair(int classicalKeySize) {
+		KeyPair pair = LTPACrypto.rsaKey(classicalKeySize);
+		LTPAPublicKey pubKey = new LTPAPublicKey((RSAPublicKey) pair.getPublic());
+		LTPAPrivateKey privKey = new LTPAPrivateKey((RSAPrivateCrtKey) pair.getPrivate());
+		return new LTPAKeyPair(pubKey, privKey);
+	}
 }

@@ -47,11 +47,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 * @throws Exception
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, final String realm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm, null);
-	}
-
-	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, final String realm, String mldsaAlgorithm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm, mldsaAlgorithm, null);
+		return generateLTPAKeys(keyPasswordBytes, null, null, null, realm);
 	}
 
 	/**
@@ -73,90 +69,58 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
 			byte[] publicKeyBytes, final String realm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, null);
+		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, 0);
 	}
 
+	/**
+	 * Generates the LTPA keys and stores them into a Properties object.
+	 *
+	 * @param keyPasswordBytes  password used to encrypt stored private keys
+	 * @param sharedKeyBytes    existing shared key, or {@code null} to generate
+	 * @param privateKeyBytes   existing RSA private key, or {@code null} to generate (classical only)
+	 * @param publicKeyBytes    existing RSA public key, or {@code null} to generate (classical only)
+	 * @param realm             realm name stored in the key file
+	 * @param mldsaAlgorithm    ML-DSA algorithm (e.g. "ML-DSA-65"); non-null selects PQC mode
+	 * @param classicalKeySize  RSA key size in bytes (e.g. 128=1024-bit, 256=2048-bit); 0 uses FIPS-aware default
+	 * @return Properties containing all LTPA key attributes
+	 * @throws Exception
+	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
-			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, mldsaAlgorithm, null);
-	}
-
-	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
-			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, String mlkemAlgorithm) throws Exception {
+			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, int classicalKeySize) throws Exception {
 		Properties expProps = null;
 
 		try {
 			KeyEncryptor encryptor = new KeyEncryptor(keyPasswordBytes);
 
-			long startgenerate = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] generateLTPAKeyPair: start=" + startgenerate + " ms");
-			if (publicKeyBytes == null && privateKeyBytes == null) {
-				LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair();
-				publicKeyBytes = pair.getPublic().getEncoded();
-				privateKeyBytes = pair.getPrivate().getEncoded();
-			}
-			long endgenerate = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] generateLTPAKeyPair: end=" + endgenerate + " ms, elapsed=" + (endgenerate - startgenerate) + " ms");
-
-			long startencrypt = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] encrypt private: start=" + startencrypt + " ms");
-			byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
-			long endencrypt = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] encrypt private: end=" + endencrypt + " ms, elapsed=" + (endencrypt - startencrypt) + " ms");
-
-			long startshared = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] generateShared: start=" + startshared + " ms");
+			// Shared AES key — always required for token payload encryption.
 			if (sharedKeyBytes == null) {
-				sharedKeyBytes = LTPACrypto.generateSharedKey(); // key length is 32 bytes (256 bits) for FIPS (AES), 24
-																		// bytes (192 bits) for non-FIPS (3DES)
+				sharedKeyBytes = LTPACrypto.generateSharedKey();
 			}
-			long endshared = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] generateShared: end=" + endshared + " ms, elapsed=" + (endshared - startshared) + " ms");
-			long startsharedencrypt = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] encrypt shared: start=" + startsharedencrypt + " ms");
 			byte[] encryptedSharedKeyBytes = encryptor.encrypt(sharedKeyBytes);
-			long endsharedencrypt = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] encrypt shared: end=" + endsharedencrypt + " ms, elapsed=" + (endsharedencrypt - startsharedencrypt) + " ms");
-
-			long startencode = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] encode: start=" + startencode + " ms");
-			String tmpShared = Base64Coder.base64EncodeToString(encryptedSharedKeyBytes);
-			String tmpPrivate = Base64Coder.base64EncodeToString(encryptedPrivateKeyBytes);
-			String tmpPublic = Base64Coder.base64EncodeToString(publicKeyBytes);
-			String tmpIV = Base64Coder.base64EncodeToString(encryptor.getIV());
-			long endencode = System.currentTimeMillis();
-			System.out.println("[ltpakeyfileutilityimpl] encode: end=" + endencode + " ms, elapsed=" + (endencode - startencode) + " ms");
 
 			expProps = new Properties();
-
-			expProps.put(KEYIMPORT_SECRETKEY, tmpShared);
-			expProps.put(KEYIMPORT_PRIVATEKEY, tmpPrivate);
-			expProps.put(KEYIMPORT_PUBLICKEY, tmpPublic);
-			expProps.put(KEYIMPORT_INITIALIZATION_VECTOR, tmpIV);
-
+			expProps.put(KEYIMPORT_SECRETKEY, Base64Coder.base64EncodeToString(encryptedSharedKeyBytes));
 			expProps.put(KEYIMPORT_REALM, realm);
 			expProps.put(CREATION_HOST_PROPERTY, "localhost");
 			expProps.put(LTPA_VERSION_PROPERTY, CryptoUtils.isFips140_3Enabled() ? "2.0" : "1.0");
 			expProps.put(CREATION_DATE_PROPERTY, (new java.util.Date()).toString());
 
-			// Generate PQC (ML-DSA) keys for signatures
-			// try {
-			// 	KeyPair mldsaKeyPair = generateMLDSAKeyPair(mldsaAlgorithm);
-			// 	if (mldsaKeyPair != null) {
-			// 		byte[] mldsaPublicKeyBytes = mldsaKeyPair.getPublic().getEncoded();
-			// 		byte[] mldsaPrivateKeyBytes = mldsaKeyPair.getPrivate().getEncoded();
-			// 		byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encrypt(mldsaPrivateKeyBytes);
-
-					String tmpMLDSAPublic = Base64Coder.base64EncodeToString(mldsaPublicKeyBytes);
-					String tmpMLDSAPrivate = Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes);
-
-					expProps.put("com.ibm.websphere.ltpa.pqc.PublicKey", tmpMLDSAPublic);
-					expProps.put("com.ibm.websphere.ltpa.pqc.PrivateKey", tmpMLDSAPrivate);
-					expProps.put("com.ibm.websphere.ltpa.pqc.Algorithm", mldsaAlgorithm);
+			if (mldsaAlgorithm == null) {
+				if (publicKeyBytes == null && privateKeyBytes == null) {
+					LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair(classicalKeySize);
+					publicKeyBytes = pair.getPublic().getEncoded();
+					privateKeyBytes = pair.getPrivate().getEncoded();
 				}
-			} catch (Exception mldsaEx) {
-				// ML-DSA key generation failed - log but continue with classical keys only
-				System.err.println("Warning: ML-DSA key generation failed: " + mldsaEx.getMessage());
+				byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
+				expProps.put(KEYIMPORT_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedPrivateKeyBytes));
+				expProps.put(KEYIMPORT_PUBLICKEY, Base64Coder.base64EncodeToString(publicKeyBytes));
+			} else {
+				KeyPair mldsaKeyPair = generateMLDSAKeyPair(mldsaAlgorithm);
+				if (mldsaKeyPair != null) {
+					byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encrypt(mldsaKeyPair.getPrivate().getEncoded());
+					expProps.put(KEYIMPORT_MLDSA_PUBLICKEY, Base64Coder.base64EncodeToString(mldsaKeyPair.getPublic().getEncoded()));
+					expProps.put(KEYIMPORT_MLDSA_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes));
+				}
 			}
 		} catch (Exception e) {
 			throw e;

@@ -57,100 +57,100 @@ public class LTPAPQCKeyGenerator {
      * @return LTPAPQCKeys containing both RSA and ML-KEM keys
      * @throws Exception if key generation fails
      */
-    public static LTPAPQCKeys generateHybridKeys() throws Exception {
-        return generateHybridKeys(MLKEMAlgorithmType.getDefault());
-    }
+    // public static LTPAPQCKeys generateHybridKeys() throws Exception {
+    //     return generateHybridKeys(MLKEMAlgorithmType.getDefault());
+    // }
     
-    /**
-     * Generate hybrid LTPA PQC keys with specified ML-KEM algorithm.
-     * 
-     * @param mlkemAlgorithm The ML-KEM algorithm type to use
-     * @return LTPAPQCKeys containing both RSA and ML-KEM keys
-     * @throws Exception if key generation fails
-     */
-    public static LTPAPQCKeys generateHybridKeys(MLKEMAlgorithmType mlkemAlgorithm) throws Exception {
-        if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled()) {
-            Tr.entry(tc, "generateHybridKeys", mlkemAlgorithm);
-        }
+    // /**
+    //  * Generate hybrid LTPA PQC keys with specified ML-KEM algorithm.
+    //  * 
+    //  * @param mlkemAlgorithm The ML-KEM algorithm type to use
+    //  * @return LTPAPQCKeys containing both RSA and ML-KEM keys
+    //  * @throws Exception if key generation fails
+    //  */
+    // public static LTPAPQCKeys generateHybridKeys(MLKEMAlgorithmType mlkemAlgorithm) throws Exception {
+    //     if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled()) {
+    //         Tr.entry(tc, "generateHybridKeys", mlkemAlgorithm);
+    //     }
         
-        long startTime = System.currentTimeMillis();
+    //     long startTime = System.currentTimeMillis();
         
-        try {
-            // 1. Generate RSA keys (existing - for signatures)
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Generating RSA-2048 key pair for signatures");
-            }
-            LTPAKeyPair rsaKeyPair = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.generateLTPAKeyPair();
-            byte[] rsaPrivateKeyBytes = rsaKeyPair.getPrivate().getEncoded();
-            byte[] rsaPublicKeyBytes = rsaKeyPair.getPublic().getEncoded();
+    //     try {
+    //         // 1. Generate RSA keys (existing - for signatures)
+    //         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+    //             Tr.debug(tc, "Generating RSA-2048 key pair for signatures");
+    //         }
+    //         LTPAKeyPair rsaKeyPair = com.ibm.ws.crypto.ltpakeyutil.LTPAKeyUtil.generateLTPAKeyPair();
+    //         byte[] rsaPrivateKeyBytes = rsaKeyPair.getPrivate().getEncoded();
+    //         byte[] rsaPublicKeyBytes = rsaKeyPair.getPublic().getEncoded();
             
-            // 2. Generate ML-KEM keys (new - for encryption)
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Generating " + mlkemAlgorithm + " key pair for encryption");
-            }
-            KeyPair mlkemKeyPair = generateMLKEMKeyPair(mlkemAlgorithm);
+    //         // 2. Generate ML-KEM keys (new - for encryption)
+    //         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+    //             Tr.debug(tc, "Generating " + mlkemAlgorithm + " key pair for encryption");
+    //         }
+    //         KeyPair mlkemKeyPair = generateMLKEMKeyPair(mlkemAlgorithm);
             
-            // 3. Create LTPAPQCKeys object
-            LTPAPQCKeys pqcKeys = new LTPAPQCKeys(
-                rsaPrivateKeyBytes,
-                rsaPublicKeyBytes,
-                mlkemKeyPair.getPrivate(),
-                mlkemKeyPair.getPublic(),
-                mlkemAlgorithm
-            );
+    //         // 3. Create LTPAPQCKeys object
+    //         LTPAPQCKeys pqcKeys = new LTPAPQCKeys(
+    //             rsaPrivateKeyBytes,
+    //             rsaPublicKeyBytes,
+    //             mlkemKeyPair.getPrivate(),
+    //             mlkemKeyPair.getPublic(),
+    //             mlkemAlgorithm
+    //         );
             
-            long elapsedTime = System.currentTimeMillis() - startTime;
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "Generated hybrid PQC keys in " + elapsedTime + "ms");
-            }
+    //         long elapsedTime = System.currentTimeMillis() - startTime;
+    //         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+    //             Tr.debug(tc, "Generated hybrid PQC keys in " + elapsedTime + "ms");
+    //         }
             
-            if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled()) {
-                Tr.exit(tc, "generateHybridKeys", pqcKeys);
-            }
+    //         if (TraceComponent.isAnyTracingEnabled() && tc.isEntryEnabled()) {
+    //             Tr.exit(tc, "generateHybridKeys", pqcKeys);
+    //         }
             
-            return pqcKeys;
+    //         return pqcKeys;
             
-        } catch (Exception e) {
-            if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-                Tr.event(tc, "Error generating hybrid PQC keys", e);
-            }
-            throw e;
-        }
-    }
+    //     } catch (Exception e) {
+    //         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
+    //             Tr.event(tc, "Error generating hybrid PQC keys", e);
+    //         }
+    //         throw e;
+    //     }
+    // }
     
-    /**
-     * Generate an ML-KEM key pair using Java 26's SunJCE provider.
-     * 
-     * @param mlkemAlgorithm The ML-KEM algorithm type
-     * @return KeyPair containing ML-KEM private and public keys
-     * @throws NoSuchAlgorithmException if ML-KEM algorithm is not available
-     * @throws NoSuchProviderException if SunJCE provider is not available
-     * @throws Exception if key generation fails
-     */
-    private static KeyPair generateMLKEMKeyPair(MLKEMAlgorithmType mlkemAlgorithm)
-            throws NoSuchAlgorithmException, NoSuchProviderException, Exception {
+    // /**
+    //  * Generate an ML-KEM key pair using Java 26's SunJCE provider.
+    //  * 
+    //  * @param mlkemAlgorithm The ML-KEM algorithm type
+    //  * @return KeyPair containing ML-KEM private and public keys
+    //  * @throws NoSuchAlgorithmException if ML-KEM algorithm is not available
+    //  * @throws NoSuchProviderException if SunJCE provider is not available
+    //  * @throws Exception if key generation fails
+    //  */
+    // private static KeyPair generateMLKEMKeyPair(MLKEMAlgorithmType mlkemAlgorithm)
+    //         throws NoSuchAlgorithmException, NoSuchProviderException, Exception {
         
-        // Use PQCRuntimeSupport for Java 26 ML-KEM key generation
-        return PQCRuntimeSupport.generateMLKEMKeyPair(mlkemAlgorithm.getAlgorithmName());
-    }
+    //     // Use PQCRuntimeSupport for Java 26 ML-KEM key generation
+    //     return PQCRuntimeSupport.generateMLKEMKeyPair(mlkemAlgorithm.getAlgorithmName());
+    // }
     
     
-    /**
-     * Check if ML-KEM support is available in the current Java runtime.
-     * 
-     * @return true if ML-KEM is supported, false otherwise
-     */
-    public static boolean isMLKEMSupported() {
-        try {
-            KeyPairGenerator.getInstance(ML_KEM_ALGORITHM, SUNJCE_PROVIDER);
-            return true;
-        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
-            if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(tc, "ML-KEM not supported in current Java runtime", e);
-            }
-            return false;
-        }
-    }
+    // /**
+    //  * Check if ML-KEM support is available in the current Java runtime.
+    //  * 
+    //  * @return true if ML-KEM is supported, false otherwise
+    //  */
+    // public static boolean isMLKEMSupported() {
+    //     try {
+    //         KeyPairGenerator.getInstance(ML_KEM_ALGORITHM, SUNJCE_PROVIDER);
+    //         return true;
+    //     } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+    //         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+    //             Tr.debug(tc, "ML-KEM not supported in current Java runtime", e);
+    //         }
+    //         return false;
+    //     }
+    // }
     
     /**
      * Get the Java version string.
@@ -181,24 +181,24 @@ public class LTPAPQCKeyGenerator {
         }
     }
     
-    /**
-     * Validate that the runtime environment supports PQC LTPA.
-     * 
-     * @throws UnsupportedOperationException if PQC is not supported
-     */
-    public static void validatePQCSupport() {
-        if (!isJava26OrHigher()) {
-            String msg = "PQC LTPA requires Java 26 or higher. Current version: " + getJavaVersion();
-            Tr.error(tc, "LTPA_PQC_UNSUPPORTED_JAVA_VERSION", getJavaVersion());
-            throw new UnsupportedOperationException(msg);
-        }
+    // /**
+    //  * Validate that the runtime environment supports PQC LTPA.
+    //  * 
+    //  * @throws UnsupportedOperationException if PQC is not supported
+    //  */
+    // public static void validatePQCSupport() {
+    //     if (!isJava26OrHigher()) {
+    //         String msg = "PQC LTPA requires Java 26 or higher. Current version: " + getJavaVersion();
+    //         Tr.error(tc, "LTPA_PQC_UNSUPPORTED_JAVA_VERSION", getJavaVersion());
+    //         throw new UnsupportedOperationException(msg);
+    //     }
         
-        if (!isMLKEMSupported()) {
-            String msg = "ML-KEM algorithm not available in SunJCE provider";
-            Tr.error(tc, "LTPA_PQC_MLKEM_NOT_AVAILABLE");
-            throw new UnsupportedOperationException(msg);
-        }
-    }
+    //     if (!isMLKEMSupported()) {
+    //         String msg = "ML-KEM algorithm not available in SunJCE provider";
+    //         Tr.error(tc, "LTPA_PQC_MLKEM_NOT_AVAILABLE");
+    //         throw new UnsupportedOperationException(msg);
+    //     }
+    // }
 }
 
 // Made with Bob

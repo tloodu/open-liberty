@@ -28,6 +28,8 @@ public class LTPAValidationKeysInfo {
     private byte[] secretKey = null;
     private byte[] privateKey = null;
     private byte[] publicKey = null;
+    private byte[] mldsaPrivateKey = null;
+    private byte[] mldsaPublicKey = null;
     private LTPAPrivateKey ltpaPrivateKey = null;
     private LTPAPublicKey ltpaPublicKey = null;
     private LTPAPQCKeys pqcKeys = null;
@@ -42,6 +44,18 @@ public class LTPAValidationKeysInfo {
         this.validUntilDateOdt = validUntilDateOdt;
         ltpaPrivateKey = new LTPAPrivateKey(privateKey);
         ltpaPublicKey = new LTPAPublicKey(publicKey);
+    }
+
+    LTPAValidationKeysInfo(String filename, byte[] secretKey, byte[] mldsaPrivateKey, byte[] mldsaPublicKey, OffsetDateTime validUntilDateOdt, boolean pqc) {
+        this.filename = filename;
+        this.secretKey = secretKey;
+        this.mldsaPrivateKey = mldsaPrivateKey;
+        this.mldsaPublicKey = mldsaPublicKey;
+        this.validUntilDateOdt = validUntilDateOdt;
+    }
+
+    public String getFilename() {
+        return filename;
     }
 
     public byte[] getSecretKey() {
@@ -62,6 +76,14 @@ public class LTPAValidationKeysInfo {
 
     public LTPAPublicKey getLTPAPublicKey() {
         return ltpaPublicKey;
+    }
+
+    public byte[] getMLDSAPrivateKey() {
+        return mldsaPrivateKey;
+    }
+
+    public byte[] getMLDSAPublicKey() {
+        return mldsaPublicKey;
     }
 
     /**

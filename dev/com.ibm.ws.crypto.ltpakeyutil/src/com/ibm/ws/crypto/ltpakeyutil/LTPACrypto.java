@@ -115,15 +115,22 @@ final class LTPACrypto {
 
     /**
      * Sign a pre-computed digest with the given RSA private key.
+     * <p>
+     * When {@code algorithm} is {@code null} the FIPS-aware static default
+     * ({@link #signatureAlgorithm}) is used. Pass a non-null value to use a
+     * different algorithm (e.g. {@code "SHA512withRSA"} configured via
+     * {@code classicalSignatureAlgorithm}).
      *
-     * Results are cached by (privateKey.getEncoded(), digest),
-     * mirroring the verify cache structure.
-     * @param privateKey JCA RSA private key (from {@link LTPAPrivateKey#getRawKey()})
-     * @param digest     Pre-computed message digest (SHA-1 or SHA-512)
+     * Results are cached by (privateKey.getEncoded(), digest).
+     *
+     * @param privKey   JCA RSA private key (from {@link LTPAPrivateKey#getRawKey()})
+     * @param data      Pre-computed message digest (SHA-1 or SHA-512)
+     * @param algorithm JCA signature algorithm, or {@code null} for the FIPS-aware default
      * @return RSA signature bytes
      */
     @Trivial
-    protected static final byte[] signRSA(PrivateKey privKey, byte[] data) throws Exception {
+    protected static final byte[] signRSA(PrivateKey privKey, byte[] data, String algorithm) throws Exception {
+        String alg = (algorithm != null) ? algorithm : signatureAlgorithm;
         CachingKey ck = new CachingKey(privKey.getEncoded(), data);
         CachingKey result = cryptoKeysMap.get(ck);
 
@@ -163,10 +170,8 @@ final class LTPACrypto {
             }
         }
 
-        Signature rsaSig = null;
-
-        rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
-                : Signature.getInstance(signatureAlgorithm, provider);
+        Signature rsaSig = (provider == null) ? Signature.getInstance(alg)
+                : Signature.getInstance(alg, provider);
 
         rsaSig.initSign(privKey);
         rsaSig.update(data);
@@ -199,14 +204,16 @@ final class LTPACrypto {
         private final byte[] key;
         private final byte[] data;
         private final byte[] sig;
+        private final String algorithm;
         private int hashcode;
         private boolean result;
 
         @Trivial
-        private CachingVerifyKey(byte[] key, byte[] data, byte[] sig) {
+        private CachingVerifyKey(byte[] key, byte[] data, byte[] sig, String algorithm) {
             this.key = key;
             this.data = data;
             this.sig = sig;
+            this.algorithm = algorithm;
             this.successfulUses = 0;
 
             this.hashcode = 0;
@@ -220,6 +227,9 @@ final class LTPACrypto {
                 for (int i = data.length - 1; i >= 0 && i > data.length - 10; i--) {
                     this.hashcode += data[i];
                 }
+            }
+            if (algorithm != null) {
+                this.hashcode += algorithm.hashCode();
             }
             this.hashcode *= 2;
         }
@@ -241,6 +251,9 @@ final class LTPACrypto {
                 return false;
             }
             if (!Arrays.equals(sig, ck.sig)) {
+                return false;
+            }
+            if (algorithm == null ? ck.algorithm != null : !algorithm.equals(ck.algorithm)) {
                 return false;
             }
 
@@ -293,17 +306,22 @@ final class LTPACrypto {
 
     /**
      * Verify an RSA signature over a pre-computed digest.
-     * Results are cached by (publicKey.getEncoded(), digest, signature),
-     * mirroring the ML-DSA verify cache in PQCSignatureHelper.
+     * <p>
+     * When {@code algorithm} is {@code null} the FIPS-aware static default
+     * ({@link #signatureAlgorithm}) is used.
+     *
+     * Results are cached by (publicKey.getEncoded(), digest, signature).
      *
      * @param publicKey JCA RSA public key (from {@link LTPAPublicKey#getRawKey()})
      * @param digest    Pre-computed message digest (SHA-1 or SHA-512)
      * @param signature Signature bytes to verify
+     * @param algorithm JCA signature algorithm, or {@code null} for the FIPS-aware default
      * @return {@code true} if the signature is valid
      */
     @Trivial
-    protected static final boolean verifyRSA(PublicKey pubKey, byte[] data, byte[] sig) throws Exception {
-        CachingVerifyKey ck = new CachingVerifyKey(pubKey.getEncoded(), data, sig);
+    protected static final boolean verifyRSA(PublicKey pubKey, byte[] data, byte[] sig, String algorithm) throws Exception {
+        String alg = (algorithm != null) ? algorithm : signatureAlgorithm;
+        CachingVerifyKey ck = new CachingVerifyKey(pubKey.getEncoded(), data, sig, alg);
         CachingVerifyKey result = verifyKeysMap.get(ck);
 
         if (result != null) {
@@ -335,9 +353,8 @@ final class LTPACrypto {
         }
 
         boolean verified = false;
-        Signature rsaSig = null;
-        rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
-                : Signature.getInstance(signatureAlgorithm, provider);
+        Signature rsaSig = (provider == null) ? Signature.getInstance(alg)
+                : Signature.getInstance(alg, provider);
 
         rsaSig.initVerify(pubKey);
         rsaSig.update(data);
@@ -348,6 +365,12 @@ final class LTPACrypto {
         ck.successfulUses = 0;
 
         return verified;
+    }
+
+    // Backward-compatible no-algorithm overload.
+    @Trivial
+    protected static final boolean verifyRSA(PublicKey pubKey, byte[] data, byte[] sig) throws Exception {
+        return verifyRSA(pubKey, data, sig, null);
     }
 
 
@@ -364,17 +387,19 @@ final class LTPACrypto {
     /**
      * @param key
      * @param cipher
+     * @param keyLengthBytes AES key length in bytes, or 0 to use the FIPS-aware default
      * @return
      * @throws InvalidKeyException
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeySpecException
      */
     @Trivial
-    private static SecretKey constructSecretKey(byte[] key, String cipher)
+    private static SecretKey constructSecretKey(byte[] key, String cipher, int keyLengthBytes)
             throws InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
         SecretKey sKey = null;
         if (cipher.indexOf(CryptoUtils.ENCRYPT_ALGORITHM_AES) != -1) {
-            int keyLength = fipsEnabled ? CryptoUtils.AES_256_KEY_LENGTH_BYTES : CryptoUtils.AES_128_KEY_LENGTH_BYTES;
+            int keyLength = (keyLengthBytes > 0) ? keyLengthBytes
+                    : (fipsEnabled ? CryptoUtils.AES_256_KEY_LENGTH_BYTES : CryptoUtils.AES_128_KEY_LENGTH_BYTES);
             sKey = new SecretKeySpec(key, 0, keyLength, CryptoUtils.ENCRYPT_ALGORITHM_AES);
         } else {
             DESedeKeySpec kSpec = new DESedeKeySpec(key);
@@ -421,7 +446,7 @@ final class LTPACrypto {
     }
 
     /**
-     * Encrypt the data.
+     * Encrypt the data using the FIPS-aware default AES key length.
      *
      * @param data   The byte representation of the data
      * @param key    The key used to encrypt the data
@@ -430,13 +455,31 @@ final class LTPACrypto {
      */
     @Trivial
     protected static final byte[] encrypt(byte[] data, byte[] key, String cipher) throws Exception {
-        SecretKey sKey = constructSecretKey(key, cipher);
+        return encrypt(data, key, cipher, 0);
+    }
+
+    /**
+     * Encrypt the data with an explicit AES key length.
+     * <p>
+     * Pass {@code keyLengthBytes > 0} to override the FIPS-aware default
+     * (e.g. {@code 16} for AES-128, {@code 32} for AES-256). Pass {@code 0}
+     * to use the FIPS-aware default (same as the no-key-length overload).
+     *
+     * @param data           The byte representation of the data
+     * @param key            The key used to encrypt the data
+     * @param cipher         The cipher algorithm
+     * @param keyLengthBytes AES key length in bytes, or 0 for the FIPS-aware default
+     * @return The encrypted data (ciphertext)
+     */
+    @Trivial
+    protected static final byte[] encrypt(byte[] data, byte[] key, String cipher, int keyLengthBytes) throws Exception {
+        SecretKey sKey = constructSecretKey(key, cipher, keyLengthBytes);
         Cipher ci = createCipher(Cipher.ENCRYPT_MODE, key, cipher, sKey);
         return ci.doFinal(data);
     }
 
     /**
-     * Decrypt the specified msg.
+     * Decrypt the specified msg using the FIPS-aware default AES key length.
      *
      * @param msg    The byte representation of the data
      * @param key    The key used to decrypt the data
@@ -445,7 +488,25 @@ final class LTPACrypto {
      */
     @Trivial
     protected static final byte[] decrypt(byte[] msg, byte[] key, String cipher) throws Exception {
-        SecretKey sKey = constructSecretKey(key, cipher);
+        return decrypt(msg, key, cipher, 0);
+    }
+
+    /**
+     * Decrypt the specified msg with an explicit AES key length.
+     * <p>
+     * Pass {@code keyLengthBytes > 0} to override the FIPS-aware default
+     * (e.g. {@code 16} for AES-128, {@code 32} for AES-256). Pass {@code 0}
+     * to use the FIPS-aware default (same as the no-key-length overload).
+     *
+     * @param msg            The byte representation of the data
+     * @param key            The key used to decrypt the data
+     * @param cipher         The cipher algorithm
+     * @param keyLengthBytes AES key length in bytes, or 0 for the FIPS-aware default
+     * @return The decrypted data (plaintext)
+     */
+    @Trivial
+    protected static final byte[] decrypt(byte[] msg, byte[] key, String cipher, int keyLengthBytes) throws Exception {
+        SecretKey sKey = constructSecretKey(key, cipher, keyLengthBytes);
         Cipher ci = createCipher(Cipher.DECRYPT_MODE, key, cipher, sKey);
         return ci.doFinal(msg);
     }
@@ -591,14 +652,19 @@ final class LTPACrypto {
 
     @Trivial
     static final byte[] generateSharedKey() {
-        return (fipsEnabled) ? CryptoUtils.generateRandomBytes(CryptoUtils.AES_256_KEY_LENGTH_BYTES)
-                : CryptoUtils.generateRandomBytes(CryptoUtils.DESEDE_KEY_LENGTH_BYTES);
+        return CryptoUtils.generateRandomBytes(CryptoUtils.AES_256_KEY_LENGTH_BYTES);
     }
 
     @Trivial
     static final KeyPair rsaKey() {
+        int keySizeBytes = CryptoUtils.isFips140_3Enabled() ? 256 : 128;
+        return rsaKey(keySizeBytes);
+    }
+
+    @Trivial
+    static final KeyPair rsaKey(int keySizeBytes) {
         KeyPairGenerator keyGen = null;
-        int keySizeBits = CryptoUtils.isFips140_3Enabled() ? 256 * 8 : 128 * 8;
+        int keySizeBits = keySizeBytes * 8;
         try {
             keyGen = (provider == null) ? KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
                     : KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);

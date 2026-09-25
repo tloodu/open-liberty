@@ -82,46 +82,34 @@ public interface LTPAConfiguration {
     // ========== PQC Configuration Properties (Issue #35556) ==========
     
     /**
-     * The cryptographic mode for LTPA tokens.
-     * Valid values: "classical" (RSA only), "pqc" (ML-DSA only), "hybrid" (both RSA and ML-DSA)
+     * The signing mode for LTPA tokens.
+     * Valid values: "classical", "pqc", "none"
      */
-    public static final String CFG_KEY_CRYPTO_MODE = "cryptoMode";
-    
+    public static final String CFG_KEY_SIGNING_MODE = "signingMode";
+
     /**
-     * The PQC algorithm to use for digital signatures.
-     * Valid values: "ML-DSA-44" (128-bit security), "ML-DSA-65" (192-bit security), "ML-DSA-87" (256-bit security)
+     * The classical digital signature algorithm.
+     * Valid values: "SHA1withRSA" (non-FIPS default), "SHA512withRSA" (FIPS default)
      */
-    public static final String CFG_KEY_PQC_ALGORITHM = "pqcAlgorithm";
-    
+    public static final String CFG_KEY_CLASSICAL_SIGNATURE_ALGORITHM = "classicalSignatureAlgorithm";
+
     /**
-     * Enable or disable Post-Quantum Cryptography support.
+     * The RSA key size in bits for the classical signature algorithm.
+     * Valid values: "1024" (non-FIPS default), "2048" (FIPS default), "4096"
      */
-    public static final String CFG_KEY_ENABLE_PQC = "enablePQC";
-    
+    public static final String CFG_KEY_CLASSICAL_KEY_SIZE = "classicalKeySize";
+
     /**
      * The ML-DSA algorithm variant for quantum-resistant signatures.
+     * Valid values: "ML-DSA-44", "ML-DSA-65" (PQC default), "ML-DSA-87"
      */
-    public static final String CFG_KEY_MLDSA_ALGORITHM = "mldsaAlgorithm";
-    
+    public static final String CFG_KEY_PQC_SIGNATURE_ALGORITHM = "pqcSignatureAlgorithm";
+
     /**
-     * The ML-DSA keystore file path.
+     * The symmetric encryption algorithm for LTPA token payloads.
+     * Valid values: "AES-CBC-128" (non-FIPS default), "AES-CBC-256" (FIPS default), "AES-GCM-256", "none"
      */
-    public static final String CFG_KEY_MLDSA_KEYSTORE_FILE = "mldsaKeystoreFile";
-    
-    /**
-     * The ML-DSA keystore password.
-     */
-    public static final String CFG_KEY_MLDSA_KEYSTORE_PASSWORD = "mldsaKeystorePassword";
-    
-    /**
-     * The PQC keystore file path (for ML-KEM keys).
-     */
-    public static final String CFG_KEY_PQC_KEYSTORE_FILE = "pqcKeystoreFile";
-    
-    /**
-     * The PQC keystore password (for ML-KEM keys).
-     */
-    public static final String CFG_KEY_PQC_KEYSTORE_PASSWORD = "pqcKeystorePassword";
+    public static final String CFG_KEY_ENCRYPTION_ALGORITHM = "encryptionAlgorithm";
 
     /**
      * Internal property used to distinguish configured validation keys from non-configured validation keys.
@@ -180,63 +168,56 @@ public interface LTPAConfiguration {
     long getExpirationDifferenceAllowed();
 
     
-    // ========== PQC Configuration Getters (Issue #35556) ==========
-    
+    // ========== Signing Configuration Getters ==========
+
     /**
-     * Get the cryptographic mode for LTPA tokens.
-     * 
-     * @return The crypto mode: "classical" (RSA only), "pqc" (ML-DSA only), or "hybrid" (both)
-     */
-    String getCryptoMode();
-    
-    /**
-     * Get the PQC algorithm to use for digital signatures.
-     * 
-     * @return The PQC algorithm: "ML-DSA-44", "ML-DSA-65", or "ML-DSA-87"
-     */
-    String getPQCAlgorithm();
-    
-    /**
-     * Check if Post-Quantum Cryptography support is enabled.
+     * Get the signing mode for LTPA tokens.
      *
-     * @return true if PQC is enabled, false otherwise
+     * @return The signing mode: "classical", "pqc", "hybrid", or "none"
      */
-    boolean isEnablePQC();
-    
+    String getSigningMode();
+
+    /**
+     * Get the classical digital signature algorithm.
+     *
+     * @return The classical signature algorithm: "SHA1WithRSA" or "SHA512WithRSA"
+     */
+    String getClassicalSignatureAlgorithm();
+
+    /**
+     * Get the RSA key size in bits for the classical signature algorithm.
+     *
+     * @return The key size in bits: 1024, 2048, or 4096
+     */
+    int getClassicalKeySize();
+
     /**
      * Get the ML-DSA algorithm variant for quantum-resistant signatures.
      *
-     * @return The ML-DSA algorithm: "ML-DSA-44", "ML-DSA-65", or "ML-DSA-87"
+     * @return The PQC signature algorithm: "ML-DSA-44", "ML-DSA-65", or "ML-DSA-87"
      */
-    String getMLDSAAlgorithm();
-    
+    String getPqcSignatureAlgorithm();
+
     /**
-     * Get the ML-DSA keystore file path.
+     * Get the symmetric encryption algorithm for LTPA token payloads.
      *
-     * @return Path to the PKCS12 keystore containing ML-DSA keys
+     * @return The encryption algorithm: "AES-CBC-128", "AES-CBC-256", "AES-GCM-256", or "none"
      */
-    String getMLDSAKeystoreFile();
-    
+    String getEncryptionAlgorithm();
+
     /**
-     * Get the ML-DSA keystore password.
+     * Get the resolved JCE cipher string for use in encrypt/decrypt operations.
      *
-     * @return Password for the ML-DSA keystore
+     * @return e.g. "AES/CBC/PKCS5Padding", "AES/GCM/NoPadding", or null for "none"
      */
-    String getMLDSAKeystorePassword();
-    
+    String getResolvedCipher();
+
     /**
-     * Get the PQC keystore file path (for ML-KEM keys).
+     * Get the resolved AES key length in bytes for use in encrypt/decrypt operations.
      *
-     * @return Path to the PKCS12 keystore containing ML-KEM keys
+     * @return e.g. 16 (AES-128) or 32 (AES-256), or 0 for "none"
      */
-    String getPQCKeystoreFile();
-    
-    /**
-     * Get the PQC keystore password (for ML-KEM keys).
-     *
-     * @return Password for the PQC keystore
-     */
-    String getPQCKeystorePassword();
+    int getResolvedKeyLength();
 
     /**
      * @return monitor interval
