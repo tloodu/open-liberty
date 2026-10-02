@@ -52,12 +52,9 @@ public final class LTPAKeyUtil {
 		return LTPACrypto.decrypt(msg, key, cipher, keyLengthBytes);
 	}
 
-	public static boolean verifyISO9796(LTPAPublicKey pubKey, byte[] digest, byte[] sig) throws Exception {
-		return LTPACrypto.verifyRSA(pubKey.getRawKey(), digest, sig, null);
-	}
-
-	public static boolean verifyISO9796(LTPAPublicKey pubKey, byte[] digest, byte[] sig, String algorithm) throws Exception {
-		return LTPACrypto.verifyRSA(pubKey.getRawKey(), digest, sig, algorithm);
+	public static boolean verifyISO9796(byte[][] key, byte[] data, int off, int len, byte[] sig, int sigOff, int sigLen)
+			throws Exception {
+		return LTPACrypto.verifyISO9796(key, data, off, len, sig, sigOff, sigLen);
 	}
 
         /**
@@ -86,16 +83,20 @@ public final class LTPAKeyUtil {
                  return LTPACrypto.decryptGCM(encryptedData, key);
         }
 
-	public static java.security.PrivateKey getRawKey(LTPAPrivateKey privKey) {
+	public static byte[] signISO9796(byte[][] key, byte[] data, int off, int len) throws Exception {
+		return LTPACrypto.signISO9796(key, data, off, len);
+	}
+
+	public static void setRSAKey(byte[][] key) {
+		LTPACrypto.setRSAKey(key);
+	}
+
+	public static byte[][] getRawKey(LTPAPrivateKey privKey) {
 		return privKey.getRawKey();
 	}
 
-	public static byte[] signISO9796(LTPAPrivateKey privKey, byte[] digest) throws Exception {
-		return LTPACrypto.signRSA(privKey.getRawKey(), digest, null);
-	}
-
-	public static byte[] signISO9796(LTPAPrivateKey privKey, byte[] digest, String algorithm) throws Exception {
-		return LTPACrypto.signRSA(privKey.getRawKey(), digest, algorithm);
+	public static byte[][] getRawKey(LTPAPublicKey pubKey) {
+		return pubKey.getRawKey();
 	}
 
 	public static LTPAKeyPair generateLTPAKeyPair() {

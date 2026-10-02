@@ -74,7 +74,6 @@ class LTPAKeyCreateTask implements Runnable {
         String signingMode = config.getSigningMode();
         List<LTPAValidationKeysInfo> validationKeys = keyInfoManager.getValidationLTPAKeys();
         long expDiffAllowed = config.getExpirationDifferenceAllowed();
-        boolean isPqc = "pqc".equals(signingMode);
 
         Map<String, Object> tokenFactoryMap = new HashMap<String, Object>();
         tokenFactoryMap.put(LTPAConstants.EXPIRATION, config.getTokenExpiration());
@@ -84,13 +83,10 @@ class LTPAKeyCreateTask implements Runnable {
         tokenFactoryMap.put("keyInfoManager", keyInfoManager);
         tokenFactoryMap.put(LTPAConstants.CONFIGURED_SIGNING_MODE, signingMode);
         tokenFactoryMap.put(LTPAConstants.CONFIGURED_CLASSICAL_SIG_ALG, config.getClassicalSignatureAlgorithm());
-        tokenFactoryMap.put(LTPAConstants.CONFIGURED_CLASSICAL_KEY_SIZE, config.getClassicalKeySize());
-        tokenFactoryMap.put(LTPAConstants.CONFIGURED_PQC_SIG_ALG, config.getPqcSignatureAlgorithm());
-        tokenFactoryMap.put(LTPAConstants.CONFIGURED_ENCRYPTION_ALG, config.getEncryptionAlgorithm());
         tokenFactoryMap.put(LTPAConstants.CONFIGURED_RESOLVED_CIPHER, config.getResolvedCipher());
         tokenFactoryMap.put(LTPAConstants.CONFIGURED_RESOLVED_KEY_LENGTH, config.getResolvedKeyLength());
 
-        if (isPqc) {
+        if ("pqc".equals(signingMode)) {
             // PQC mode — ML-DSA keys only, no RSA keys in the key file.
             byte[] mldsaPrivateKey = keyInfoManager.getMLDSAPrivateKey(primaryKeyFile);
             byte[] mldsaPublicKey  = keyInfoManager.getMLDSAPublicKey(primaryKeyFile);

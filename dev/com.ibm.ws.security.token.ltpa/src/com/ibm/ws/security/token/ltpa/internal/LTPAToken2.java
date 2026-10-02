@@ -72,11 +72,11 @@ public class LTPAToken2 implements Token, Serializable {
     private final PublicKey mldsaPublicKey;
     private final String signingMode;
     private final String classicalSigAlg;
-    private final String encryptionAlg;
-    // Pre-resolved cipher and key length — passed in from config, avoids re-deriving from encryptionAlg
     private final String resolvedCipher;
     private final int resolvedKeyLength;
     private String sigAlgForVerify = null;
+    private String headerCipher = null;
+    private int headerKeyLen = 0;
 
     private long expirationDifferenceAllowed;
 
@@ -119,11 +119,11 @@ public class LTPAToken2 implements Token, Serializable {
         this.mldsaPublicKey = mldsaPublicKey;
         this.signingMode = signingMode;
         this.classicalSigAlg = null; // not used on validation path
-        this.encryptionAlg = null;   // not used on validation path
         this.resolvedCipher = null;  // not used on validation path
         this.resolvedKeyLength = 0;  // not used on validation path
         this.expirationInMilliseconds = 0;
         this.expirationDifferenceAllowed = expDiffAllowed;
+        extractTokenHeader();
         decrypt();
         isValid();
         if (attributes != null) {
@@ -145,24 +145,18 @@ public class LTPAToken2 implements Token, Serializable {
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
                          LTPAPrivateKey privateKey, LTPAPublicKey publicKey) {
-        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, null, null, "classical", null, null);
+        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, null, null, "classical", null, null, 0);
     }
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
                          LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
                          PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode) {
-        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, mldsaPrivateKey, mldsaPublicKey, signingMode, null, null);
+        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, mldsaPrivateKey, mldsaPublicKey, signingMode, null, null, 0);
     }
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
                          LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
-                         PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode, String classicalSigAlg, String encryptionAlg) {
-        this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, mldsaPrivateKey, mldsaPublicKey, signingMode, classicalSigAlg, encryptionAlg, null, 0);
-    }
-
-    protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
-                         LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
-                         PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode, String classicalSigAlg, String encryptionAlg,
+                         PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode, String classicalSigAlg,
                          String resolvedCipher, int resolvedKeyLength) {
         this.signature = null;
         this.encryptedBytes = null;
@@ -173,7 +167,6 @@ public class LTPAToken2 implements Token, Serializable {
         this.mldsaPublicKey = mldsaPublicKey;
         this.signingMode = signingMode;
         this.classicalSigAlg = classicalSigAlg;
-        this.encryptionAlg = encryptionAlg;
         this.resolvedCipher = resolvedCipher;
         this.resolvedKeyLength = resolvedKeyLength;
         this.userData = new UserData(accessID);
@@ -199,7 +192,6 @@ public class LTPAToken2 implements Token, Serializable {
         this.mldsaPublicKey = null;
         this.signingMode = "classical";
         this.classicalSigAlg = null;
-        this.encryptionAlg = null;
         this.resolvedCipher = null;
         this.resolvedKeyLength = 0;
         this.userData = userdata;
@@ -233,7 +225,7 @@ public class LTPAToken2 implements Token, Serializable {
         }
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
-            Tr.event(this, tc, "encryptionAlg=" + encryptionAlg);
+            Tr.event(this, tc, "resolvedCipher=" + resolvedCipher + " resolvedKeyLength=" + resolvedKeyLength);
         }
 
         byte[] ciphertext;
@@ -242,7 +234,7 @@ public class LTPAToken2 implements Token, Serializable {
                 ciphertext = LTPAKeyUtil.encryptGCM(toBeEnc, sharedKey);
             } else {
                 // resolvedCipher is AES/CBC/PKCS5Padding; resolvedKeyLength is 16 or 32 (0 = FIPS-aware default)
-                ciphertext = LTPAKeyUtil.encrypt(toBeEnc, sharedKey, resolvedCipher != null ? resolvedCipher : CryptoUtils.AES_CBC_CIPHER, resolvedKeyLength);
+                ciphertext = LTPAKeyUtil.encrypt(toBeEnc, sharedKey, resolvedCipher, resolvedKeyLength);
             }
         } catch (Exception e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
@@ -267,46 +259,55 @@ public class LTPAToken2 implements Token, Serializable {
     }
 
     /**
+     * Extracts and validates the LTPA2 token header from {@link #encryptedBytes}.
+     *
+     * @throws InvalidTokenException if the magic prefix is present but the version
+     *                               byte is not recognised.
+     */
+    private void extractTokenHeader() throws InvalidTokenException {
+        if (!LTPATokenHeader.hasMagic(encryptedBytes)) {
+            return;
+        }
+        byte versionByte = encryptedBytes[4];
+        if (versionByte != LTPATokenHeader.HEADER_VERSION_1) {
+            throw new InvalidTokenException("Unknown token header version: 0x"
+                    + Integer.toHexString(versionByte & 0xFF));
+        }
+        sigAlgForVerify = LTPATokenHeader.decodeSigAlg(encryptedBytes[5]);
+        headerCipher = LTPATokenHeader.decodeCipher(encryptedBytes[6]);
+        headerKeyLen = LTPATokenHeader.decodeKeyLength(encryptedBytes[6]);
+    }
+
+    /**
      * Decrypt the encrypted token bytes passed into the constructor.
+     * Relies on {@link #extractTokenHeader()} having been called first to populate
+     * {@link #headerCipher} and {@link #headerKeyLen} for headered tokens.
      */
     @FFDCIgnore({ BadPaddingException.class, Exception.class })
     private final void decrypt() throws InvalidTokenException {
         byte[] tokenData;
         try {
-            if (LTPATokenHeader.hasMagic(encryptedBytes)) {
-                byte versionByte = encryptedBytes[4];
-                byte sigAlgByte  = encryptedBytes[5];
-                byte encAlgByte  = encryptedBytes[6];
-
-                if (versionByte != LTPATokenHeader.HEADER_VERSION_1) {
-                    throw new InvalidTokenException("Unknown token header version: 0x"
-                            + Integer.toHexString(versionByte & 0xFF));
-                }
-                sigAlgForVerify = LTPATokenHeader.decodeSigAlg(sigAlgByte);
-                String cipher = LTPATokenHeader.decodeCipher(encAlgByte);
-                int keyLen = LTPATokenHeader.decodeKeyLength(encAlgByte);
-
+            if (headerCipher != null) {
                 byte[] ciphertext = Arrays.copyOfRange(encryptedBytes, LTPATokenHeader.HEADER_SIZE, encryptedBytes.length);
 
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(this, tc, "decrypt: headered token" + " cipher=" + cipher + " keyLen=" + keyLen);
+                    Tr.debug(this, tc, "decrypt: headered token cipher=" + headerCipher + " keyLen=" + headerKeyLen);
                 }
 
-                if (CryptoUtils.AES_GCM_CIPHER.equals(cipher)) {
+                if (CryptoUtils.AES_GCM_CIPHER.equals(headerCipher)) {
                     tokenData = LTPAKeyUtil.decryptGCM(ciphertext, sharedKey);
                 } else {
-                    tokenData = LTPAKeyUtil.decrypt(ciphertext, sharedKey, cipher, keyLen);
+                    tokenData = LTPAKeyUtil.decrypt(ciphertext, sharedKey, headerCipher, headerKeyLen);
                 }
 
             } else {
                 // ---- Legacy token path ----
                 // Pre-branch tokens are always one of two fixed cipher+sig pairs coupled to FIPS mode.
-                // GCM is never present in legacy tokens — it was introduced by this branch.
                 // Try pairs in FIPS-preference order; use parseToken() as discriminator because
                 // CBC with the wrong key size yields silent garbage rather than throwing.
                 int primaryKeyLen  = fipsEnabled ? CryptoUtils.AES_256_KEY_LENGTH_BYTES : CryptoUtils.AES_128_KEY_LENGTH_BYTES;
-                String primarySigAlg = fipsEnabled ? CryptoUtils.SIGNATURE_ALGORITHM_SHA512WITHRSA : CryptoUtils.SIGNATURE_ALGORITHM_SHA1WITHRSA;
                 int fallbackKeyLen = fipsEnabled ? CryptoUtils.AES_128_KEY_LENGTH_BYTES : CryptoUtils.AES_256_KEY_LENGTH_BYTES;
+                String primarySigAlg  = fipsEnabled ? CryptoUtils.SIGNATURE_ALGORITHM_SHA512WITHRSA : CryptoUtils.SIGNATURE_ALGORITHM_SHA1WITHRSA;
                 String fallbackSigAlg = fipsEnabled ? CryptoUtils.SIGNATURE_ALGORITHM_SHA1WITHRSA : CryptoUtils.SIGNATURE_ALGORITHM_SHA512WITHRSA;
 
                 tokenData = decryptLegacyCBC(primaryKeyLen, primarySigAlg, fallbackKeyLen, fallbackSigAlg);
@@ -366,7 +367,7 @@ public class LTPAToken2 implements Token, Serializable {
     }
 
     /**
-     * Legacy CBC probe: tries two fixed cipher+sig pairs in the given order.
+     * Legacy CBC probe: tries two AES-CBC key lengths in order.
      * Uses {@link LTPATokenizer#parseToken} as the discriminator because CBC with
      * the wrong key size decrypts silently to garbage rather than throwing.
      * Sets {@link #sigAlgForVerify} from whichever pair produces parseable plaintext.
@@ -377,10 +378,9 @@ public class LTPAToken2 implements Token, Serializable {
         byte[] candidate = LTPAKeyUtil.decrypt(encryptedBytes.clone(), sharedKey, CryptoUtils.AES_CBC_CIPHER, primaryKeyLen);
         try {
             LTPATokenizer.parseToken(toSimpleString(candidate));
-            // Parse succeeded — this is the right pair
             sigAlgForVerify = primarySigAlg;
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                Tr.debug(this, tc, "decrypt: legacy CBC-" + (primaryKeyLen * 8) + " succeeded, sigAlg=" + primarySigAlg);
+                Tr.debug(this, tc, "decrypt: legacy CBC-" + (primaryKeyLen * 8) + " succeeded");
             }
             return candidate;
         } catch (Exception parseEx) {
@@ -388,12 +388,8 @@ public class LTPAToken2 implements Token, Serializable {
                 Tr.debug(this, tc, "decrypt: legacy CBC-" + (primaryKeyLen * 8) + " parse failed, trying CBC-" + (fallbackKeyLen * 8));
             }
         }
-        // Fallback pair — let any exception propagate to decrypt()'s outer catch
         byte[] fallback = LTPAKeyUtil.decrypt(encryptedBytes.clone(), sharedKey, CryptoUtils.AES_CBC_CIPHER, fallbackKeyLen);
         sigAlgForVerify = fallbackSigAlg;
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(this, tc, "decrypt: legacy CBC-" + (fallbackKeyLen * 8) + " succeeded, sigAlg=" + fallbackSigAlg);
-        }
         return fallback;
     }
 
@@ -420,21 +416,22 @@ public class LTPAToken2 implements Token, Serializable {
         synchronized (lockObj1) {
             data = md1JCE.digest(msg);
         }
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(this, tc, "sign: classicalSigAlg=" + classicalSigAlg + " privKey=" + privKey);
-        }
-        return LTPAKeyUtil.signISO9796(privKey, data, classicalSigAlg);
+        byte[][] rsaPrivKey = LTPAKeyUtil.getRawKey(privKey);
+        LTPAKeyUtil.setRSAKey(rsaPrivKey);
+        byte[] signature;
+        signature = LTPAKeyUtil.signISO9796(rsaPrivKey, data, 0, data.length);
+
+        return signature;
     }
 
     /**
      * Verify the token.
      */
-
     private final boolean verify() throws Exception {
         String dataStr = this.getUserData().toString();
         byte[] data = Base64Coder.getBytes(dataStr);
 
-        if ("pqc".equals(signingMode)) {
+        if ("ML-DSA".equals(sigAlgForVerify)) {
             return PQCSignatureHelper.verifyMLDSA(data, signature, mldsaPublicKey, null);
         } else {
             return verify(data, signature, publicKey);
@@ -459,7 +456,8 @@ public class LTPAToken2 implements Token, Serializable {
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
             Tr.debug(this, tc, "verify: using sigAlg=" + sigAlgForVerify);
         }
-        return LTPAKeyUtil.verifyISO9796(pubKey, data, signature, sigAlgForVerify);
+        byte[][] rsaPubKey = LTPAKeyUtil.getRawKey(pubKey);
+        return LTPAKeyUtil.verifyISO9796(rsaPubKey, data, 0, data.length, signature, 0, signature.length);
     }
 
     /** {@inheritDoc} */

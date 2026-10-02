@@ -74,15 +74,6 @@ public class LTPAConstants {
     /** Effective classical signature algorithm (e.g. SHA1withRSA, SHA512withRSA). */
     protected static final String CONFIGURED_CLASSICAL_SIG_ALG = "configured_classical_sig_alg";
 
-    /** Effective RSA key size in bits (e.g. 1024, 2048, 4096). */
-    protected static final String CONFIGURED_CLASSICAL_KEY_SIZE = "configured_classical_key_size";
-
-    /** Effective PQC signature algorithm (e.g. ML-DSA-65). */
-    protected static final String CONFIGURED_PQC_SIG_ALG = "configured_pqc_sig_alg";
-
-    /** Effective encryption algorithm (e.g. AES-CBC-128, AES-CBC-256, AES-GCM-256, none). */
-    protected static final String CONFIGURED_ENCRYPTION_ALG = "configured_encryption_alg";
-
     /** JCA cipher string resolved from encryptionAlgorithm (e.g. AES/CBC/PKCS5Padding, AES/GCM/NoPadding). */
     protected static final String CONFIGURED_RESOLVED_CIPHER = "configured_resolved_cipher";
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1997, 2025 IBM Corporation and others.
+ * Copyright (c) 1997, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -12,10 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.crypto.ltpakeyutil;
 
-import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.X509EncodedKeySpec;
 
 import com.ibm.ws.common.crypto.CryptoUtils;
 
@@ -27,10 +24,13 @@ public final class LTPAPublicKey implements PublicKey {
 
 	private static final boolean fipsEnabled = CryptoUtils.isFips140_3Enabled();
 	private static final long serialVersionUID = 6585779055758956436L;
-	private final PublicKey rawKey;
+	private static final int MODULUS = 0;
+	private static final int EXPONENT = 1;
+	private static final int EXPONENT_LENGTH = 3;
+	private final byte[][] rawKey;
 	private final byte[] encodedKey;
 
-	LTPAPublicKey(RSAPublicKey rawKey) {
+	LTPAPublicKey(byte[][] rawKey) {
 		this.rawKey = rawKey;
 		this.encodedKey = encode();
 	}
@@ -40,37 +40,30 @@ public final class LTPAPublicKey implements PublicKey {
 		this.rawKey = decode(encodedKey);
 	}
 
-	private PublicKey decode(byte[] encodedPublicKey) {
-		try {
-
-			long startkf = System.currentTimeMillis();
-			System.out.println("[ltpakeyutil] LTPAPublicKey.decode: start keyfactory getInstance=" + startkf + " ms");
-			String provider = CryptoUtils.getProvider();
-			KeyFactory kf = (provider == null)
-					? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
-					: KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-			long endkf = System.currentTimeMillis();
-			System.out.println("[ltpakeyutil] LTPAPublicKey.decode: end keyfactory getInstance=" + endkf + " ms, elapsed=" + (endkf - startkf) + " ms");
-			
-			long startdecode = System.currentTimeMillis();
-			System.out.println("[ltpakeyutil] LTPAPublicKey.decode: start generatePublic=" + startdecode + " ms");
-			PublicKey key = kf.generatePublic(new X509EncodedKeySpec(encodedPublicKey));
-			long enddecode = System.currentTimeMillis();
-			System.out.println("[ltpakeyutil] LTPAPublicKey.decode: end generatePublic=" + enddecode + " ms, elapsed=" + (enddecode - startdecode) + " ms");
-			
-			return key;
-		} catch (Exception ex) {
-			throw new RuntimeException("Failed to build RSA public key from encoded bytes", ex);
-		}
+	/**
+	 * encoding/decoding are based on non-standard LTPA specific algorithm.
+	 * concatenates byte arrays of raw key to a format that can be decoded based on
+	 * length of each component.
+	 *
+	 * @param encodedPublicKey The encoded key
+	 */
+	private byte[][] decode(byte[] encodedPublicKey) {
+		int modulusLength = encodedPublicKey.length - EXPONENT_LENGTH;
+		byte[][] decodedKey = new byte[2][];
+		decodedKey[MODULUS] = new byte[modulusLength];
+		decodedKey[EXPONENT] = new byte[EXPONENT_LENGTH];
+		System.arraycopy(encodedPublicKey, 0, decodedKey[MODULUS], 0, modulusLength);
+		System.arraycopy(encodedPublicKey, modulusLength, decodedKey[EXPONENT], 0, EXPONENT_LENGTH);
+		return decodedKey;
 	}
 
 	private byte[] encode() {
-		long start = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] LTPAPublicKey.encode: start getEncoded=" + start + " ms");
-		byte[] encoded = rawKey.getEncoded();
-		long end = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] LTPAPublicKey.encode: end getEncoded=" + end + " ms, elapsed=" + (end - start) + " ms");
-		return encoded;
+		int modulusLength = rawKey[MODULUS].length;
+		int publicKeyLength = modulusLength + EXPONENT_LENGTH;
+		byte[] encodedPublicKey = new byte[publicKeyLength];
+		System.arraycopy(rawKey[MODULUS], 0, encodedPublicKey, 0, modulusLength);
+		System.arraycopy(rawKey[EXPONENT], 0, encodedPublicKey, modulusLength, EXPONENT_LENGTH);
+		return encodedPublicKey;
 	}
 
 	/** {@inheritDoc} */
@@ -91,7 +84,11 @@ public final class LTPAPublicKey implements PublicKey {
 		return "LTPAFormat";
 	}
 
-	protected final PublicKey getRawKey() {
-		return rawKey;
+	protected final byte[][] getRawKey() {
+		if (rawKey == null) {
+			return null;
+		} else {
+			return rawKey.clone();
+		}
 	}
 }

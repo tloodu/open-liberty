@@ -49,16 +49,11 @@ public class LTPAToken2Factory implements TokenFactory {
 
     private String signingMode;
     private String classicalSigAlg;
-    private int classicalKeySize;
-    private String pqcSigAlg;
-    private String encryptionAlg;
     private String resolvedCipher;
     private int resolvedKeyLength;
 
     private PrivateKey primaryMLDSAPrivateKey;
     private PublicKey primaryMLDSAPublicKey;
-    private byte[] mldsaPrivBytes;
-    private byte[] mldsaPubBytes;
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
@@ -75,14 +70,11 @@ public class LTPAToken2Factory implements TokenFactory {
 
         signingMode = (String) tokenFactoryMap.get(LTPAConstants.CONFIGURED_SIGNING_MODE);
         classicalSigAlg = (String) tokenFactoryMap.get(LTPAConstants.CONFIGURED_CLASSICAL_SIG_ALG);
-        classicalKeySize = (int) tokenFactoryMap.get(LTPAConstants.CONFIGURED_CLASSICAL_KEY_SIZE);
-        pqcSigAlg = (String) tokenFactoryMap.get(LTPAConstants.CONFIGURED_PQC_SIG_ALG);
-        encryptionAlg = (String) tokenFactoryMap.get(LTPAConstants.CONFIGURED_ENCRYPTION_ALG);
         resolvedCipher = (String) tokenFactoryMap.get(LTPAConstants.CONFIGURED_RESOLVED_CIPHER);
         resolvedKeyLength = (int) tokenFactoryMap.get(LTPAConstants.CONFIGURED_RESOLVED_KEY_LENGTH);
 
-        mldsaPrivBytes = (byte[]) tokenFactoryMap.get(LTPAConstants.PRIMARY_MLDSA_PRIVATE_KEY);
-        mldsaPubBytes = (byte[]) tokenFactoryMap.get(LTPAConstants.PRIMARY_MLDSA_PUBLIC_KEY);
+        byte[] mldsaPrivBytes = (byte[]) tokenFactoryMap.get(LTPAConstants.PRIMARY_MLDSA_PRIVATE_KEY);
+        byte[] mldsaPubBytes = (byte[]) tokenFactoryMap.get(LTPAConstants.PRIMARY_MLDSA_PUBLIC_KEY);
         if (mldsaPrivBytes != null && mldsaPubBytes != null) {
             Object[] keys = buildMLDSAKeys(mldsaPrivBytes, mldsaPubBytes);
             if (keys != null) {
@@ -149,7 +141,7 @@ public class LTPAToken2Factory implements TokenFactory {
                 return new LTPAToken2(userUniqueId, expirationInMinutes,
                                       primarySharedKey, primaryPrivateKey, primaryPublicKey,
                                       primaryMLDSAPrivateKey, primaryMLDSAPublicKey, signingMode,
-                                      null, encryptionAlg, resolvedCipher, resolvedKeyLength);
+                                      null, resolvedCipher, resolvedKeyLength);
             } else {
                 Tr.warning(tc, "ML-DSA keys not available for signingMode=" + signingMode + ", falling back to classical");
             }
@@ -158,7 +150,7 @@ public class LTPAToken2Factory implements TokenFactory {
         // classical / none / fallback
         return new LTPAToken2(userUniqueId, expirationInMinutes,
                               primarySharedKey, primaryPrivateKey, primaryPublicKey,
-                              null, null, signingMode, classicalSigAlg, encryptionAlg, resolvedCipher, resolvedKeyLength);
+                              null, null, signingMode, classicalSigAlg, resolvedCipher, resolvedKeyLength);
     }
 
     private String getUniqueId(Map tokenData) throws TokenCreationFailedException {
@@ -191,20 +183,13 @@ public class LTPAToken2Factory implements TokenFactory {
     public Token validateTokenBytes(byte[] tokenBytes, String... removeAttributes) throws InvalidTokenException, TokenExpiredException {
         Token validatedToken = null;
 
-        // primary key for create and validation
-        // In PQC mode, RSA private/public keys are intentionally absent; proceed if ML-DSA keys are available
-        boolean hasPrimaryMLDSA = primaryMLDSAPrivateKey != null && primaryMLDSAPublicKey != null;
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled() && "pqc".equals(signingMode) && !hasPrimaryMLDSA) {
-            Tr.debug(tc, "ML-DSA keys not available for validation, will try classical mode");
-        }
-
-        if (primarySharedKey != null && (hasPrimaryMLDSA || (primaryPrivateKey != null && primaryPublicKey != null))) {
+        if (primarySharedKey != null && (primaryMLDSAPublicKey != null || primaryPublicKey != null)) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                 Tr.debug(tc, "validateTokenBytes with primary keys");
             }
 
             try {
-                if (hasPrimaryMLDSA) {
+                if (primaryMLDSAPublicKey != null) {
                     validatedToken = new LTPAToken2(tokenBytes, primarySharedKey, primaryPrivateKey, primaryPublicKey,
                                                    primaryMLDSAPrivateKey, primaryMLDSAPublicKey, signingMode,
                                                    expDiffAllowed, removeAttributes);
@@ -241,22 +226,12 @@ public class LTPAToken2Factory implements TokenFactory {
                 LTPAValidationKeysInfo ltpaKeyInfo = validationKeysIterator.next();
                 byte[] sharedKeyForValidation = ltpaKeyInfo.getSecretKey();
 
-                // get rsa keys from valiation.keys
                 LTPAPrivateKey ltpaPrivateKeyForValidation = ltpaKeyInfo.getLTPAPrivateKey();
                 LTPAPublicKey ltpaPublicKeyForValidation = ltpaKeyInfo.getLTPAPublicKey();
+                byte[] ltpaPqcPrivateKeyForValidation = ltpaKeyInfo.getMLDSAPrivateKey();
+                byte[] ltpaPqcPublicKeyForValidation = ltpaKeyInfo.getMLDSAPublicKey();
 
-                boolean hasStoredMldsaPublicKey = ltpaKeyInfo.getMLDSAPublicKey() != null;
-                if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-                    Tr.debug(tc, "validationKey filename=" + ltpaKeyInfo.getFilename()
-                            + " hasStoredMldsaPublicKey=" + hasStoredMldsaPublicKey
-                            + " hasRsaPrivateKey=" + (ltpaPrivateKeyForValidation != null)
-                            + " hasRsaPublicKey=" + (ltpaPublicKeyForValidation != null)
-                            + " hasSharedKey=" + (sharedKeyForValidation != null)
-                            + " signingMode=" + signingMode);
-                }
-
-                Object[] valMldsaKeys = hasStoredMldsaPublicKey ? loadMLDSAKeys(ltpaKeyInfo.getFilename())
-                                                                 : (hasPrimaryMLDSA ? new Object[] { primaryMLDSAPrivateKey, primaryMLDSAPublicKey } : null);
+                Object[] valMldsaKeys = loadMLDSAKeys(ltpaKeyInfo.getFilename());
 
                 if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                     Tr.debug(tc, "validationKey valMldsaKeys=" + (valMldsaKeys == null ? "null" : "present"));
@@ -268,17 +243,15 @@ public class LTPAToken2Factory implements TokenFactory {
                     if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
                         Tr.debug(tc, "validateTokenBytes with validationKeys: " + ltpaKeyInfo);
                     }
-                    boolean hasClassicalKeys = ltpaPrivateKeyForValidation != null && ltpaPublicKeyForValidation != null;
 
-                    if (sharedKeyForValidation != null && (valMldsaKeys != null || hasClassicalKeys)) {
+                    if (sharedKeyForValidation != null && (valMldsaKeys != null || ltpaPublicKeyForValidation != null)) {
                         try {
                                 if (valMldsaKeys != null) {
-                                    // Derive signing mode from the actual keys available for this validation entry,
-                                    // not from the primary server's signingMode. A PQC-only validation key
-                                    // (no RSA keys) must use "pqc" so LTPAToken2.verify() calls verifyMLDSA.
-                                    String valSigningMode = hasClassicalKeys ? signingMode : "pqc";
+                                    // signingMode is not passed — LTPAToken2.verify() routes on sigAlgForVerify
+                                    // which is set from the token's own content, so it is correct regardless of
+                                    // which keys happen to be present in this validation entry.
                                     validatedToken = new LTPAToken2(tokenBytes, sharedKeyForValidation, ltpaPrivateKeyForValidation, ltpaPublicKeyForValidation,
-                                                                   (PrivateKey) valMldsaKeys[0], (PublicKey) valMldsaKeys[1], valSigningMode,
+                                                                   (PrivateKey) valMldsaKeys[0], (PublicKey) valMldsaKeys[1], signingMode,
                                                                    expDiffAllowed, removeAttributes);
                                 } else {
                                     validatedToken = new LTPAToken2(tokenBytes, sharedKeyForValidation, ltpaPrivateKeyForValidation, ltpaPublicKeyForValidation, expDiffAllowed, removeAttributes);
