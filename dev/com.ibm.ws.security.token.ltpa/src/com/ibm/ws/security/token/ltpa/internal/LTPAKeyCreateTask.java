@@ -12,6 +12,11 @@
  *******************************************************************************/
 package com.ibm.ws.security.token.ltpa.internal;
 
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -24,6 +29,7 @@ import com.ibm.websphere.crypto.PasswordUtil;
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.websphere.ras.annotation.Sensitive;
+import com.ibm.ws.common.crypto.CryptoUtils;
 import com.ibm.ws.crypto.ltpakeyutil.LTPAPrivateKey;
 import com.ibm.ws.crypto.ltpakeyutil.LTPAPublicKey;
 import com.ibm.ws.security.token.ltpa.LTPAConfiguration;
@@ -62,7 +68,8 @@ class LTPAKeyCreateTask implements Runnable {
                                           config.getTryToReEncryptLtpaKeys(),
                                           config.getSigningMode(),
                                           config.getPqcSignatureAlgorithm(),
-                                          config.getClassicalKeySize() / 8);
+                                          config.getClassicalKeySize() / 8,
+                                          config.getResolvedCipher());
         return keyInfoManager;
     }
 
@@ -86,6 +93,9 @@ class LTPAKeyCreateTask implements Runnable {
         tokenFactoryMap.put(LTPAConstants.CONFIGURED_RESOLVED_CIPHER, config.getResolvedCipher());
         tokenFactoryMap.put(LTPAConstants.CONFIGURED_RESOLVED_KEY_LENGTH, config.getResolvedKeyLength());
 
+        byte[] privBytes = keyInfoManager.getPrivateKey(primaryKeyFile);
+        byte[] pubBytes = keyInfoManager.getPublicKey(primaryKeyFile);
+
         if ("pqc".equals(signingMode)) {
             // PQC mode — ML-DSA keys only, no RSA keys in the key file.
             byte[] mldsaPrivateKey = keyInfoManager.getMLDSAPrivateKey(primaryKeyFile);
@@ -93,13 +103,36 @@ class LTPAKeyCreateTask implements Runnable {
             tokenFactoryMap.put(LTPAConstants.PRIMARY_MLDSA_PRIVATE_KEY, mldsaPrivateKey);
             tokenFactoryMap.put(LTPAConstants.PRIMARY_MLDSA_PUBLIC_KEY, mldsaPublicKey);
         } else {
-            // Classical mode — RSA keys only.
-            LTPAPrivateKey primaryPrivateKey = new LTPAPrivateKey(keyInfoManager.getPrivateKey(primaryKeyFile));
-            LTPAPublicKey primaryPublicKey   = new LTPAPublicKey(keyInfoManager.getPublicKey(primaryKeyFile));
-            tokenFactoryMap.put(LTPAConstants.PRIMARY_PRIVATE_KEY, primaryPrivateKey);
-            tokenFactoryMap.put(LTPAConstants.PRIMARY_PUBLIC_KEY, primaryPublicKey);
-        }
+            if (config.getResolvedCipher() == CryptoUtils.AES_CBC_CIPHER) {
+                // Guard: PKCS#8 keys start with the ASN.1 sequence tag 0x30. If that is
+                // detected here it means the ltpa.keys file was generated with useGCM=true
+                // and is incompatible with useGCM=false. Delete ltpa.keys and restart.
+                if (privBytes != null && privBytes.length > 0 && privBytes[0] == 0x30) {
+                    System.out.println("[LTPA-KEY-LOAD] ERROR: ltpa.keys was generated with useGCM=true (PKCS#8 format) "
+                        + "but useGCM=false is now set. Delete ltpa.keys and restart the server to regenerate compatible keys.");
+                }
+                PrivateKey primaryPrivateKey = new LTPAPrivateKey(privBytes);
+                PublicKey primaryPublicKey = new LTPAPublicKey(pubBytes);
 
+                tokenFactoryMap.put(LTPAConstants.PRIMARY_PRIVATE_KEY, primaryPrivateKey);
+                tokenFactoryMap.put(LTPAConstants.PRIMARY_PUBLIC_KEY, primaryPublicKey);
+            } else {
+                PrivateKey primaryPrivateKey = null;
+                PublicKey primaryPublicKey = null;
+                try {
+                    KeyFactory kf = KeyFactory.getInstance("RSA");
+                    primaryPrivateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(privBytes));
+                    primaryPublicKey = kf.generatePublic(new X509EncodedKeySpec(pubBytes));
+                } catch (Exception e) {
+                    System.out.println("[LTPA-KEY-LOAD] FAILED loading standard keys: " + e.getMessage());
+                    if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
+                        Tr.debug(tc, "Error generating keys (standard encoding): " + e.getMessage());
+                    }
+                }
+                tokenFactoryMap.put(LTPAConstants.PRIMARY_PRIVATE_KEY, primaryPrivateKey);
+                tokenFactoryMap.put(LTPAConstants.PRIMARY_PUBLIC_KEY, primaryPublicKey);
+            }
+        }
         return tokenFactoryMap;
     }
 

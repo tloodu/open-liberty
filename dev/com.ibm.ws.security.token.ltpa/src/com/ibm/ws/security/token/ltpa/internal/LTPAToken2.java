@@ -64,8 +64,8 @@ public class LTPAToken2 implements Token, Serializable {
     private UserData userData;
     private long expirationInMilliseconds;
     private final byte[] sharedKey;
-    private final LTPAPrivateKey privateKey;
-    private final LTPAPublicKey publicKey;
+    private final PrivateKey privateKey;
+    private final PublicKey publicKey;
    
     // PQC: ML-DSA keys (Issue #35556 - Task 2.7)
     private final PrivateKey mldsaPrivateKey;
@@ -101,12 +101,12 @@ public class LTPAToken2 implements Token, Serializable {
      * @param publicKey  The LTPA public key
      * @param attributes The list of attributes will be removed from the LTPA2 token
      */
-     public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, LTPAPrivateKey privateKey, LTPAPublicKey publicKey, long expDiffAllowed,
+     public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, PrivateKey privateKey, PublicKey publicKey, long expDiffAllowed,
                         String... attributes) throws InvalidTokenException, TokenExpiredException {
         this(tokenBytes, sharedKey, privateKey, publicKey, null, null, PQCConstants.CRYPTO_MODE_CLASSICAL, expDiffAllowed, attributes);
      }
 
-    public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
+    public LTPAToken2(byte[] tokenBytes, @Sensitive byte[] sharedKey, PrivateKey privateKey, PublicKey publicKey,
                       PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode, long expDiffAllowed,
                       String... attributes) throws InvalidTokenException, TokenExpiredException {
         checkTokenBytes(tokenBytes);
@@ -144,18 +144,18 @@ public class LTPAToken2 implements Token, Serializable {
      */
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
-                         LTPAPrivateKey privateKey, LTPAPublicKey publicKey) {
+                         PrivateKey privateKey, PublicKey publicKey) {
         this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, null, null, "classical", null, null, 0);
     }
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
-                         LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
+                         PrivateKey privateKey, PublicKey publicKey,
                          PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode) {
         this(accessID, expirationInMinutes, sharedKey, privateKey, publicKey, mldsaPrivateKey, mldsaPublicKey, signingMode, null, null, 0);
     }
 
     protected LTPAToken2(String accessID, long expirationInMinutes, @Sensitive byte[] sharedKey,
-                         LTPAPrivateKey privateKey, LTPAPublicKey publicKey,
+                         PrivateKey privateKey, PublicKey publicKey,
                          PrivateKey mldsaPrivateKey, PublicKey mldsaPublicKey, String signingMode, String classicalSigAlg,
                          String resolvedCipher, int resolvedKeyLength) {
         this.signature = null;
@@ -182,7 +182,7 @@ public class LTPAToken2 implements Token, Serializable {
      * @param publicKey           The LTPA public key
      * @param userdata            The UserData
      */
-    protected LTPAToken2(long expirationInMinutes, @Sensitive byte[] sharedKey, LTPAPrivateKey privateKey, LTPAPublicKey publicKey, UserData userdata) {
+    protected LTPAToken2(long expirationInMinutes, @Sensitive byte[] sharedKey, PrivateKey privateKey, PublicKey publicKey, UserData userdata) {
         this.signature = null;
         this.encryptedBytes = null;
         this.sharedKey = sharedKey.clone();
@@ -411,17 +411,26 @@ public class LTPAToken2 implements Token, Serializable {
     }
 
 
-    private final byte[] sign(byte[] msg, LTPAPrivateKey privKey) throws Exception {
-        byte[] data;
-        synchronized (lockObj1) {
-            data = md1JCE.digest(msg);
-        }
-        byte[][] rsaPrivKey = LTPAKeyUtil.getRawKey(privKey);
-        LTPAKeyUtil.setRSAKey(rsaPrivKey);
-        byte[] signature;
-        signature = LTPAKeyUtil.signISO9796(rsaPrivKey, data, 0, data.length);
+    private final byte[] sign(byte[] msg, PrivateKey privKey) throws Exception {
+        if(privKey instanceof LTPAPrivateKey) {
+            System.out.println("[LTPA-SIGN] Signing token with CUSTOM LTPA encoding (LTPAPrivateKey -> signISO9796)");
+            byte[] data;
+            synchronized (lockObj1) {
+                data = md1JCE.digest(msg);
+            }
+            byte[][] rsaPrivKey = LTPAKeyUtil.getRawKey((LTPAPrivateKey) privKey);
+            LTPAKeyUtil.setRSAKey(rsaPrivKey);
+            byte[] signature;
+            signature = LTPAKeyUtil.signISO9796(rsaPrivKey, data, 0, data.length);
+            return signature;
 
-        return signature;
+        } else {
+            System.out.println("[LTPA-SIGN] Signing token with STANDARD encoding (java.security.PrivateKey -> JCE Signature)");
+            // might have to pass in byte[] data instead of msg 
+            byte[] signature;
+            signature = LTPAKeyUtil.sign(privKey, msg, 0, msg.length);
+            return signature;
+        }
     }
 
     /**
@@ -438,26 +447,25 @@ public class LTPAToken2 implements Token, Serializable {
         }
     }
 
-    private final boolean verify(byte[] msg, byte[] signature, LTPAPublicKey pubKey) throws Exception {
+    private final boolean verify(byte[] msg, byte[] signature, PublicKey pubKey) throws Exception {
         if (msg == null) {
             throw new IllegalArgumentException("null message");
         } else if (signature == null) {
             throw new IllegalArgumentException("null signature");
         }
 
-        byte[] data;
-        synchronized (lockObj2) {
-            data = md2JCE.digest(msg);
+        if (pubKey instanceof LTPAPublicKey) {
+            System.out.println("[LTPA-VERIFY] Verifying token with CUSTOM LTPA encoding (LTPAPublicKey -> verifyISO9796)");
+            byte[] data;
+            synchronized (lockObj2) {
+                data = md2JCE.digest(msg);
+            }
+            byte[][] rsaPubKey = LTPAKeyUtil.getRawKey((LTPAPublicKey) pubKey);
+            return LTPAKeyUtil.verifyISO9796(rsaPubKey, data, 0, data.length, signature, 0, signature.length);
+        } else {
+            System.out.println("[LTPA-VERIFY] Verifying token with STANDARD encoding (java.security.PublicKey -> JCE Signature.verify)");
+            return LTPAKeyUtil.verify(pubKey, msg, 0, msg.length, signature);
         }
-
-        // sigAlgForVerify is always set by decrypt() before verify() is called —
-        // either from the token header or from the legacy CBC pair probe.
-        // Use it directly: one algorithm, one verify call, no fallback loop.
-        if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
-            Tr.debug(this, tc, "verify: using sigAlg=" + sigAlgForVerify);
-        }
-        byte[][] rsaPubKey = LTPAKeyUtil.getRawKey(pubKey);
-        return LTPAKeyUtil.verifyISO9796(rsaPubKey, data, 0, data.length, signature, 0, signature.length);
     }
 
     /** {@inheritDoc} */

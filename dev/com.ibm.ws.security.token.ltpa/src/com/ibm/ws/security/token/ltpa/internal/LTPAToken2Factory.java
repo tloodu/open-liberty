@@ -40,8 +40,8 @@ public class LTPAToken2Factory implements TokenFactory {
     private static final TraceComponent tc = Tr.register(LTPAToken2Factory.class);
     private long expirationInMinutes;
     private byte[] primarySharedKey;
-    private LTPAPublicKey primaryPublicKey;
-    private LTPAPrivateKey primaryPrivateKey;
+    private PublicKey primaryPublicKey;
+    private PrivateKey primaryPrivateKey;
     private CopyOnWriteArrayList<LTPAValidationKeysInfo> validationKeys;
     private long expDiffAllowed;
 
@@ -61,8 +61,8 @@ public class LTPAToken2Factory implements TokenFactory {
     public void initialize(@Sensitive Map tokenFactoryMap) {
         expirationInMinutes = (Long) tokenFactoryMap.get(LTPAConstants.EXPIRATION);
         primarySharedKey = (byte[]) tokenFactoryMap.get(LTPAConstants.PRIMARY_SECRET_KEY);
-        primaryPublicKey = (LTPAPublicKey) tokenFactoryMap.get(LTPAConstants.PRIMARY_PUBLIC_KEY);
-        primaryPrivateKey = (LTPAPrivateKey) tokenFactoryMap.get(LTPAConstants.PRIMARY_PRIVATE_KEY);
+        primaryPublicKey = (PublicKey) tokenFactoryMap.get(LTPAConstants.PRIMARY_PUBLIC_KEY);
+        primaryPrivateKey = (PrivateKey) tokenFactoryMap.get(LTPAConstants.PRIMARY_PRIVATE_KEY);
         expDiffAllowed = (Long) tokenFactoryMap.get(LTPAConfigurationImpl.KEY_EXP_DIFF_ALLOWED);
         validationKeys = (CopyOnWriteArrayList<LTPAValidationKeysInfo>) tokenFactoryMap.get(LTPAConstants.VALIDATION_KEYS);
 

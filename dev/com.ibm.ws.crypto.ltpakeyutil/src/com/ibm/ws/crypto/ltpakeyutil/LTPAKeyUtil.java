@@ -12,6 +12,9 @@
  *******************************************************************************/
 package com.ibm.ws.crypto.ltpakeyutil;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
+
 public final class LTPAKeyUtil {
 
 	public static byte[] encrypt(byte[] data, byte[] key, String cipher) throws Exception {
@@ -57,6 +60,10 @@ public final class LTPAKeyUtil {
 		return LTPACrypto.verifyISO9796(key, data, off, len, sig, sigOff, sigLen);
 	}
 
+	public static boolean verify(PublicKey key, byte[] data, int off, int len, byte[] sig) throws Exception {
+		return LTPACrypto.verify(key, data, off, len, sig);
+	}
+
         /**
          * Encrypt data using AES-GCM (authenticated encryption).
          * PQC Issue #35556 - Task 2.6
@@ -85,6 +92,10 @@ public final class LTPAKeyUtil {
 
 	public static byte[] signISO9796(byte[][] key, byte[] data, int off, int len) throws Exception {
 		return LTPACrypto.signISO9796(key, data, off, len);
+	}
+
+	public static byte[] sign(PrivateKey key, byte[] data, int off, int len) throws Exception {
+		return LTPACrypto.sign(key, data, off, len);
 	}
 
 	public static void setRSAKey(byte[][] key) {

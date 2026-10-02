@@ -69,7 +69,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
 			byte[] publicKeyBytes, final String realm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, 0);
+		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, 0, null);
 	}
 
 	/**
@@ -86,7 +86,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 * @throws Exception
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
-			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, int classicalKeySize) throws Exception {
+			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws Exception {
 		Properties expProps = null;
 
 		try {
@@ -107,9 +107,15 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 
 			if (mldsaAlgorithm == null) {
 				if (publicKeyBytes == null && privateKeyBytes == null) {
-					LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair(classicalKeySize);
-					publicKeyBytes = pair.getPublic().getEncoded();
-					privateKeyBytes = pair.getPrivate().getEncoded();
+					if (resolvedCipher == CryptoUtils.AES_CBC_CIPHER) {
+						LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair(classicalKeySize);
+						publicKeyBytes = pair.getPublic().getEncoded();
+						privateKeyBytes = pair.getPrivate().getEncoded();
+					} else {
+						KeyPair pair = LTPACrypto.rsaKey(classicalKeySize);
+						publicKeyBytes = pair.getPublic().getEncoded();
+						privateKeyBytes = pair.getPrivate().getEncoded();
+					}
 				}
 				byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
 				expProps.put(KEYIMPORT_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedPrivateKeyBytes));

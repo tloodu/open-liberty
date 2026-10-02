@@ -136,9 +136,9 @@ public class LTPAKeyInfoManager {
      */
     @SuppressWarnings("deprecation")
     public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
-                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize) throws Exception {
+                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws Exception {
         if (!this.importFileCache.contains(primaryKeyImportFile)) {
-            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize);
+            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
         }
         if (validationKeys != null && !validationKeys.isEmpty()) {
             ltpaValidationKeysInfos.clear();
@@ -164,7 +164,7 @@ public class LTPAKeyInfoManager {
 
                     byte[] password = getKeyPasswordBytes(vKeys);
                     boolean isConfiguredValidationKey = Boolean.valueOf(vKeys.getProperty(LTPAConfiguration.INTERNAL_KEY_IS_CONFIGURED_VALIDATION_KEY));
-                    loadLtpaKeysFile(locService, filename, password, true, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize);
+                    loadLtpaKeysFile(locService, filename, password, true, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
                 }
             }
         }
@@ -219,7 +219,7 @@ public class LTPAKeyInfoManager {
      * @throws Exception
      */
     private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
-                                  OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize) throws IOException, Exception {
+                                  OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws IOException, Exception {
         // Need to load the key import file
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             Tr.event(this, tc, "Loading LTPA " + (validationKey == true ? "validation" : "primary") + "Keys file: " + keyImportFile);
@@ -248,7 +248,7 @@ public class LTPAKeyInfoManager {
                         props = loadPropertiesFile(ltpaKeyFileResource);
                     } else {
                         //regenerate the primary key
-                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize);
+                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
                     }
                 }
             }
@@ -257,7 +257,7 @@ public class LTPAKeyInfoManager {
             Tr.error(tc, "LTPA_KEYS_FILE_DOES_NOT_EXIST", keyImportFile);
             return;
         } else { //Primary keys file does not exist so create the primary key
-            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize);
+            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
         }
 
         if (props == null || props.isEmpty()) {
@@ -495,7 +495,7 @@ public class LTPAKeyInfoManager {
      * @return
      * @throws Exception
      */
-    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String signingMode, String mldsaAlgorithm, int classicalKeySize) throws Exception {
+    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String signingMode, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws Exception {
         long start = System.currentTimeMillis();
         Tr.info(tc, "LTPA_CREATE_KEYS_START");
 
@@ -504,7 +504,7 @@ public class LTPAKeyInfoManager {
         if ("pqc".equals(signingMode)) {
             props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
         } else {
-            props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, classicalKeySize);
+            props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, classicalKeySize, resolvedCipher);
         }
 
         Tr.audit(tc, "LTPA_CREATE_KEYS_COMPLETE", TimestampUtils.getElapsedTime(start), keyImportFile);

@@ -250,6 +250,16 @@ final class LTPACrypto {
         RSAPrivateCrtKeySpec privCrtKeySpec = new RSAPrivateCrtKeySpec(n, e, d, p, q, pep, peq, crtC);
         PrivateKey privKey = kFact.generatePrivate(privCrtKeySpec);
 
+        byte[] sig = sign(privKey, data, off, len);
+
+        cryptoKeysMap.put(ck, ck);
+        ck.result = sig;
+        ck.successfulUses = 0;
+
+        return sig;
+    }
+
+    protected static byte[] sign(PrivateKey privKey, byte[] data, int off, int len) throws Exception {
         Signature rsaSig = null;
 
         rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
@@ -258,11 +268,6 @@ final class LTPACrypto {
         rsaSig.initSign(privKey);
         rsaSig.update(data, off, len);
         byte[] sig = rsaSig.sign();
-
-        cryptoKeysMap.put(ck, ck);
-        ck.result = sig;
-        ck.successfulUses = 0;
-
         return sig;
     }
 
@@ -525,16 +530,22 @@ final class LTPACrypto {
         RSAPublicKeySpec pubKeySpec = new RSAPublicKeySpec(n, e);
         PublicKey pubKey = kFact.generatePublic(pubKeySpec);
 
-        rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
-                : Signature.getInstance(signatureAlgorithm, provider);
-
-        rsaSig.initVerify(pubKey);
-        rsaSig.update(data, off, len);
-        verified = rsaSig.verify(sig);
+        verified = verify(pubKey, data, off, len, sig);
 
         verifyKeysMap.put(ck, ck);
         ck.result = verified;
         ck.successfulUses = 0;
+
+        return verified;
+    }
+
+    protected static boolean verify(PublicKey pubKey, byte[] data, int off, int len, byte[] sig) throws Exception {
+        Signature rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
+                : Signature.getInstance(signatureAlgorithm, provider);
+
+        rsaSig.initVerify(pubKey);
+        rsaSig.update(data, off, len);
+        boolean verified = rsaSig.verify(sig);
 
         return verified;
     }
@@ -865,18 +876,31 @@ final class LTPACrypto {
         return CryptoUtils.generateRandomBytes(CryptoUtils.AES_256_KEY_LENGTH_BYTES);
     }
 
-    @Trivial
-    static final byte[][] rsaKey(int len, boolean crt, boolean f4) {
-        byte[][] key = new byte[crt ? 8 : 3][];
-        KeyPair pair = null;
-        KeyPairGenerator keyGen = null;
-        try {
+    static final KeyPair rsaKey(int len) {
 
+        try {
+            KeyPair pair = null;
+            KeyPairGenerator keyGen = null;
             keyGen = (provider == null) ? KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
-                    : KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
+                        : KeyPairGenerator.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
 
             keyGen.initialize(len * 8, new SecureRandom());
             pair = keyGen.generateKeyPair();
+
+            return pair;
+        } catch (java.security.NoSuchAlgorithmException | java.security.NoSuchProviderException e) {
+            return null;
+        }
+    }
+
+    @Trivial
+    static final byte[][] rsaKey(int len, boolean crt, boolean f4) {
+        byte[][] key = new byte[crt ? 8 : 3][];
+        
+        try {
+
+            KeyPair pair = rsaKey(len);
+
             RSAPublicKey rsaPubKey = (RSAPublicKey) pair.getPublic();
             RSAPrivateCrtKey rsaPrivKey = (RSAPrivateCrtKey) pair.getPrivate();
 
@@ -899,11 +923,7 @@ final class LTPACrypto {
                 key[6] = eq.toByteArray();
                 key[7] = c.toByteArray();
             }
-        } catch (java.security.NoSuchAlgorithmException e) {
-            // instrumented ffdc
-        } catch (java.security.NoSuchProviderException e) {
-            // instrumented ffdc
-        } catch (java.lang.UnsupportedOperationException uoe) {
+        }  catch (java.lang.UnsupportedOperationException uoe) {
             // This is when hard ware crypto provider is at the top of java.security
             // Using the different key creation routines.
             System.out.println(
