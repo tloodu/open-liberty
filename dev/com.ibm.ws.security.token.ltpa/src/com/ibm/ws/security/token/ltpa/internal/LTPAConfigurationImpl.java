@@ -191,6 +191,12 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
         String oldUpdateTrigger = updateTrigger;
         List<Properties> oldValidationKeys = new ArrayList<Properties>();
         oldValidationKeys.addAll(validationKeys);
+        String oldTokenVersion = tokenVersion;
+        String oldSigningMode = signingMode;
+        String oldClassicalSignatureAlgorithm = classicalSignatureAlgorithm;
+        int oldClassicalKeySize = classicalKeySize;
+        String oldPqcSignatureAlgorithm = pqcSignatureAlgorithm;
+        String oldEncryptionAlgorithm = encryptionAlgorithm;
 
         if (TraceComponent.isAnyTracingEnabled() && tc.isDebugEnabled()) {
             Tr.debug(tc, "oldValidationKeys: " + maskKeysPasswords(oldValidationKeys));
@@ -199,7 +205,8 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
         try {
             loadConfig(props);
 
-            if (isKeysConfigChanged(oldKeyImportFile, oldKeyTokenExpiration, oldExpirationDifferenceAllowed, oldMonitorValidationKeysDir, oldUpdateTrigger, oldValidationKeys)) {
+            if (isKeysConfigChanged(oldKeyImportFile, oldKeyTokenExpiration, oldExpirationDifferenceAllowed, oldMonitorValidationKeysDir, oldUpdateTrigger, oldValidationKeys,
+                                    oldTokenVersion, oldSigningMode, oldClassicalSignatureAlgorithm, oldClassicalKeySize, oldPqcSignatureAlgorithm, oldEncryptionAlgorithm)) {
                 unsetFileMonitorRegistration();
                 Tr.audit(tc, "LTPA_KEYS_TO_LOAD", primaryKeyImportFile);
                 setupRuntimeLTPAInfrastructure();
@@ -786,12 +793,21 @@ public class LTPAConfigurationImpl implements LTPAConfiguration, FileBasedAction
      */
     private boolean isKeysConfigChanged(String oldKeyImportFile, Long oldKeyTokenExpiration, Long oldExpirationDifferenceAllowed, boolean oldMonitorValidationKeysDir,
                                         String oldUpdateTrigger,
-                                        @Sensitive List<Properties> oldValidationKeys) {
+                                        @Sensitive List<Properties> oldValidationKeys,
+                                        String oldTokenVersion, String oldSigningMode,
+                                        String oldClassicalSignatureAlgorithm, int oldClassicalKeySize,
+                                        String oldPqcSignatureAlgorithm, String oldEncryptionAlgorithm) {
         return ((oldKeyImportFile.equals(primaryKeyImportFile) == false)
                 || (oldKeyTokenExpiration != keyTokenExpiration)
                 || (oldExpirationDifferenceAllowed != expirationDifferenceAllowed)
                 || (oldMonitorValidationKeysDir != monitorValidationKeysDir)
                 || (oldUpdateTrigger != updateTrigger)
+                || (oldTokenVersion != tokenVersion)
+                || (oldSigningMode != signingMode)
+                || (oldClassicalSignatureAlgorithm != classicalSignatureAlgorithm)
+                || (oldClassicalKeySize != classicalKeySize)
+                || (oldPqcSignatureAlgorithm != pqcSignatureAlgorithm)
+                || (oldEncryptionAlgorithm != encryptionAlgorithm)
                 || (isValidationKeysConfigured(oldValidationKeys)));
     }
 

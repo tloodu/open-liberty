@@ -21,7 +21,9 @@ public interface LTPAKeyFileUtility {
 	/**
 	 * Properties used in the LTPA keys file.
 	 */
-	public static final String KEYIMPORT_SECRETKEY = CryptoUtils.isFips140_3Enabled() ? "com.ibm.websphere.ltpa.SharedKey" : "com.ibm.websphere.ltpa.3DESKey";
+	public static final String KEYIMPORT_SECRETKEY_V1 = "com.ibm.websphere.ltpa.3DESKey";
+	public static final String KEYIMPORT_SECRETKEY_V2 = "com.ibm.websphere.ltpa.SharedKey";
+	public static final String KEYIMPORT_SECRETKEY = CryptoUtils.isFips140_3Enabled() ? KEYIMPORT_SECRETKEY_V2 : KEYIMPORT_SECRETKEY_V1;
 	public static final String KEYIMPORT_PRIVATEKEY = "com.ibm.websphere.ltpa.PrivateKey";
 	public static final String KEYIMPORT_PUBLICKEY = "com.ibm.websphere.ltpa.PublicKey";
 	public static final String KEYIMPORT_REALM = "com.ibm.websphere.ltpa.Realm";

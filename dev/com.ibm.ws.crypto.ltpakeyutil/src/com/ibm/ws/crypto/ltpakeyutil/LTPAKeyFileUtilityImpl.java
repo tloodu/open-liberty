@@ -69,7 +69,7 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
 			byte[] publicKeyBytes, final String realm) throws Exception {
-		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, 0, null);
+		return generateLTPAKeys(keyPasswordBytes, sharedKeyBytes, privateKeyBytes, publicKeyBytes, realm, null, 0);
 	}
 
 	/**
@@ -81,12 +81,12 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	 * @param publicKeyBytes    existing RSA public key, or {@code null} to generate (classical only)
 	 * @param realm             realm name stored in the key file
 	 * @param mldsaAlgorithm    ML-DSA algorithm (e.g. "ML-DSA-65"); non-null selects PQC mode
-	 * @param classicalKeySize  RSA key size in bytes (e.g. 128=1024-bit, 256=2048-bit); 0 uses FIPS-aware default
+	 * @param classicalKeySize  RSA key size in bytes (128=RSA-1024, 256=RSA-2048); 0 uses default
 	 * @return Properties containing all LTPA key attributes
 	 * @throws Exception
 	 */
 	protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes,
-			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws Exception {
+			byte[] publicKeyBytes, final String realm, String mldsaAlgorithm, int classicalKeySize) throws Exception {
 		Properties expProps = null;
 
 		try {
@@ -96,34 +96,50 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 			if (sharedKeyBytes == null) {
 				sharedKeyBytes = LTPACrypto.generateSharedKey();
 			}
-			byte[] encryptedSharedKeyBytes = encryptor.encrypt(sharedKeyBytes);
 
 			expProps = new Properties();
-			expProps.put(KEYIMPORT_SECRETKEY, Base64Coder.base64EncodeToString(encryptedSharedKeyBytes));
 			expProps.put(KEYIMPORT_REALM, realm);
 			expProps.put(CREATION_HOST_PROPERTY, "localhost");
-			expProps.put(LTPA_VERSION_PROPERTY, CryptoUtils.isFips140_3Enabled() ? "2.0" : "1.0");
 			expProps.put(CREATION_DATE_PROPERTY, (new java.util.Date()).toString());
 
 			if (mldsaAlgorithm == null) {
-				if (publicKeyBytes == null && privateKeyBytes == null) {
-					if (resolvedCipher == CryptoUtils.AES_CBC_CIPHER) {
-						LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair(classicalKeySize);
-						publicKeyBytes = pair.getPublic().getEncoded();
-						privateKeyBytes = pair.getPrivate().getEncoded();
-					} else {
-						KeyPair pair = LTPACrypto.rsaKey(classicalKeySize);
-						publicKeyBytes = pair.getPublic().getEncoded();
-						privateKeyBytes = pair.getPrivate().getEncoded();
-					}
+				if (classicalKeySize <= 0) {
+					classicalKeySize = LTPADigSignature.keySize;
 				}
-				byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
+				// v2.0 = RSA-2048 (classicalKeySize >= 256 bytes).
+				// v1.0 = RSA-1024 (classicalKeySize < 256 bytes).
+				boolean rsa2048 = (classicalKeySize >= 256);
+				expProps.put(LTPA_VERSION_PROPERTY, rsa2048 ? "2.0" : "1.0");
+
+				if (rsa2048) {
+					// v2.0: encrypt with AES regardless of FIPS mode so any server can load the file.
+					expProps.put(KEYIMPORT_SECRETKEY_V2,
+					             Base64Coder.base64EncodeToString(encryptor.encryptAES(sharedKeyBytes)));
+				} else {
+					// v1.0: legacy DES/AES encryption determined by FIPS mode.
+					expProps.put(KEYIMPORT_SECRETKEY_V1,
+					             Base64Coder.base64EncodeToString(encryptor.encrypt(sharedKeyBytes)));
+				}
+
+				if (publicKeyBytes == null && privateKeyBytes == null) {
+					LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair(classicalKeySize);
+					publicKeyBytes = pair.getPublic().getEncoded();
+					privateKeyBytes = pair.getPrivate().getEncoded();
+				}
+				byte[] encryptedPrivateKeyBytes = rsa2048
+				        ? encryptor.encryptAES(privateKeyBytes)
+				        : encryptor.encrypt(privateKeyBytes);
 				expProps.put(KEYIMPORT_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedPrivateKeyBytes));
 				expProps.put(KEYIMPORT_PUBLICKEY, Base64Coder.base64EncodeToString(publicKeyBytes));
 			} else {
+				// v3.0 = PQC (ML-DSA keys only, no RSA keys).
+				// Encrypt with AES regardless of FIPS mode so any server can load the file.
+				expProps.put(LTPA_VERSION_PROPERTY, "3.0");
+				expProps.put(KEYIMPORT_SECRETKEY_V1,
+				             Base64Coder.base64EncodeToString(encryptor.encryptAES(sharedKeyBytes)));
 				KeyPair mldsaKeyPair = generateMLDSAKeyPair(mldsaAlgorithm);
 				if (mldsaKeyPair != null) {
-					byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encrypt(mldsaKeyPair.getPrivate().getEncoded());
+					byte[] encryptedMLDSAPrivateKeyBytes = encryptor.encryptAES(mldsaKeyPair.getPrivate().getEncoded());
 					expProps.put(KEYIMPORT_MLDSA_PUBLICKEY, Base64Coder.base64EncodeToString(mldsaKeyPair.getPublic().getEncoded()));
 					expProps.put(KEYIMPORT_MLDSA_PRIVATEKEY, Base64Coder.base64EncodeToString(encryptedMLDSAPrivateKeyBytes));
 				}
@@ -184,60 +200,18 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
 	}
 
 	/**
-	 * Generate ML-DSA (Dilithium) key pair for PQC support. Uses Java 25's built-in
-	 * ML-DSA support without requiring MLDSAParameterSpec. The KeyPairGenerator
-	 * uses default parameters (ML-DSA-65) when not explicitly initialized.
+	 * Generate an ML-DSA key pair for PQC support.
 	 *
 	 * @param algorithm ML-DSA algorithm name (e.g. "ML-DSA-44", "ML-DSA-65", "ML-DSA-87")
-	 * @return KeyPair containing ML-DSA public and private keys, or null if
-	 *         generation fails
+	 * @return KeyPair containing ML-DSA public and private keys, or null if generation fails
 	 */
 	private KeyPair generateMLDSAKeyPair(String algorithm) {
-		System.out.println("DEBUG: Starting ML-DSA key pair generation");
-		System.out.println("DEBUG: Java version: " + System.getProperty("java.version"));
-		System.out.println("DEBUG: Java vendor: " + System.getProperty("java.vendor"));
-
 		try {
-			// List all available security providers
-			System.out.println("DEBUG: Available security providers:");
-			java.security.Provider[] providers = java.security.Security.getProviders();
-			for (java.security.Provider provider : providers) {
-				System.out.println("DEBUG:   - " + provider.getName() + " (version " + provider.getVersion() + ")");
-				// Check if provider supports ML-DSA
-				if (provider.getService("KeyPairGenerator", "ML-DSA") != null) {
-					System.out.println("DEBUG:     * Supports ML-DSA KeyPairGenerator");
-				}
-			}
-
-			// Generate ML-DSA key pair using default SUN provider
-			// Note: IBM Java 25 doesn't expose MLDSAParameterSpec class, but the
-			// KeyPairGenerator
-			// works with default parameters (ML-DSA-65) without explicit initialization
-			System.out.println("DEBUG: Getting KeyPairGenerator instance for ML-DSA...");
 			java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance(algorithm);
-			System.out.println("DEBUG: KeyPairGenerator obtained, provider: " + keyGen.getProvider().getName());
-			System.out.println("DEBUG: Using algorithm: " + algorithm);
-
-			System.out.println("DEBUG: Generating ML-DSA key pair...");
-			KeyPair keyPair = keyGen.generateKeyPair();
-			System.out.println("DEBUG: ML-DSA key pair generated successfully!");
-			System.out.println("DEBUG: Public key algorithm: " + keyPair.getPublic().getAlgorithm());
-			System.out.println("DEBUG: Public key format: " + keyPair.getPublic().getFormat());
-			System.out.println("DEBUG: Public key size: " + keyPair.getPublic().getEncoded().length + " bytes");
-			System.out.println("DEBUG: Private key algorithm: " + keyPair.getPrivate().getAlgorithm());
-			System.out.println("DEBUG: Private key format: " + keyPair.getPrivate().getFormat());
-			System.out.println("DEBUG: Private key size: " + keyPair.getPrivate().getEncoded().length + " bytes");
-
-			return keyPair;
+			return keyGen.generateKeyPair();
 		} catch (java.security.NoSuchAlgorithmException e) {
-			System.err.println("ERROR: ML-DSA algorithm not available in any security provider");
-			System.err.println("ERROR: Exception: " + e.getClass().getName() + ": " + e.getMessage());
-			e.printStackTrace(System.err);
 			return null;
 		} catch (Exception e) {
-			System.err.println("ERROR: ML-DSA key generation failed");
-			System.err.println("ERROR: Exception: " + e.getClass().getName() + ": " + e.getMessage());
-			e.printStackTrace(System.err);
 			return null;
 		}
 	}

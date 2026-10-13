@@ -88,11 +88,15 @@ public class LTPAKeyInfoManager {
     private static final String MLDSA_PUBLICKEY = "mldsapublickey";
     private static final String LTPA_KEYS_BACKUP_EXTENSION = ".defaultpassword.backup";
 
+    private static final int MLDSA_44_65_THRESHOLD  = 1700; // 1312..1700 → ML-DSA-44
+    private static final int MLDSA_65_87_THRESHOLD  = 2300; // 1701..2300 → ML-DSA-65
+
     private final List<String> importFileCache = new ArrayList<String>();
     private final Map<String, byte[]> keyCache = new Hashtable<String, byte[]>();
     private final Map<String, String> realmCache = new Hashtable<String, String>();
     private final String suffixNoFips = ".nofips";
     private final String suffixFips = ".fips";
+    private final String suffixPqc = ".pqc";
 
     private static CopyOnWriteArrayList<LTPAValidationKeysInfo> ltpaValidationKeysInfos = new CopyOnWriteArrayList<LTPAValidationKeysInfo>();
 
@@ -136,9 +140,9 @@ public class LTPAKeyInfoManager {
      */
     @SuppressWarnings("deprecation")
     public synchronized final void prepareLTPAKeyInfo(WsLocationAdmin locService, String primaryKeyImportFile, @Sensitive byte[] primaryKeyPassword,
-                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws Exception {
+                                                      @Sensitive List<Properties> validationKeys, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize) throws Exception {
         if (!this.importFileCache.contains(primaryKeyImportFile)) {
-            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
+            loadLtpaKeysFile(locService, primaryKeyImportFile, primaryKeyPassword, false, false, null, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize);
         }
         if (validationKeys != null && !validationKeys.isEmpty()) {
             ltpaValidationKeysInfos.clear();
@@ -164,7 +168,7 @@ public class LTPAKeyInfoManager {
 
                     byte[] password = getKeyPasswordBytes(vKeys);
                     boolean isConfiguredValidationKey = Boolean.valueOf(vKeys.getProperty(LTPAConfiguration.INTERNAL_KEY_IS_CONFIGURED_VALIDATION_KEY));
-                    loadLtpaKeysFile(locService, filename, password, true, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
+                    loadLtpaKeysFile(locService, filename, password, true, isConfiguredValidationKey, validUntilDateOdt, tryToReEncryptLtpaKeys, signingMode, mldsaAlgorithm, classicalKeySize);
                 }
             }
         }
@@ -219,7 +223,7 @@ public class LTPAKeyInfoManager {
      * @throws Exception
      */
     private void loadLtpaKeysFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, boolean validationKey, boolean isConfiguredValidationKey,
-                                  OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws IOException, Exception {
+                                  OffsetDateTime validUntilDateOdt, boolean tryToReEncryptLtpaKeys, String signingMode, String mldsaAlgorithm, int classicalKeySize) throws IOException, Exception {
         // Need to load the key import file
         if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
             Tr.event(this, tc, "Loading LTPA " + (validationKey == true ? "validation" : "primary") + "Keys file: " + keyImportFile);
@@ -234,22 +238,74 @@ public class LTPAKeyInfoManager {
             if (tc.isDebugEnabled()) {
                 Tr.debug(this, tc, "LTPA key version: " + version);
             }
-            if ((CryptoUtils.isFips140_3Enabled() && "1.0".equals(version)) ||
-                (!CryptoUtils.isFips140_3Enabled() && "2.0".equals(version))) {
-                if (validationKey) {
-                    if ("1.0".equals(version))
-                        Tr.warning(tc, "LTPA_VALIDATION_KEYS_NEED_TO_REGENERATE", keyImportFile);
-                    else
-                        Tr.warning(tc, "LTPA_FIPS_VALIDATION_KEYS_NEED_TO_REGENERATE", keyImportFile);
-                    return;
+
+            boolean isPqcMode = "pqc".equals(signingMode);
+            boolean isFips = CryptoUtils.isFips140_3Enabled();
+
+            if (!validationKey) {
+                // Determine whether the primary key file version is compatible with the resolved
+                // configuration (PQC mode vs. classical RSA key size).
+                boolean versionMismatch = false;
+                String restoreSuffix = null;
+
+                if (isPqcMode) {
+                    if (!"3.0".equals(version)) {
+                        versionMismatch = true;
+                        restoreSuffix = suffixPqc;
+                    }
                 } else {
+                    // Classical mode configured
+                    if ("3.0".equals(version)) {
+                        // Classical mode configured, but file is v3.0 (ML-DSA-only).
+                        // Back up with .pqc, restore from the suffix that matches the configured RSA key size:
+                        //   RSA-2048 (classicalKeySize >= 256) → .fips  (where v2.0 backups are stored)
+                        //   RSA-1024 (classicalKeySize <  256) → .nofips (where v1.0 backups are stored)
+                        versionMismatch = true;
+                        restoreSuffix = (classicalKeySize >= 256) ? suffixFips : suffixNoFips;
+                    } else if (classicalKeySize >= 256 && "1.0".equals(version)) {
+                        // RSA-2048 configured, but file is v1.0 (RSA-1024).
+                        // Back up with .nofips, restore .fips backup if available, else regenerate to v2.0.
+                        versionMismatch = true;
+                        restoreSuffix = suffixFips;
+                    } else if (classicalKeySize < 256 && "2.0".equals(version)) {
+                        // RSA-1024 configured, but file is v2.0 (RSA-2048).
+                        // Back up with .fips, restore .nofips backup if available, else regenerate to v1.0.
+                        versionMismatch = true;
+                        restoreSuffix = suffixNoFips;
+                    }
+                }
+
+                if (versionMismatch) {
                     backupLtpaKeyFile(locService, keyImportFile, ltpaKeyFileResource, version);
-                    if (restoreLtpaKeyFile(locService, keyImportFile, ltpaKeyFileResource)) {
+                    if (restoreLtpaKeyFile(locService, keyImportFile, ltpaKeyFileResource, restoreSuffix)) {
                         props = loadPropertiesFile(ltpaKeyFileResource);
                     } else {
-                        //regenerate the primary key
-                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
+                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize);
                     }
+                } else {
+                    // ---------------------------------------------------------------
+                    // Configuration-mismatch detection: version is compatible with the
+                    // current mode, but the stored key sizes do not match the server
+                    // configuration.  No backup is taken; keys are regenerated in-place.
+                    // ---------------------------------------------------------------
+                    if (isRsaKeySizeMismatch(props, classicalKeySize)) {
+                        if (tc.isDebugEnabled()) {
+                            Tr.debug(this, tc, "RSA key size mismatch for " + keyImportFile + "; regenerating.");
+                        }
+                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize);
+                    } else if (isMldsaKeySizeMismatch(props, mldsaAlgorithm)) {
+                        if (tc.isDebugEnabled()) {
+                            Tr.debug(this, tc, "ML-DSA key size mismatch for " + keyImportFile + "; regenerating.");
+                        }
+                        props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize);
+                    }
+                }
+            } else {
+                // validationKey == true: Validation keys are used to validate tokens of all types.
+                // Only reject v1.0 keys if FIPS 140-3 mode is strictly enabled.
+                if (isFips && "1.0".equals(version)) {
+                    Tr.warning(tc, "LTPA_VALIDATION_KEYS_NEED_TO_REGENERATE", keyImportFile);
+                    return;
                 }
             }
 
@@ -257,14 +313,19 @@ public class LTPAKeyInfoManager {
             Tr.error(tc, "LTPA_KEYS_FILE_DOES_NOT_EXIST", keyImportFile);
             return;
         } else { //Primary keys file does not exist so create the primary key
-            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize, resolvedCipher);
+            props = createPrimaryKeyFile(locService, keyImportFile, keyPassword, signingMode, mldsaAlgorithm, classicalKeySize);
         }
 
         if (props == null || props.isEmpty()) {
             return;
         }
         String realm = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_REALM);
-        String secretKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
+        String version = props.getProperty(LTPAKeyFileUtility.LTPA_VERSION_PROPERTY);
+        // Try both property names: v1.0/v3.0 files use 3DESKey, v2.0 files use SharedKey
+        String secretKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_SECRETKEY_V1);
+        if (secretKeyStr == null || secretKeyStr.isEmpty()) {
+            secretKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_SECRETKEY_V2);
+        }
         String privateKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_PRIVATEKEY);
         String publicKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
         String mldsaPrivateKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_MLDSA_PRIVATEKEY);
@@ -274,12 +335,16 @@ public class LTPAKeyInfoManager {
                 Tr.debug(tc, "PQC keys present: " + (mldsaPrivateKeyStr != null && mldsaPublicKeyStr != null));
         }
 
+        // v2.0 and v3.0 key files are always encrypted with AES regardless of the
+        // writing server's FIPS mode, so any server can load them.
+        boolean useAES = "2.0".equals(version) || "3.0".equals(version);
+
         byte[] secretKey, privateKey, publicKey;
         byte[] mldsaPrivateKey, mldsaPublicKey;
         byte[][] keys;
 
         try {
-            keys = decryptKeys(keyPassword, secretKeyStr, privateKeyStr, publicKeyStr, mldsaPrivateKeyStr, mldsaPublicKeyStr);
+            keys = decryptKeys(keyPassword, secretKeyStr, privateKeyStr, publicKeyStr, mldsaPrivateKeyStr, mldsaPublicKeyStr, useAES);
         } catch (BadPaddingException e) {
             // only try to re-encrypt if it failed with keystore_password and it's not a configured validationKeys
             if (!tryToReEncryptLtpaKeys || (validationKey && isConfiguredValidationKey)) {
@@ -291,7 +356,7 @@ public class LTPAKeyInfoManager {
 
             keys = reEncryptLtpaKey(locService, "WebAS".getBytes(), keyPassword,
                                     secretKeyStr, privateKeyStr, publicKeyStr,
-                                    keyImportFile, ltpaKeyFileResource, e);
+                                    keyImportFile, ltpaKeyFileResource, e, useAES);
         } catch (Exception e) {
             if (TraceComponent.isAnyTracingEnabled() && tc.isEventEnabled()) {
                 Tr.event(this, tc, "Error loading key; " + e);
@@ -344,7 +409,7 @@ public class LTPAKeyInfoManager {
     @Sensitive
     private byte[][] decryptKeys(@Sensitive byte[] keyPassword, @Sensitive String secretKeyStr, @Sensitive String privateKeyStr,
                                  @Sensitive String publicKeyStr, @Sensitive String mldsaPrivateKeyStr,
-                                 @Sensitive String mldsaPublicKeyStr) throws Exception {
+                                 @Sensitive String mldsaPublicKeyStr, boolean useAES) throws Exception {
         KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
         byte[] secretKey, privateKey = null, publicKey = null;
         byte[] mldsaPrivateKey = null, mldsaPublicKey = null;
@@ -355,11 +420,13 @@ public class LTPAKeyInfoManager {
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
             throw new IllegalArgumentException(formattedMessage);
         }
-        secretKey = encryptor.decrypt(Base64Coder.base64DecodeString(secretKeyStr));
+        secretKey = useAES ? encryptor.decryptAES(Base64Coder.base64DecodeString(secretKeyStr))
+                           : encryptor.decrypt(Base64Coder.base64DecodeString(secretKeyStr));
 
         // RSA keys — present in classical mode, absent in PQC mode.
         if (privateKeyStr != null && privateKeyStr.length() > 0) {
-            privateKey = encryptor.decrypt(Base64Coder.base64DecodeString(privateKeyStr));
+            privateKey = useAES ? encryptor.decryptAES(Base64Coder.base64DecodeString(privateKeyStr))
+                                : encryptor.decrypt(Base64Coder.base64DecodeString(privateKeyStr));
         }
         if (publicKeyStr != null && publicKeyStr.length() > 0) {
             publicKey = Base64Coder.base64DecodeString(publicKeyStr);
@@ -367,7 +434,8 @@ public class LTPAKeyInfoManager {
 
         // ML-DSA keys — present in PQC mode, absent in classical mode.
         if (mldsaPrivateKeyStr != null && mldsaPrivateKeyStr.length() > 0) {
-            mldsaPrivateKey = encryptor.decrypt(Base64Coder.base64DecodeString(mldsaPrivateKeyStr));
+            mldsaPrivateKey = useAES ? encryptor.decryptAES(Base64Coder.base64DecodeString(mldsaPrivateKeyStr))
+                                     : encryptor.decrypt(Base64Coder.base64DecodeString(mldsaPrivateKeyStr));
         }
         if (mldsaPublicKeyStr != null && mldsaPublicKeyStr.length() > 0) {
             mldsaPublicKey = Base64Coder.base64DecodeString(mldsaPublicKeyStr);
@@ -379,10 +447,10 @@ public class LTPAKeyInfoManager {
     @Sensitive
     private byte[][] reEncryptLtpaKey(WsLocationAdmin locService, @Sensitive byte[] keyPasswordToTry, @Sensitive byte[] keyPasswordToReEncryptWith,
                                       @Sensitive String secretKeyStr, @Sensitive String privateKeyStr, @Sensitive String publicKeyStr,
-                                      String keyImportFile, WsResource ltpaKeyFileResource, Exception originalException) throws Exception {
+                                      String keyImportFile, WsResource ltpaKeyFileResource, Exception originalException, boolean useAES) throws Exception {
         try {
             // failed with keystore_password... let's try again with the legacy default password
-            byte[][] keys = decryptKeys(keyPasswordToTry, secretKeyStr, privateKeyStr, publicKeyStr, null, null);
+            byte[][] keys = decryptKeys(keyPasswordToTry, secretKeyStr, privateKeyStr, publicKeyStr, null, null, useAES);
 
             // successfully decrypted keys; backup and re-encrypt the keys using keystore_password
             Tr.info(tc, "LTPA_KEYS_REENCRYPT", keyImportFile);
@@ -447,9 +515,13 @@ public class LTPAKeyInfoManager {
      * @throws IOException
      */
     private void backupLtpaKeyFile(WsLocationAdmin locService, String keyImportFile, WsResource ltpaKeyFileResource, String version) throws IOException {
-        String suffix = suffixNoFips;
-        if ("2.0".equals(version)) {
+        String suffix;
+        if ("3.0".equals(version)) {
+            suffix = suffixPqc;
+        } else if ("2.0".equals(version)) {
             suffix = suffixFips;
+        } else {
+            suffix = suffixNoFips;
         }
         WsResource ltpaFileBackup = locService.resolveResource(keyImportFile + suffix);
 
@@ -466,16 +538,12 @@ public class LTPAKeyInfoManager {
     /**
      * @param locService
      * @param keyImportFile
-     * @WsResource ltpaKeyFileResource
+     * @param ltpaKeyFileResource
+     * @param suffix
      * @return
      * @throws IOException
      */
-    private boolean restoreLtpaKeyFile(WsLocationAdmin locService, String keyImportFile, WsResource ltpaKeyFileResource) throws IOException {
-        String suffix = suffixNoFips;
-        if (CryptoUtils.isFips140_3Enabled()) {
-            suffix = suffixFips;
-        }
-
+    private boolean restoreLtpaKeyFile(WsLocationAdmin locService, String keyImportFile, WsResource ltpaKeyFileResource, String suffix) throws IOException {
         WsResource ltpaFileBackup = locService.resolveResource(keyImportFile + suffix);
         if (ltpaFileBackup.exists()) {
             if (tc.isDebugEnabled()) {
@@ -489,13 +557,77 @@ public class LTPAKeyInfoManager {
     }
 
     /**
+     * @param props            loaded key file properties
+     * @param classicalKeySize configured RSA key size in bytes (128 for 1024-bit, 256 for 2048-bit)
+     * @return {@code true} if the stored key does not match the configuration
+     */
+    private boolean isRsaKeySizeMismatch(Properties props, int classicalKeySize) {
+        if (classicalKeySize <= 0) {
+            return false;
+        }
+        String publicKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
+        if (publicKeyStr == null || publicKeyStr.isEmpty()) {
+            return false; // no RSA key present; not applicable
+        }
+        try {
+            byte[] publicKeyBytes = com.ibm.ws.common.encoder.Base64Coder.base64DecodeString(publicKeyStr);
+            int storedLen = publicKeyBytes.length;
+            // LTPA public key format: [optional 0x00 sign byte] + modulus (classicalKeySize bytes) + 3-byte exponent (65537).
+            // BigInteger.toByteArray() prepends a 0x00 sign byte when the high bit of the modulus is set,
+            // so the encoded length is either classicalKeySize+3 or classicalKeySize+4.
+            return storedLen != classicalKeySize + 3 && storedLen != classicalKeySize + 4;
+        } catch (Exception e) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(this, tc, "Could not decode RSA public key for size check: " + e);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param props          loaded key file properties
+     * @param mldsaAlgorithm configured ML-DSA algorithm (e.g. "ML-DSA-65"), or {@code null}
+     * @return {@code true} if the stored key does not match the configured algorithm
+     */
+    private boolean isMldsaKeySizeMismatch(Properties props, String mldsaAlgorithm) {
+        if (mldsaAlgorithm == null || mldsaAlgorithm.isEmpty()) {
+            return false;
+        }
+        String publicKeyStr = props.getProperty(LTPAKeyFileUtility.KEYIMPORT_MLDSA_PUBLICKEY);
+        if (publicKeyStr == null || publicKeyStr.isEmpty()) {
+            return false; // no ML-DSA key present; not applicable
+        }
+        try {
+            byte[] publicKeyBytes = com.ibm.ws.common.encoder.Base64Coder.base64DecodeString(publicKeyStr);
+            int storedLen = publicKeyBytes.length;
+
+            // Derive the stored algorithm from the key length using midpoint thresholds.
+            String storedAlgorithm;
+            if (storedLen <= MLDSA_44_65_THRESHOLD) {
+                storedAlgorithm = "ML-DSA-44";
+            } else if (storedLen <= MLDSA_65_87_THRESHOLD) {
+                storedAlgorithm = "ML-DSA-65";
+            } else {
+                storedAlgorithm = "ML-DSA-87";
+            }
+
+            return !mldsaAlgorithm.equals(storedAlgorithm);
+        } catch (Exception e) {
+            if (tc.isDebugEnabled()) {
+                Tr.debug(this, tc, "Could not decode ML-DSA public key for size check: " + e);
+            }
+        }
+        return false;
+    }
+
+    /**
      * @param locService
      * @param keyImportFile
      * @param keyPassword
      * @return
      * @throws Exception
      */
-    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String signingMode, String mldsaAlgorithm, int classicalKeySize, String resolvedCipher) throws Exception {
+    private Properties createPrimaryKeyFile(WsLocationAdmin locService, String keyImportFile, @Sensitive byte[] keyPassword, String signingMode, String mldsaAlgorithm, int classicalKeySize) throws Exception {
         long start = System.currentTimeMillis();
         Tr.info(tc, "LTPA_CREATE_KEYS_START");
 
@@ -504,7 +636,7 @@ public class LTPAKeyInfoManager {
         if ("pqc".equals(signingMode)) {
             props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, mldsaAlgorithm);
         } else {
-            props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, classicalKeySize, resolvedCipher);
+            props = creator.createLTPAKeysFile(locService, keyImportFile, keyPassword, classicalKeySize);
         }
 
         Tr.audit(tc, "LTPA_CREATE_KEYS_COMPLETE", TimestampUtils.getElapsedTime(start), keyImportFile);
