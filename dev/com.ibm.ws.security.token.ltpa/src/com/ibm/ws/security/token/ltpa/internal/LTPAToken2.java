@@ -280,10 +280,8 @@ public class LTPAToken2 implements Token, Serializable {
         synchronized (lockObj1) {
             data = md1JCE.digest(msg);
         }
-        byte[][] rsaPrivKey = LTPAKeyUtil.getRawKey(privKey);
-        LTPAKeyUtil.setRSAKey(rsaPrivKey);
         byte[] signature;
-        signature = LTPAKeyUtil.signISO9796(rsaPrivKey, data, 0, data.length);
+        signature = LTPAKeyUtil.signISO9796(privKey, data, 0, data.length);
 
         return signature;
     }
@@ -308,8 +306,7 @@ public class LTPAToken2 implements Token, Serializable {
         synchronized (lockObj2) {
             data = md2JCE.digest(msg);
         }
-        byte[][] rsaPubKey = LTPAKeyUtil.getRawKey(pubKey);
-        return LTPAKeyUtil.verifyISO9796(rsaPubKey, data, 0, data.length, signature, 0, signature.length);
+        return LTPAKeyUtil.verifyISO9796(pubKey, data, 0, data.length, signature, 0, signature.length);
     }
 
     /** {@inheritDoc} */

@@ -22,25 +22,13 @@ public final class LTPAKeyUtil {
 		return LTPACrypto.decrypt(msg, key, cipher);
 	}
 
-	public static boolean verifyISO9796(byte[][] key, byte[] data, int off, int len, byte[] sig, int sigOff, int sigLen)
+	public static boolean verifyISO9796(LTPAPublicKey key, byte[] data, int off, int len, byte[] sig, int sigOff, int sigLen)
 			throws Exception {
 		return LTPACrypto.verifyISO9796(key, data, off, len, sig, sigOff, sigLen);
 	}
 
-	public static byte[] signISO9796(byte[][] key, byte[] data, int off, int len) throws Exception {
+	public static byte[] signISO9796(LTPAPrivateKey key, byte[] data, int off, int len) throws Exception {
 		return LTPACrypto.signISO9796(key, data, off, len);
-	}
-
-	public static void setRSAKey(byte[][] key) {
-		LTPACrypto.setRSAKey(key);
-	}
-
-	public static byte[][] getRawKey(LTPAPrivateKey privKey) {
-		return privKey.getRawKey();
-	}
-
-	public static byte[][] getRawKey(LTPAPublicKey pubKey) {
-		return pubKey.getRawKey();
 	}
 
 	public static LTPAKeyPair generateLTPAKeyPair() {

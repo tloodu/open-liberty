@@ -12,7 +12,10 @@
  *******************************************************************************/
 package com.ibm.ws.crypto.ltpakeyutil;
 
+import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
 
 import com.ibm.ws.common.crypto.CryptoUtils;
 
@@ -24,14 +27,10 @@ public final class LTPAPublicKey implements PublicKey {
 
 	private static final boolean fipsEnabled = CryptoUtils.isFips140_3Enabled();
 	private static final long serialVersionUID = 6585779055758956436L;
-	private static final int MODULUS = 0;
-	private static final int EXPONENT = 1;
-	private static final int MODULUS_LENGTH = (fipsEnabled ? 257 : 129);
-	private static final int EXPONENT_LENGTH = 3;
-	private final byte[][] rawKey;
+	private final RSAPublicKey rawKey;
 	private final byte[] encodedKey;
 
-	LTPAPublicKey(byte[][] rawKey) {
+	LTPAPublicKey(RSAPublicKey rawKey) {
 		this.rawKey = rawKey;
 		this.encodedKey = encode();
 	}
@@ -48,20 +47,21 @@ public final class LTPAPublicKey implements PublicKey {
 	 *
 	 * @param encodedPublicKey The encoded key
 	 */
-	private byte[][] decode(byte[] encodedPublicKey) {
-		byte[][] decodedKey = new byte[2][];
-		decodedKey[MODULUS] = new byte[MODULUS_LENGTH];
-		decodedKey[EXPONENT] = new byte[EXPONENT_LENGTH];
-		System.arraycopy(encodedPublicKey, 0, decodedKey[MODULUS], 0, MODULUS_LENGTH);
-		System.arraycopy(encodedPublicKey, MODULUS_LENGTH, decodedKey[EXPONENT], 0, EXPONENT_LENGTH);
-		return decodedKey;
+	private RSAPublicKey decode(byte[] encodedPublicKey) {
+		try {
+			String provider = CryptoUtils.getProvider();
+			KeyFactory kf = (provider == null)
+					? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
+					: KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
+			RSAPublicKey key = (RSAPublicKey) kf.generatePublic(new X509EncodedKeySpec(encodedPublicKey));
+			return key;
+		} catch (Exception ex) {
+			throw new RuntimeException("Failed to build RSA public key from encoded bytes", ex);
+		}
 	}
 
 	private byte[] encode() {
-		int publicKeyLength = MODULUS_LENGTH + EXPONENT_LENGTH;
-		byte[] encodedPublicKey = new byte[publicKeyLength];
-		System.arraycopy(rawKey[MODULUS], 0, encodedPublicKey, 0, MODULUS_LENGTH);
-		System.arraycopy(rawKey[EXPONENT], 0, encodedPublicKey, MODULUS_LENGTH, EXPONENT_LENGTH);
+		byte[] encodedPublicKey = rawKey.getEncoded();
 		return encodedPublicKey;
 	}
 
@@ -83,11 +83,11 @@ public final class LTPAPublicKey implements PublicKey {
 		return "LTPAFormat";
 	}
 
-	protected final byte[][] getRawKey() {
-		if (rawKey == null) {
-			return null;
-		} else {
-			return rawKey.clone();
-		}
+	protected final RSAPublicKey getRawKey() {
+		return rawKey;
+	}
+
+	byte[] getEncodedKey() {
+		return encodedKey;
 	}
 }
