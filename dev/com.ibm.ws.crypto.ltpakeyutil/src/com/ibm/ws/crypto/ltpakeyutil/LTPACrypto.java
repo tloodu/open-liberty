@@ -194,56 +194,62 @@ final class LTPACrypto {
      */
     @Trivial
     protected static final byte[] signISO9796(byte[][] key, byte[] data, int off, int len) throws Exception {
+        long startSign = System.currentTimeMillis();
+        System.out.println("[LTPACrypto] signISO9796: start; time=" + startSign + " ms");
+
+        // Cache lookup
+        long startCacheLookup = System.currentTimeMillis();
         CachingKey ck = new CachingKey(key, data, off, len);
         CachingKey result = cryptoKeysMap.get(ck);
+        long cacheLookupMs = System.currentTimeMillis() - startCacheLookup;
+        System.out.println("[LTPACrypto] signISO9796: cache lookup took " + cacheLookupMs + " ms");
 
         if (result != null) {
             result.successfulUses += 1;
             result.reused = true;
+            System.out.println("[LTPACrypto] signISO9796: cache hit; total=" + (System.currentTimeMillis() - startSign) + " ms");
             return result.result;
-        } else {
-            if (cryptoKeysMap.size() >= MAX_CACHE) {
-                try {
-                    int cryptoKeysMapSize = cryptoKeysMap.size();
-                    CachingKey[] keys = cryptoKeysMap.keySet().toArray(new CachingKey[cryptoKeysMapSize]);
-                    Arrays.sort(keys, cachingKeyComparator);
-                    if (cachingKeyComparator.compare(keys[0], keys[keys.length - 1]) < 0) {
-                        for (int i = 0; i < cryptoKeysMapSize / 5; i++) {
-                            cryptoKeysMap.remove(keys[i]);
-                            keys[i + 1 * cryptoKeysMapSize / 5].successfulUses--;
-                            keys[i + 2 * cryptoKeysMapSize / 5].successfulUses--;
-                            keys[i + 3 * cryptoKeysMapSize / 5].successfulUses--;
-                            keys[i + 4 * cryptoKeysMapSize / 5].successfulUses--;
-                        }
-                    } else { // TODO: consider removing bc this likely isn't used since we sort the keys above (except when all keys have the same num of uses)
-                        for (int i = 0; i < cryptoKeysMapSize / 5; i++) {
-                            cryptoKeysMap.remove(keys[keys.length - 1 - i]);
-                            keys[keys.length - 1 - i - 1 * cryptoKeysMapSize / 5].successfulUses--;
-                            keys[keys.length - 1 - i - 2 * cryptoKeysMapSize / 5].successfulUses--;
-                            keys[keys.length - 1 - i - 3 * cryptoKeysMapSize / 5].successfulUses--;
-                            keys[keys.length - 1 - i - 4 * cryptoKeysMapSize / 5].successfulUses--;
-                        }
-                    }
-                } catch (Exception e) {
-                    // do nothing. since this code is used for the command line
-                    // utility, no log is
-                    // taken.
-                }
-
-            }
         }
 
-        /** Invoked by LTPADigSignature **/
-        long startkf = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] signISO9796: start keyfactory getInstance=" + startkf + " ms");
-        KeyFactory kFact = null;
-        kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
-                : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-        long endkf = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] signISO9796: end keyfactory getInstance=" + endkf + " ms, elapsed=" + (endkf - startkf) + " ms");
+        // Cache eviction (only when cache is full)
+        long evictionMs = 0;
+        if (cryptoKeysMap.size() >= MAX_CACHE) {
+            long startEviction = System.currentTimeMillis();
+            try {
+                int cryptoKeysMapSize = cryptoKeysMap.size();
+                CachingKey[] keys = cryptoKeysMap.keySet().toArray(new CachingKey[cryptoKeysMapSize]);
+                Arrays.sort(keys, cachingKeyComparator);
+                if (cachingKeyComparator.compare(keys[0], keys[keys.length - 1]) < 0) {
+                    for (int i = 0; i < cryptoKeysMapSize / 5; i++) {
+                        cryptoKeysMap.remove(keys[i]);
+                        keys[i + 1 * cryptoKeysMapSize / 5].successfulUses--;
+                        keys[i + 2 * cryptoKeysMapSize / 5].successfulUses--;
+                        keys[i + 3 * cryptoKeysMapSize / 5].successfulUses--;
+                        keys[i + 4 * cryptoKeysMapSize / 5].successfulUses--;
+                    }
+                } else { // TODO: consider removing bc this likely isn't used since we sort the keys above (except when all keys have the same num of uses)
+                    for (int i = 0; i < cryptoKeysMapSize / 5; i++) {
+                        cryptoKeysMap.remove(keys[keys.length - 1 - i]);
+                        keys[keys.length - 1 - i - 1 * cryptoKeysMapSize / 5].successfulUses--;
+                        keys[keys.length - 1 - i - 2 * cryptoKeysMapSize / 5].successfulUses--;
+                        keys[keys.length - 1 - i - 3 * cryptoKeysMapSize / 5].successfulUses--;
+                        keys[keys.length - 1 - i - 4 * cryptoKeysMapSize / 5].successfulUses--;
+                    }
+                }
+            } catch (Exception e) {
+                // do nothing. since this code is used for the command line
+                // utility, no log is
+                // taken.
+            }
+            evictionMs = System.currentTimeMillis() - startEviction;
+            System.out.println("[LTPACrypto] signISO9796: cache eviction took " + evictionMs + " ms");
+        }
 
-        long startdeserialization = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] signISO9796: start deserialization=" + startdeserialization + " ms");
+        // Crypto operation
+        long startCrypto = System.currentTimeMillis();
+        KeyFactory kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
+                : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
+
         BigInteger n = new BigInteger(key[0]);
         BigInteger e = new BigInteger(key[2]);
         BigInteger p = new BigInteger(key[3]);
@@ -252,29 +258,25 @@ final class LTPACrypto {
         BigInteger pep = new BigInteger(key[5]);
         BigInteger peq = new BigInteger(key[6]);
         BigInteger crtC = new BigInteger(key[7]);
-        long enddeserialization = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] signISO9796: end deserialization=" + enddeserialization + " ms");
 
-        long startdecode = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] signISO9796: start generatePrivate" + startdecode + " ms");
         RSAPrivateCrtKeySpec privCrtKeySpec = new RSAPrivateCrtKeySpec(n, e, d, p, q, pep, peq, crtC);
         PrivateKey privKey = kFact.generatePrivate(privCrtKeySpec);
-        long enddecode = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] signISO9796: end generatePrivate=" + enddecode + " ms, elapsed=" + (enddecode - startdecode) + " ms");
 
-        Signature rsaSig = null;
-
-        rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
+        Signature rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
                 : Signature.getInstance(signatureAlgorithm, provider);
 
         rsaSig.initSign(privKey);
         rsaSig.update(data, off, len);
         byte[] sig = rsaSig.sign();
+        long cryptoMs = System.currentTimeMillis() - startCrypto;
+        System.out.println("[LTPACrypto] signISO9796: crypto (getInstance+initSign+update+sign) took " + cryptoMs + " ms");
 
         cryptoKeysMap.put(ck, ck);
         ck.result = sig;
         ck.successfulUses = 0;
 
+        long totalMs = System.currentTimeMillis() - startSign;
+        System.out.println("[LTPACrypto] signISO9796: end; cacheLookup=" + cacheLookupMs + " ms, eviction=" + evictionMs + " ms, crypto=" + cryptoMs + " ms, total=" + totalMs + " ms");
         return sig;
     }
 
@@ -501,73 +503,74 @@ final class LTPACrypto {
     @Trivial
     protected static final boolean verifyISO9796(byte[][] key, byte[] data, int off, int len, byte[] sig, int sigOff,
             int sigLen) throws Exception {
+        long startVerify = System.currentTimeMillis();
+        System.out.println("[LTPACrypto] verifyISO9796: start; time=" + startVerify + " ms");
+
+        // Cache lookup
+        long startCacheLookup = System.currentTimeMillis();
         CachingVerifyKey ck = new CachingVerifyKey(key, data, off, len, sig, sigOff, sigLen);
         CachingVerifyKey result = verifyKeysMap.get(ck);
+        long cacheLookupMs = System.currentTimeMillis() - startCacheLookup;
+        System.out.println("[LTPACrypto] verifyISO9796: cache lookup took " + cacheLookupMs + " ms");
 
         if (result != null) {
             result.successfulUses += 1;
+            System.out.println("[LTPACrypto] verifyISO9796: cache hit; total=" + (System.currentTimeMillis() - startVerify) + " ms");
             return result.result;
-        } else {
-            if (verifyKeysMap.size() >= MAX_CACHE) {
-                int verifyKeysMapSize = verifyKeysMap.size();
-                CachingVerifyKey[] keys = verifyKeysMap.keySet().toArray(new CachingVerifyKey[verifyKeysMapSize]);
-                Arrays.sort(keys, cachingVerifyKeyComparator);
-                if (cachingVerifyKeyComparator.compare(keys[0], keys[keys.length - 1]) < 0) {
-                    for (int i = 0; i < verifyKeysMapSize / 5; i++) {
-                        verifyKeysMap.remove(keys[i]);
-                        keys[i + 1 * verifyKeysMapSize / 5].successfulUses--;
-                        keys[i + 2 * verifyKeysMapSize / 5].successfulUses--;
-                        keys[i + 3 * verifyKeysMapSize / 5].successfulUses--;
-                        keys[i + 4 * verifyKeysMapSize / 5].successfulUses--;
-                    }
-                } else { // TODO: consider removing bc this likely isn't used since we sort the keys above (except when all keys have the same num of uses)
-                    for (int i = 0; i < verifyKeysMapSize / 5; i++) {
-                        verifyKeysMap.remove(keys[keys.length - 1 - i]);
-                        keys[keys.length - 1 - i - 1 * verifyKeysMapSize / 5].successfulUses--;
-                        keys[keys.length - 1 - i - 2 * verifyKeysMapSize / 5].successfulUses--;
-                        keys[keys.length - 1 - i - 3 * verifyKeysMapSize / 5].successfulUses--;
-                        keys[keys.length - 1 - i - 4 * verifyKeysMapSize / 5].successfulUses--;
-                    }
-                }
-            }
         }
 
-        boolean verified = false;
+        // Cache eviction (only when cache is full)
+        long evictionMs = 0;
+        if (verifyKeysMap.size() >= MAX_CACHE) {
+            long startEviction = System.currentTimeMillis();
+            int verifyKeysMapSize = verifyKeysMap.size();
+            CachingVerifyKey[] keys = verifyKeysMap.keySet().toArray(new CachingVerifyKey[verifyKeysMapSize]);
+            Arrays.sort(keys, cachingVerifyKeyComparator);
+            if (cachingVerifyKeyComparator.compare(keys[0], keys[keys.length - 1]) < 0) {
+                for (int i = 0; i < verifyKeysMapSize / 5; i++) {
+                    verifyKeysMap.remove(keys[i]);
+                    keys[i + 1 * verifyKeysMapSize / 5].successfulUses--;
+                    keys[i + 2 * verifyKeysMapSize / 5].successfulUses--;
+                    keys[i + 3 * verifyKeysMapSize / 5].successfulUses--;
+                    keys[i + 4 * verifyKeysMapSize / 5].successfulUses--;
+                }
+            } else { // TODO: consider removing bc this likely isn't used since we sort the keys above (except when all keys have the same num of uses)
+                for (int i = 0; i < verifyKeysMapSize / 5; i++) {
+                    verifyKeysMap.remove(keys[keys.length - 1 - i]);
+                    keys[keys.length - 1 - i - 1 * verifyKeysMapSize / 5].successfulUses--;
+                    keys[keys.length - 1 - i - 2 * verifyKeysMapSize / 5].successfulUses--;
+                    keys[keys.length - 1 - i - 3 * verifyKeysMapSize / 5].successfulUses--;
+                    keys[keys.length - 1 - i - 4 * verifyKeysMapSize / 5].successfulUses--;
+                }
+            }
+            evictionMs = System.currentTimeMillis() - startEviction;
+            System.out.println("[LTPACrypto] verifyISO9796: cache eviction took " + evictionMs + " ms");
+        }
 
-        long startkf = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] verifyISO9796: start keyfactory getInstance=" + startkf + " ms");
-        KeyFactory kFact = null;
-        kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
+        // Crypto operation
+        long startCrypto = System.currentTimeMillis();
+        KeyFactory kFact = (provider == null) ? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
                 : KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-        long endkf = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] verifyISO9796: end keyfactory getInstance=" + endkf + " ms, elapsed=" + (endkf - startkf) + " ms");
-
-        long startdeserialization = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] verifyISO9796: start deserialization=" + startdeserialization + " ms");
-        Signature rsaSig = null;
         BigInteger n = new BigInteger(key[0]);
         BigInteger e = new BigInteger(key[1]);
-        long enddeserialization = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] verifyISO9796: end deserialization=" + enddeserialization + " ms");
-
-        long startdecode = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] verifyISO9796: start generatePublic" + startdecode + " ms");
         RSAPublicKeySpec pubKeySpec = new RSAPublicKeySpec(n, e);
         PublicKey pubKey = kFact.generatePublic(pubKeySpec);
-        long enddecode = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] verifyISO9796: end generatePublic=" + enddecode + " ms, elapsed=" + (enddecode - startdecode) + " ms");
 
-        rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
+        Signature rsaSig = (provider == null) ? Signature.getInstance(signatureAlgorithm)
                 : Signature.getInstance(signatureAlgorithm, provider);
 
         rsaSig.initVerify(pubKey);
         rsaSig.update(data, off, len);
-        verified = rsaSig.verify(sig);
+        boolean verified = rsaSig.verify(sig, sigOff, sigLen);
+        long cryptoMs = System.currentTimeMillis() - startCrypto;
+        System.out.println("[LTPACrypto] verifyISO9796: crypto (getInstance+initVerify+update+verify) took " + cryptoMs + " ms");
 
         verifyKeysMap.put(ck, ck);
         ck.result = verified;
         ck.successfulUses = 0;
 
+        long totalMs = System.currentTimeMillis() - startVerify;
+        System.out.println("[LTPACrypto] verifyISO9796: end; cacheLookup=" + cacheLookupMs + " ms, eviction=" + evictionMs + " ms, crypto=" + cryptoMs + " ms, total=" + totalMs + " ms");
         return verified;
     }
 

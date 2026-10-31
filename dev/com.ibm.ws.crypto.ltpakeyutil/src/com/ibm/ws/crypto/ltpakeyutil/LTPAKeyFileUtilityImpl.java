@@ -67,48 +67,59 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
      * @throws Exception
      */
     protected final Properties generateLTPAKeys(byte[] keyPasswordBytes, byte[] sharedKeyBytes, byte[] privateKeyBytes, byte[] publicKeyBytes, final String realm) throws Exception {
+        long startGenerate = System.currentTimeMillis();
+        System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: start; time=" + startGenerate + " ms");
+
         Properties expProps = null;
 
         try {
+            // KeyEncryptor construction (password-based key derivation)
+            long startEncryptor = System.currentTimeMillis();
             KeyEncryptor encryptor = new KeyEncryptor(keyPasswordBytes);
+            long encryptorMs = System.currentTimeMillis() - startEncryptor;
+            System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: KeyEncryptor construction took " + encryptorMs + " ms");
 
-            long startgenerate = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] generateLTPAKeyPair: start=" + startgenerate + " ms");
+            // RSA key pair generation (only when keys are not being reused)
+            long keyPairMs = 0;
             if (publicKeyBytes == null && privateKeyBytes == null) {
+                long startKeyPair = System.currentTimeMillis();
                 LTPAKeyPair pair = LTPADigSignature.generateLTPAKeyPair();
                 publicKeyBytes = pair.getPublic().getEncoded();
                 privateKeyBytes = pair.getPrivate().getEncoded();
+                keyPairMs = System.currentTimeMillis() - startKeyPair;
+                System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: RSA key pair generation took " + keyPairMs + " ms");
+            } else {
+                System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: RSA key pair reused (skipped generation)");
             }
-            long endgenerate = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] generateLTPAKeyPair: end=" + endgenerate + " ms, elapsed=" + (endgenerate - startgenerate) + " ms");
 
-            long startencrypt = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] encrypt private: start=" + startencrypt + " ms");
+            // Private key encryption
+            long startPrivateEncrypt = System.currentTimeMillis();
             byte[] encryptedPrivateKeyBytes = encryptor.encrypt(privateKeyBytes);
-            long endencrypt = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] encrypt private: end=" + endencrypt + " ms, elapsed=" + (endencrypt - startencrypt) + " ms");
+            long privateEncryptMs = System.currentTimeMillis() - startPrivateEncrypt;
+            System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: private key encryption took " + privateEncryptMs + " ms");
 
-            long startshared = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] generateShared: start=" + startshared + " ms");
+            // Shared key generation (only when not being reused)
+            long sharedKeyMs = 0;
             if (sharedKeyBytes == null) {
+                long startSharedKey = System.currentTimeMillis();
                 sharedKeyBytes = LTPACrypto.generateSharedKey(); // key length is 32 bytes (256 bits) for FIPS (AES), 24 bytes (192 bits) for non-FIPS (3DES)
+                sharedKeyMs = System.currentTimeMillis() - startSharedKey;
+                System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: shared key generation took " + sharedKeyMs + " ms");
+            } else {
+                System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: shared key reused (skipped generation)");
             }
-            long endshared = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] generateShared: end=" + endshared + " ms, elapsed=" + (endshared - startshared) + " ms");
 
-            long startsharedencrypt = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] encrypt shared: start=" + startsharedencrypt + " ms");
+            // Shared key encryption
+            long startSharedEncrypt = System.currentTimeMillis();
             byte[] encryptedSharedKeyBytes = encryptor.encrypt(sharedKeyBytes);
-            long endsharedencrypt = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] encrypt shared: end=" + endsharedencrypt + " ms, elapsed=" + (endsharedencrypt - startsharedencrypt) + " ms");
+            long sharedEncryptMs = System.currentTimeMillis() - startSharedEncrypt;
+            System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: shared key encryption took " + sharedEncryptMs + " ms");
 
-            long startencode = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] encode: start=" + startencode + " ms");
+            // Base64 encoding + Properties assembly
+            long startAssembly = System.currentTimeMillis();
             String tmpShared = Base64Coder.base64EncodeToString(encryptedSharedKeyBytes);
             String tmpPrivate = Base64Coder.base64EncodeToString(encryptedPrivateKeyBytes);
             String tmpPublic = Base64Coder.base64EncodeToString(publicKeyBytes);
-            long endencode = System.currentTimeMillis();
-		    System.out.println("[ltpakeyfileutilityimpl] encode: end=" + endencode + " ms, elapsed=" + (endencode - startencode) + " ms");
 
             expProps = new Properties();
 
@@ -120,6 +131,11 @@ public class LTPAKeyFileUtilityImpl implements LTPAKeyFileUtility {
             expProps.put(CREATION_HOST_PROPERTY, "localhost");
             expProps.put(LTPA_VERSION_PROPERTY, CryptoUtils.isFips140_3Enabled() ? "2.0" : "1.0");
             expProps.put(CREATION_DATE_PROPERTY, (new java.util.Date()).toString());
+            long assemblyMs = System.currentTimeMillis() - startAssembly;
+            System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: Base64 encoding and Properties assembly took " + assemblyMs + " ms");
+
+            long totalMs = System.currentTimeMillis() - startGenerate;
+            System.out.println("[LTPAKeyFileUtilityImpl] generateLTPAKeys: end; encryptor=" + encryptorMs + " ms, keyPair=" + keyPairMs + " ms, privateEncrypt=" + privateEncryptMs + " ms, sharedKey=" + sharedKeyMs + " ms, sharedEncrypt=" + sharedEncryptMs + " ms, assembly=" + assemblyMs + " ms, total=" + totalMs + " ms");
         } catch (Exception e) {
             throw e;
         }

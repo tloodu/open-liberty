@@ -56,8 +56,8 @@ public final class LTPAPrivateKey implements PrivateKey {
 	 * @param encodedPrivateKey The encoded key
 	 */
 	private final byte[][] decode(byte[] encodedPrivateKey) {
-		long start = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: start=" + start + " ms");
+		long startDecode = System.currentTimeMillis();
+		System.out.println("[LTPAPrivateKey] decode: start; encodedKey.length=" + encodedPrivateKey.length + " bytes");
 		byte[][] decodedKey = new byte[8][];
 		if (encodedPrivateKey.length > (PUBLIC_EXPONENT_LENGTH + PRIME_P_LENGTH + PRIME_Q_LENGTH)) {
 			// it is potentially the new encoding mechanism based on R3.5 [with CRT key
@@ -93,14 +93,14 @@ public final class LTPAPrivateKey implements PrivateKey {
 			System.arraycopy(encodedPrivateKey, PUBLIC_EXPONENT_LENGTH + PRIME_P_LENGTH, decodedKey[PRIME_Q], 0,
 					PRIME_Q_LENGTH);
 		}
-		long end = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] LTPAPrivateKey.decode: end=" + end + " ms, elapsed=" + (end - start) + " ms");
+		long totalMs = System.currentTimeMillis() - startDecode;
+		System.out.println("[LTPAPrivateKey] decode: end; total=" + totalMs + " ms");
 		return decodedKey;
 	}
 
 	private byte[] encode() {
-		long start = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] LTPAPrivateKey.encode: start=" + start + " ms");
+		long startEncode = System.currentTimeMillis();
+		System.out.println("[LTPAPrivateKey] encode: start");
 		int encodedKeyLength = PRIVATE_EXPONENT_LENGTH_FIELD_LENGTH + privateExponentLength + PUBLIC_EXPONENT_LENGTH
 				+ PRIME_P_LENGTH + PRIME_Q_LENGTH;
 		byte[] encodedPrivateKey = new byte[encodedKeyLength];
@@ -114,8 +114,8 @@ public final class LTPAPrivateKey implements PrivateKey {
 				PRIVATE_EXPONENT_LENGTH_FIELD_LENGTH + privateExponentLength + PUBLIC_EXPONENT_LENGTH);
 		copy(rawKey[PRIME_Q], 0, PRIME_Q_LENGTH, encodedPrivateKey,
 				PRIVATE_EXPONENT_LENGTH_FIELD_LENGTH + privateExponentLength + PRIME_P_LENGTH + PUBLIC_EXPONENT_LENGTH);
-		long end = System.currentTimeMillis();
-		System.out.println("[ltpakeyutil] LTPAPrivateKey.encode: end=" + end + " ms, elapsed=" + (end - start) + " ms");
+		long totalMs = System.currentTimeMillis() - startEncode;
+		System.out.println("[LTPAPrivateKey] encode: end; encodedKey.length=" + encodedPrivateKey.length + " bytes, total=" + totalMs + " ms");
 		return encodedPrivateKey;
 	}
 
