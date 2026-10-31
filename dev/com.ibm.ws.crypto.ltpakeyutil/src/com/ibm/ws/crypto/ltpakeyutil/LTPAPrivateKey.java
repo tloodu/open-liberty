@@ -48,19 +48,38 @@ public final class LTPAPrivateKey implements PrivateKey {
 	 * @param encodedPrivateKey The encoded key
 	 */
 	private RSAPrivateCrtKey decode(byte[] encodedPrivateKey) {
+		long startDecode = System.currentTimeMillis();
+		System.out.println("[LTPAPrivateKey] decode: start; encodedKey.length=" + encodedPrivateKey.length + " bytes");
 		try {
 			String provider = CryptoUtils.getProvider();
+
+			long startKeyFactory = System.currentTimeMillis();
 			KeyFactory kf = (provider == null)
 					? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
 					: KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
-			return (RSAPrivateCrtKey) kf.generatePrivate(new PKCS8EncodedKeySpec(encodedPrivateKey));
+			long keyFactoryMs = System.currentTimeMillis() - startKeyFactory;
+			System.out.println("[LTPAPrivateKey] decode: KeyFactory.getInstance took " + keyFactoryMs + " ms");
+
+			long startGeneratePrivate = System.currentTimeMillis();
+			RSAPrivateCrtKey key = (RSAPrivateCrtKey) kf.generatePrivate(new PKCS8EncodedKeySpec(encodedPrivateKey));
+			long generatePrivateMs = System.currentTimeMillis() - startGeneratePrivate;
+			System.out.println("[LTPAPrivateKey] decode: kf.generatePrivate took " + generatePrivateMs + " ms");
+
+			long totalMs = System.currentTimeMillis() - startDecode;
+			System.out.println("[LTPAPrivateKey] decode: end; keyFactory=" + keyFactoryMs + " ms, generatePrivate=" + generatePrivateMs + " ms, total=" + totalMs + " ms");
+			return key;
 		} catch (Exception ex) {
 			throw new RuntimeException("Failed to build RSA private key from encoded bytes", ex);
 		}
 	}
 
 	private byte[] encode() {
-		return rawKey.getEncoded();
+		long startEncode = System.currentTimeMillis();
+		System.out.println("[LTPAPrivateKey] encode: start");
+		byte[] encodedKey = rawKey.getEncoded();
+		long totalMs = System.currentTimeMillis() - startEncode;
+		System.out.println("[LTPAPrivateKey] encode: end; encodedKey.length=" + encodedKey.length + " bytes, total=" + totalMs + " ms");
+		return encodedKey;
 	}
 
 	/**

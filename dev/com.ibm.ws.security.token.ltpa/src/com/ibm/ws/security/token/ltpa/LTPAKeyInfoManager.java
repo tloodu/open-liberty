@@ -320,35 +320,58 @@ public class LTPAKeyInfoManager {
     @Sensitive
     private byte[][] decryptKeys(@Sensitive byte[] keyPassword, @Sensitive String secretKeyStr, @Sensitive String privateKeyStr,
                                  @Sensitive String publicKeyStr) throws Exception {
+        long startDecryptKeys = System.currentTimeMillis();
+        System.out.println("[LTPAKeyInfoManager] decryptKeys: start; time=" + startDecryptKeys + " ms");
+
+        // KeyEncryptor construction (password-based key derivation)
+        long startEncryptor = System.currentTimeMillis();
         KeyEncryptor encryptor = new KeyEncryptor(keyPassword);
+        long encryptorMs = System.currentTimeMillis() - startEncryptor;
+        System.out.println("[LTPAKeyInfoManager] decryptKeys: KeyEncryptor construction took " + encryptorMs + " ms");
+
         byte[] secretKey, privateKey, publicKey;
-        // Secret key
+
+        // Secret key: Base64 decode + decrypt
         if ((secretKeyStr == null) || (secretKeyStr.length() == 0)) {
             Tr.error(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_SECRETKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startSecretKey = System.currentTimeMillis();
             byte[] keyEncoded = Base64Coder.base64DecodeString(secretKeyStr);
             secretKey = encryptor.decrypt(keyEncoded);
+            long secretKeyMs = System.currentTimeMillis() - startSecretKey;
+            System.out.println("[LTPAKeyInfoManager] decryptKeys: secret key (Base64 decode + decrypt) took " + secretKeyMs + " ms");
         }
-        // Private key
+
+        // Private key: Base64 decode + decrypt
         if ((privateKeyStr == null) || (privateKeyStr.length() == 0)) {
             Tr.error(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PRIVATEKEY);
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PRIVATEKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startPrivateKey = System.currentTimeMillis();
             byte[] keyEncoded = Base64Coder.base64DecodeString(privateKeyStr);
             privateKey = encryptor.decrypt(keyEncoded);
+            long privateKeyMs = System.currentTimeMillis() - startPrivateKey;
+            System.out.println("[LTPAKeyInfoManager] decryptKeys: private key (Base64 decode + decrypt) took " + privateKeyMs + " ms");
         }
-        // Public key
+
+        // Public key: Base64 decode only (not encrypted)
         if ((publicKeyStr == null) || (publicKeyStr.length() == 0)) {
             Tr.error(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
             String formattedMessage = Tr.formatMessage(tc, "LTPA_TOKEN_SERVICE_MISSING_KEY", LTPAKeyFileUtility.KEYIMPORT_PUBLICKEY);
             throw new IllegalArgumentException(formattedMessage);
         } else {
+            long startPublicKey = System.currentTimeMillis();
             byte[] keyEncoded = Base64Coder.base64DecodeString(publicKeyStr);
             publicKey = keyEncoded;
+            long publicKeyMs = System.currentTimeMillis() - startPublicKey;
+            System.out.println("[LTPAKeyInfoManager] decryptKeys: public key (Base64 decode only) took " + publicKeyMs + " ms");
         }
+
+        long totalMs = System.currentTimeMillis() - startDecryptKeys;
+        System.out.println("[LTPAKeyInfoManager] decryptKeys: end; encryptor=" + encryptorMs + " ms, total=" + totalMs + " ms");
         return new byte[][] { secretKey, privateKey, publicKey };
     }
 

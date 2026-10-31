@@ -48,12 +48,25 @@ public final class LTPAPublicKey implements PublicKey {
 	 * @param encodedPublicKey The encoded key
 	 */
 	private RSAPublicKey decode(byte[] encodedPublicKey) {
+		long startDecode = System.currentTimeMillis();
+		System.out.println("[LTPAPublicKey] decode: start; encodedKey.length=" + encodedPublicKey.length + " bytes");
 		try {
 			String provider = CryptoUtils.getProvider();
+
+			long startKeyFactory = System.currentTimeMillis();
 			KeyFactory kf = (provider == null)
 					? KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA)
 					: KeyFactory.getInstance(CryptoUtils.CRYPTO_ALGORITHM_RSA, provider);
+			long keyFactoryMs = System.currentTimeMillis() - startKeyFactory;
+			System.out.println("[LTPAPublicKey] decode: KeyFactory.getInstance took " + keyFactoryMs + " ms");
+
+			long startGeneratePublic = System.currentTimeMillis();
 			RSAPublicKey key = (RSAPublicKey) kf.generatePublic(new X509EncodedKeySpec(encodedPublicKey));
+			long generatePublicMs = System.currentTimeMillis() - startGeneratePublic;
+			System.out.println("[LTPAPublicKey] decode: kf.generatePublic took " + generatePublicMs + " ms");
+
+			long totalMs = System.currentTimeMillis() - startDecode;
+			System.out.println("[LTPAPublicKey] decode: end; keyFactory=" + keyFactoryMs + " ms, generatePublic=" + generatePublicMs + " ms, total=" + totalMs + " ms");
 			return key;
 		} catch (Exception ex) {
 			throw new RuntimeException("Failed to build RSA public key from encoded bytes", ex);
@@ -61,7 +74,11 @@ public final class LTPAPublicKey implements PublicKey {
 	}
 
 	private byte[] encode() {
+		long startEncode = System.currentTimeMillis();
+		System.out.println("[LTPAPublicKey] encode: start");
 		byte[] encodedPublicKey = rawKey.getEncoded();
+		long totalMs = System.currentTimeMillis() - startEncode;
+		System.out.println("[LTPAPublicKey] encode: end; encodedKey.length=" + encodedPublicKey.length + " bytes, total=" + totalMs + " ms");
 		return encodedPublicKey;
 	}
 
