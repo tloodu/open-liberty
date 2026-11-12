@@ -47,6 +47,7 @@ public final class LTPATokenHeader {
     public static final byte ENC_ALG_AES_CBC_128 = (byte) 0x01;
     public static final byte ENC_ALG_AES_CBC_256 = (byte) 0x02;
     public static final byte ENC_ALG_AES_GCM_256 = (byte) 0x03;
+    public static final byte ENC_ALG_KDF_AES_GCM_256 = (byte) 0x04;
 
     private LTPATokenHeader() {}
 
@@ -103,6 +104,9 @@ public final class LTPATokenHeader {
      * @throws IllegalArgumentException if the combination is unrecognised
      */
     public static byte encodeEncAlg(String resolvedCipher, int resolvedKeyLength) {
+        if (CryptoUtils.KDF_AES_GCM_CIPHER.equals(resolvedCipher)) {
+            return ENC_ALG_KDF_AES_GCM_256;
+        }
         if (CryptoUtils.AES_GCM_CIPHER.equals(resolvedCipher)) {
             return ENC_ALG_AES_GCM_256;
         }
@@ -172,6 +176,7 @@ public final class LTPATokenHeader {
      */
     public static String decodeCipher(byte encAlgByte) throws InvalidTokenException {
         switch (encAlgByte) {
+            case ENC_ALG_KDF_AES_GCM_256: return CryptoUtils.KDF_AES_GCM_CIPHER;
             case ENC_ALG_AES_CBC_128: return CryptoUtils.AES_CBC_CIPHER;
             case ENC_ALG_AES_CBC_256: return CryptoUtils.AES_CBC_CIPHER;
             case ENC_ALG_AES_GCM_256: return CryptoUtils.AES_GCM_CIPHER;
@@ -190,6 +195,7 @@ public final class LTPATokenHeader {
      */
     public static int decodeKeyLength(byte encAlgByte) throws InvalidTokenException {
         switch (encAlgByte) {
+            case ENC_ALG_KDF_AES_GCM_256: return 0;
             case ENC_ALG_AES_CBC_128: return CryptoUtils.AES_128_KEY_LENGTH_BYTES;
             case ENC_ALG_AES_CBC_256: return CryptoUtils.AES_256_KEY_LENGTH_BYTES;
             case ENC_ALG_AES_GCM_256: return 0;
