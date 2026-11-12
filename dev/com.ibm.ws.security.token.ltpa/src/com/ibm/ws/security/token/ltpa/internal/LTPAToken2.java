@@ -245,7 +245,9 @@ public class LTPAToken2 implements Token, Serializable {
         long startCipher = System.currentTimeMillis();
         byte[] ciphertext;
         try {
-            if (CryptoUtils.AES_GCM_CIPHER.equals(resolvedCipher)) {
+            if (CryptoUtils.KDF_AES_GCM_CIPHER.equals(resolvedCipher)) {
+                ciphertext = LTPAKeyUtil.encryptKDF(toBeEnc, sharedKey);
+            } else if (CryptoUtils.AES_GCM_CIPHER.equals(resolvedCipher)) {
                 ciphertext = LTPAKeyUtil.encryptGCM(toBeEnc, sharedKey);
             } else {
                 // resolvedCipher is AES/CBC/PKCS5Padding; resolvedKeyLength is 16 or 32 (0 = FIPS-aware default)
@@ -335,7 +337,9 @@ public class LTPAToken2 implements Token, Serializable {
                 }
 
                 long startCipher = System.currentTimeMillis();
-                if (CryptoUtils.AES_GCM_CIPHER.equals(headerCipher)) {
+                if (CryptoUtils.KDF_AES_GCM_CIPHER.equals(headerCipher)) {
+                    tokenData = LTPAKeyUtil.decryptKDF(ciphertext, sharedKey);
+                } else if (CryptoUtils.AES_GCM_CIPHER.equals(headerCipher)) {
                     tokenData = LTPAKeyUtil.decryptGCM(ciphertext, sharedKey);
                 } else {
                     tokenData = LTPAKeyUtil.decrypt(ciphertext, sharedKey, headerCipher, headerKeyLen);
